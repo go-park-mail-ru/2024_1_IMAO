@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -8,16 +9,25 @@ import (
 )
 
 func (active *ActiveUsers) Login(writer http.ResponseWriter, request *http.Request) {
-	email := request.FormValue("email")
-	password := request.FormValue("password")
-	user, ok := active.getUserByEmail(email)
+	var user unauthorizedUser
+
+	err := json.NewDecoder(request.Body).Decode(&user)
+
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	email := user.Email
+	password := user.Password
+	expectedUser, ok := active.getUserByEmail(email)
 
 	if ok != nil {
 		http.Error(writer, `Wrong username or password`, 404)
 		return
 	}
 
-	if !CheckPassword(password, user.PasswordHash) {
+	if !CheckPassword(password, expectedUser.PasswordHash) {
 		http.Error(writer, `Wrong username or password`, 404)
 		return
 	}
@@ -30,9 +40,17 @@ func (active *ActiveUsers) Login(writer http.ResponseWriter, request *http.Reque
 		Expires: time.Now().Add(24 * time.Hour),
 	}
 
+	serverResponse := response{
+		User:      *expectedUser,
+		SessionID: sessionID,
+	}
+
+	userData, _ := json.Marshal(serverResponse)
+	writer.Write(userData)
+
 	http.SetCookie(writer, cookie)
-	writer.Write([]byte("You have been authorized with session ID: "))
-	writer.Write([]byte(sessionID))
+	fmt.Println("You have been authorized with session ID: ")
+	fmt.Println(sessionID)
 }
 
 func (active *ActiveUsers) Logout(writer http.ResponseWriter, request *http.Request) {
@@ -59,9 +77,18 @@ func (active *ActiveUsers) Logout(writer http.ResponseWriter, request *http.Requ
 }
 
 func (active *ActiveUsers) Signup(writer http.ResponseWriter, request *http.Request) {
-	email := request.FormValue("email")
-	password := request.FormValue("password")
-	passwordRepeat := request.FormValue("password_repeat")
+	var newUser unauthorizedUser
+
+	err := json.NewDecoder(request.Body).Decode(&newUser)
+
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	email := newUser.Email
+	password := newUser.Password
+	passwordRepeat := newUser.PasswordRepeat
 
 	if password != passwordRepeat {
 		http.Error(writer, "Passwords do not match", 401)
@@ -69,7 +96,7 @@ func (active *ActiveUsers) Signup(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	_, err := active.createUser(email, HashPassword(password))
+	user, err := active.createUser(email, HashPassword(password))
 
 	if err != nil {
 		http.Error(writer, "User already exists", 401)
@@ -83,30 +110,15 @@ func (active *ActiveUsers) Signup(writer http.ResponseWriter, request *http.Requ
 		Expires: time.Now().Add(24 * time.Hour),
 	}
 
+	serverResponse := response{
+		User:      *user,
+		SessionID: sessionID,
+	}
+
+	userData, _ := json.Marshal(serverResponse)
+	writer.Write(userData)
+
 	http.SetCookie(writer, cookie)
-	writer.Write([]byte("You have been authorized with session ID: "))
-	writer.Write([]byte(sessionID))
-}
-
-func (active *ActiveUsers) Root(writer http.ResponseWriter, request *http.Request) {
-	authorized := false
-	session, err := request.Cookie("session_id")
-
-	if err == nil && session != nil {
-		authorized = active.sessionExists(session.Value)
-	}
-
-	if authorized {
-		user, err := active.GetUserBySession(session.Value)
-
-		if err != nil {
-			fmt.Println("No such session")
-			return
-		}
-
-		writer.Write([]byte("You authorized as user "))
-		writer.Write([]byte(user.Email))
-	} else {
-		writer.Write([]byte("You have no authorization"))
-	}
+	fmt.Println("You have been authorized with session ID: ")
+	fmt.Println(sessionID)
 }

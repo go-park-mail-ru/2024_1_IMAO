@@ -10,7 +10,7 @@ func main() {
 	r := mux.NewRouter()
 	active := auth.NewActiveUser()
 
-	r.HandleFunc("/", active.Root)
+	//r.HandleFunc("/", active.Root)
 	r.HandleFunc("/login", active.Login)
 	r.HandleFunc("/logout", active.Logout)
 	r.HandleFunc("/signup", active.Signup)
