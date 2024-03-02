@@ -1,25 +1,23 @@
 package adverts
 
-/*
-func (active *ActiveUsers) Root(writer http.ResponseWriter, request *http.Request) {
-	authorized := false
-	session, err := request.Cookie("session_id")
+import (
+	"encoding/json"
+	"net/http"
+)
 
-	if err == nil && session != nil {
-		authorized = active.sessionExists(session.Value)
+func (ads *AdvertsStorage) Root(writer http.ResponseWriter, request *http.Request) {
+	adsList, err := ads.GetSeveralAdverts(50)
+
+	if err != nil {
+		http.Error(writer, `Wrong numbers of ads`, 404)
+
+		return
 	}
 
-	if authorized {
-		user, err := active.GetUserBySession(session.Value)
-
-		if err != nil {
-			fmt.Println("No such session")
-			return
-		}
-
-		writer.Write([]byte("You authorized as user "))
-		writer.Write([]byte(user.Email))
-	} else {
-		writer.Write([]byte("You have no authorization"))
+	serverResponse := response{
+		Adverts: adsList,
 	}
-} */
+
+	data, _ := json.Marshal(serverResponse)
+	writer.Write(data)
+}

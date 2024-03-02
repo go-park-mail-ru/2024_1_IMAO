@@ -24,6 +24,10 @@ type Advert struct {
 	Location    string `json:"location"`
 }
 
+type response struct {
+	Adverts []*Advert `json:"adverts"`
+}
+
 type AdvertsStorage struct {
 	Adverts        []*Advert
 	AdvertsCounter uint
@@ -50,7 +54,7 @@ func (ads *AdvertsStorage) GetSeveralAdverts(number uint) ([]*Advert, error) {
 
 	returningAds := make([]*Advert, number)
 
-	for i := 1; i <= int(number); i++ {
+	for i := 0; i < int(number); i++ {
 		returningAds[i] = &Advert{
 			ID:          ads.Adverts[i].ID,
 			UserID:      ads.Adverts[i].UserID,
@@ -73,15 +77,15 @@ func (ads *AdvertsStorage) GetLastID() uint {
 
 func NewAdvertsStorage() *AdvertsStorage {
 	return &AdvertsStorage{
-		AdvertsCounter: 1,
-		Adverts:        make([]*Advert, 1),
+		AdvertsCounter: 0,
+		Adverts:        make([]*Advert, 0),
 	}
 }
 
 func FillAdvertsStorage(ads *AdvertsStorage) {
 	for i := 1; i <= 60; i++ {
 		advertID := ads.GetLastID()
-		ads.Adverts[advertID] = &Advert{
+		ads.Adverts = append(ads.Adverts, &Advert{
 			ID:          advertID,
 			UserID:      1,
 			Title:       fmt.Sprintf("Объявление № %d", advertID),
@@ -89,6 +93,6 @@ func FillAdvertsStorage(ads *AdvertsStorage) {
 			Description: fmt.Sprintf("Текст в объявлениии № %d", advertID),
 			Price:       uint(rand.Intn(1000)) * advertID,
 			Location:    "Москва",
-		}
+		})
 	}
 }

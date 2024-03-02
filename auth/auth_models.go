@@ -15,6 +15,10 @@ var (
 	errSessionNotExists = errors.New("session does not exist")
 )
 
+type Session struct {
+	SessionID string `json:"session_id"`
+}
+
 type unauthorizedUser struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
@@ -24,6 +28,7 @@ type unauthorizedUser struct {
 type response struct {
 	User      User   `json:"user"`
 	SessionID string `json:"session_id"`
+	IsAuth    bool   `json:"is_auth"`
 }
 
 type User struct {

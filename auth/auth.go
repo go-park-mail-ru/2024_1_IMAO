@@ -43,6 +43,7 @@ func (active *ActiveUsers) Login(writer http.ResponseWriter, request *http.Reque
 	serverResponse := response{
 		User:      *expectedUser,
 		SessionID: sessionID,
+		IsAuth:    true,
 	}
 
 	userData, _ := json.Marshal(serverResponse)
@@ -113,6 +114,7 @@ func (active *ActiveUsers) Signup(writer http.ResponseWriter, request *http.Requ
 	serverResponse := response{
 		User:      *user,
 		SessionID: sessionID,
+		IsAuth:    true,
 	}
 
 	userData, _ := json.Marshal(serverResponse)
@@ -121,4 +123,36 @@ func (active *ActiveUsers) Signup(writer http.ResponseWriter, request *http.Requ
 	http.SetCookie(writer, cookie)
 	fmt.Println("You have been authorized with session ID: ")
 	fmt.Println(sessionID)
+}
+
+func (active *ActiveUsers) CheckAuth(writer http.ResponseWriter, request *http.Request) {
+	session, err := request.Cookie("session_id")
+
+	if errors.Is(err, http.ErrNoCookie) || !active.sessionExists(session.Value) {
+		serverResponse := response{
+			IsAuth: false,
+		}
+
+		userData, _ := json.Marshal(serverResponse)
+		writer.Write(userData)
+
+		return
+	}
+
+	user, ok := active.GetUserBySession(session.Value)
+
+	if ok != nil {
+		http.Error(writer, `Wrong username or password`, 404)
+
+		return
+	}
+
+	serverResponse := response{
+		User:      *user,
+		SessionID: session.Value,
+		IsAuth:    true,
+	}
+
+	userData, _ := json.Marshal(serverResponse)
+	writer.Write(userData)
 }
