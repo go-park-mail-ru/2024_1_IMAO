@@ -1,4 +1,4 @@
-package root
+package adverts
 
 /*
 func (active *ActiveUsers) Root(writer http.ResponseWriter, request *http.Request) {
