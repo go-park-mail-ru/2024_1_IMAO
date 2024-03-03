@@ -1,4 +1,4 @@
-package adverts
+package storage
 
 import (
 	"errors"
@@ -24,11 +24,7 @@ type Advert struct {
 	Location    string `json:"location"`
 }
 
-type response struct {
-	Adverts []*Advert `json:"adverts"`
-}
-
-type AdvertsStorage struct {
+type AdvertsList struct {
 	Adverts        []*Advert
 	AdvertsCounter uint
 }
@@ -39,7 +35,7 @@ type AdvertsInfo interface {
 	GetLastID() uint
 }
 
-func (ads *AdvertsStorage) GetAdvert(advertID uint) (*Advert, error) {
+func (ads *AdvertsList) GetAdvert(advertID uint) (*Advert, error) {
 	if advertID > ads.AdvertsCounter {
 		return nil, errWrongID
 	}
@@ -47,7 +43,7 @@ func (ads *AdvertsStorage) GetAdvert(advertID uint) (*Advert, error) {
 	return ads.Adverts[advertID], nil
 }
 
-func (ads *AdvertsStorage) GetSeveralAdverts(number uint) ([]*Advert, error) {
+func (ads *AdvertsList) GetSeveralAdverts(number uint) ([]*Advert, error) {
 	if number > ads.AdvertsCounter {
 		return nil, errWrongAdvertsAmount
 	}
@@ -69,20 +65,20 @@ func (ads *AdvertsStorage) GetSeveralAdverts(number uint) ([]*Advert, error) {
 	return returningAds, nil
 }
 
-func (ads *AdvertsStorage) GetLastID() uint {
+func (ads *AdvertsList) GetLastID() uint {
 	ads.AdvertsCounter++
 
 	return ads.AdvertsCounter
 }
 
-func NewAdvertsStorage() *AdvertsStorage {
-	return &AdvertsStorage{
+func NewAdvertsList() *AdvertsList {
+	return &AdvertsList{
 		AdvertsCounter: 0,
 		Adverts:        make([]*Advert, 0),
 	}
 }
 
-func FillAdvertsStorage(ads *AdvertsStorage) {
+func FillAdvertsList(ads *AdvertsList) {
 	for i := 1; i <= 60; i++ {
 		advertID := ads.GetLastID()
 		ads.Adverts = append(ads.Adverts, &Advert{

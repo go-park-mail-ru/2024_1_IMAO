@@ -1,6 +1,7 @@
-package auth
+package storage
 
 import (
+	"2024_1_IMAO/internal/usecase"
 	"errors"
 	"math/rand"
 )
@@ -15,20 +16,10 @@ var (
 	errSessionNotExists = errors.New("session does not exist")
 )
 
-type Session struct {
-	SessionID string `json:"session_id"`
-}
-
-type unauthorizedUser struct {
+type UnauthorizedUser struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
 	PasswordRepeat string `json:"password_repeat"`
-}
-
-type response struct {
-	User      User   `json:"user"`
-	SessionID string `json:"session_id"`
-	IsAuth    bool   `json:"is_auth"`
 }
 
 type User struct {
@@ -39,7 +30,7 @@ type User struct {
 	PasswordHash string `json:"-"`
 }
 
-type ActiveUsers struct {
+type UsersList struct {
 	//Ключ - id сессии, значение - id пользователя
 	Sessions   map[string]uint
 	Users      map[string]*User
@@ -47,15 +38,15 @@ type ActiveUsers struct {
 }
 
 type UsersInfo interface {
-	userExists(email string) bool
-	createUser(email, password string) (*User, error)
-	getUserByEmail(email string) (*User, error)
-	getUserBySession(sessionID string) (*User, error)
-	getLastID() uint
+	UserExists(email string) bool
+	CreateUser(email, password string) (*User, error)
+	GetUserByEmail(email string) (*User, error)
+	GetUserBySession(sessionID string) (*User, error)
+	GetLastID() uint
 
-	sessionExists(sessionID string) bool
-	addSession(email string) string
-	removeSession(sessionID string)
+	SessionExists(sessionID string) bool
+	AddSession(email string) string
+	RemoveSession(sessionID string)
 }
 
 func randString(length int) string {
@@ -67,25 +58,25 @@ func randString(length int) string {
 	return result
 }
 
-func (active *ActiveUsers) userExists(email string) bool {
+func (active *UsersList) UserExists(email string) bool {
 	_, exists := active.Users[email]
 
 	return exists
 }
 
-func (active *ActiveUsers) getLastID() uint {
+func (active *UsersList) GetLastID() uint {
 	active.UsersCount++
 
 	return active.UsersCount
 }
 
-func (active *ActiveUsers) createUser(email, passwordHash string) (*User, error) {
-	if active.userExists(email) {
+func (active *UsersList) CreateUser(email, passwordHash string) (*User, error) {
+	if active.UserExists(email) {
 		return nil, errUserExists
 	}
 
 	active.Users[email] = &User{
-		ID:           active.getLastID(),
+		ID:           active.GetLastID(),
 		PasswordHash: passwordHash,
 		Email:        email,
 	}
@@ -93,15 +84,15 @@ func (active *ActiveUsers) createUser(email, passwordHash string) (*User, error)
 	return active.Users[email], nil
 }
 
-func (active *ActiveUsers) getUserByEmail(email string) (*User, error) {
-	if !active.userExists(email) {
+func (active *UsersList) GetUserByEmail(email string) (*User, error) {
+	if !active.UserExists(email) {
 		return nil, errUserNotExists
 	}
 
 	return active.Users[email], nil
 }
 
-func (active *ActiveUsers) GetUserBySession(sessionID string) (*User, error) {
+func (active *UsersList) GetUserBySession(sessionID string) (*User, error) {
 	id := active.Sessions[sessionID]
 
 	for _, val := range active.Users {
@@ -113,13 +104,13 @@ func (active *ActiveUsers) GetUserBySession(sessionID string) (*User, error) {
 	return nil, errUserNotExists
 }
 
-func (active *ActiveUsers) sessionExists(sessionID string) bool {
+func (active *UsersList) SessionExists(sessionID string) bool {
 	_, exists := active.Sessions[sessionID]
 
 	return exists
 }
 
-func (active *ActiveUsers) addSession(email string) string {
+func (active *UsersList) AddSession(email string) string {
 	sessionID := randString(32)
 	user := active.Users[email]
 
@@ -128,8 +119,8 @@ func (active *ActiveUsers) addSession(email string) string {
 	return sessionID
 }
 
-func (active *ActiveUsers) removeSession(sessionID string) error {
-	if !active.sessionExists(sessionID) {
+func (active *UsersList) RemoveSession(sessionID string) error {
+	if !active.SessionExists(sessionID) {
 		return errSessionNotExists
 	}
 
@@ -138,14 +129,14 @@ func (active *ActiveUsers) removeSession(sessionID string) error {
 	return nil
 }
 
-func NewActiveUser() *ActiveUsers {
-	return &ActiveUsers{
+func NewActiveUser() *UsersList {
+	return &UsersList{
 		Sessions: make(map[string]uint, 1),
 		Users: map[string]*User{
 			"example@mail.ru": {
 				ID:           1,
 				Email:        "example@mail.ru",
-				PasswordHash: HashPassword("123456"),
+				PasswordHash: usecase.HashPassword("123456"),
 			},
 		},
 		UsersCount: 1,
