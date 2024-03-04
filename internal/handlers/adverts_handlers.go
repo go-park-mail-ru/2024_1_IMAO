@@ -19,7 +19,8 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 
 	if err != nil {
 		log.Println(err)
-		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest, responses.ErrTooManyAdverts))
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrTooManyAdverts), responses.StatusBadRequest)
 
 		return
 	}

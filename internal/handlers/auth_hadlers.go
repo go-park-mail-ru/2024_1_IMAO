@@ -23,14 +23,24 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	usersList := authHandler.List
 
+	session, err := request.Cookie("session_id")
+
+	if err == nil || usersList.SessionExists(session.Value) {
+		log.Println("User already authorized")
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
+			responses.ErrAuthorized), responses.StatusBadRequest)
+
+		return
+	}
+
 	var user storage.UnauthorizedUser
 
-	err := json.NewDecoder(request.Body).Decode(&user)
+	err = json.NewDecoder(request.Body).Decode(&user)
 
 	if err != nil {
 		log.Println(err)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+			responses.ErrBadRequest), responses.StatusBadRequest)
 
 		return
 	}
@@ -42,7 +52,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	if err != nil {
 		log.Println(err)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrUserNotExists))
+			responses.ErrUserNotExists), responses.StatusBadRequest)
 
 		return
 	}
@@ -50,7 +60,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	if !usecase.CheckPassword(password, expectedUser.PasswordHash) {
 		log.Println("Passwords do not match")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongCredentials))
+			responses.ErrWrongCredentials), responses.StatusBadRequest)
 
 		return
 	}
@@ -84,7 +94,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	if err != nil {
 		log.Println(err)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
+			responses.ErrUnauthorized), responses.StatusUnauthorized)
 
 		return
 	}
@@ -94,7 +104,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	if err != nil {
 		log.Println(err)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
+			responses.ErrUnauthorized), responses.StatusUnauthorized)
 
 		return
 	}
@@ -114,14 +124,24 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	usersList := authHandler.List
 
+	session, err := request.Cookie("session_id")
+
+	if err == nil || usersList.SessionExists(session.Value) {
+		log.Println("User already authorized")
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
+			responses.ErrAuthorized), responses.StatusBadRequest)
+
+		return
+	}
+
 	var newUser storage.UnauthorizedUser
 
-	err := json.NewDecoder(request.Body).Decode(&newUser)
+	err = json.NewDecoder(request.Body).Decode(&newUser)
 
 	if err != nil {
 		log.Println(err)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+			responses.ErrBadRequest), responses.StatusBadRequest)
 
 		return
 	}
@@ -133,7 +153,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if password != passwordRepeat {
 		log.Println("Passwords do not match")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongCredentials))
+			responses.ErrWrongCredentials), responses.StatusBadRequest)
 
 		return
 	}
@@ -141,7 +161,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if !usecase.ValidatePassword(password) {
 		log.Println("Bad password format")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongPasswordFormat))
+			responses.ErrWrongPasswordFormat), responses.StatusBadRequest)
 
 		return
 	}
@@ -149,7 +169,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if !usecase.ValidateEmail(email) {
 		log.Println("Bad email format")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongEmailFormat))
+			responses.ErrWrongEmailFormat), responses.StatusBadRequest)
 
 		return
 	}
@@ -159,7 +179,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if err != nil {
 		log.Println("User already exists")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrUserAlreadyExists))
+			responses.ErrUserAlreadyExists), responses.StatusBadRequest)
 
 		return
 	}

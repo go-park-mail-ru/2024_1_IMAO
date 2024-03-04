@@ -3,11 +3,7 @@ package storage
 import (
 	"2024_1_IMAO/internal/usecase"
 	"errors"
-	"math/rand"
-)
-
-const (
-	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"sync"
 )
 
 var (
@@ -35,6 +31,7 @@ type UsersList struct {
 	Sessions   map[string]uint
 	Users      map[string]*User
 	UsersCount uint
+	mu         sync.RWMutex
 }
 
 type UsersInfo interface {
@@ -49,17 +46,12 @@ type UsersInfo interface {
 	RemoveSession(sessionID string)
 }
 
-func randString(length int) string {
-	var result string
-	for i := 0; i < length; i++ {
-		result += string(letters[rand.Intn(len(letters))])
-	}
-
-	return result
-}
-
 func (active *UsersList) UserExists(email string) bool {
+	active.mu.Lock()
+
 	_, exists := active.Users[email]
+
+	active.mu.Unlock()
 
 	return exists
 }
@@ -74,6 +66,9 @@ func (active *UsersList) CreateUser(email, passwordHash string) (*User, error) {
 	if active.UserExists(email) {
 		return nil, errUserExists
 	}
+
+	active.mu.Lock()
+	defer active.mu.Unlock()
 
 	active.Users[email] = &User{
 		ID:           active.GetLastID(),
@@ -93,6 +88,9 @@ func (active *UsersList) GetUserByEmail(email string) (*User, error) {
 }
 
 func (active *UsersList) GetUserBySession(sessionID string) (*User, error) {
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
 	id := active.Sessions[sessionID]
 
 	for _, val := range active.Users {
@@ -111,7 +109,11 @@ func (active *UsersList) SessionExists(sessionID string) bool {
 }
 
 func (active *UsersList) AddSession(email string) string {
-	sessionID := randString(32)
+	sessionID := usecase.RandString(32)
+
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
 	user := active.Users[email]
 
 	active.Sessions[sessionID] = user.ID
@@ -123,6 +125,9 @@ func (active *UsersList) RemoveSession(sessionID string) error {
 	if !active.SessionExists(sessionID) {
 		return errSessionNotExists
 	}
+
+	active.mu.Lock()
+	defer active.mu.Unlock()
 
 	delete(active.Sessions, sessionID)
 
@@ -140,5 +145,6 @@ func NewActiveUser() *UsersList {
 			},
 		},
 		UsersCount: 1,
+		mu:         sync.RWMutex{},
 	}
 }

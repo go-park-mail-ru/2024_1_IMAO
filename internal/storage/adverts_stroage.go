@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 )
 
 var (
@@ -27,6 +28,7 @@ type Advert struct {
 type AdvertsList struct {
 	Adverts        []*Advert
 	AdvertsCounter uint
+	mu             sync.RWMutex
 }
 
 type AdvertsInfo interface {
@@ -40,6 +42,9 @@ func (ads *AdvertsList) GetAdvert(advertID uint) (*Advert, error) {
 		return nil, errWrongID
 	}
 
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+
 	return ads.Adverts[advertID], nil
 }
 
@@ -47,6 +52,9 @@ func (ads *AdvertsList) GetSeveralAdverts(number uint) ([]*Advert, error) {
 	if number > ads.AdvertsCounter {
 		return nil, errWrongAdvertsAmount
 	}
+
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
 
 	returningAds := make([]*Advert, number)
 
@@ -75,6 +83,7 @@ func NewAdvertsList() *AdvertsList {
 	return &AdvertsList{
 		AdvertsCounter: 0,
 		Adverts:        make([]*Advert, 0),
+		mu:             sync.RWMutex{},
 	}
 }
 

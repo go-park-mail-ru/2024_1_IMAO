@@ -23,6 +23,7 @@ const (
 	ErrUserAlreadyExists   = "User with same email already exists"
 	ErrWrongCredentials    = "Wrong credentials"
 	ErrUnauthorized        = "User not authorized"
+	ErrAuthorized          = "User already authorized"
 	ErrWrongEmailFormat    = "Wrong email format"
 	ErrWrongPasswordFormat = "Wrong password format"
 
@@ -60,7 +61,8 @@ func SendOkResponse(writer http.ResponseWriter, response any) {
 	sendResponse(writer, response)
 }
 
-func SendErrResponse(writer http.ResponseWriter, response any) {
+func SendErrResponse(writer http.ResponseWriter, response any, code int) {
 	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(code)
 	sendResponse(writer, response)
 }
