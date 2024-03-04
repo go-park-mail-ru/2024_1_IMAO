@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"2024_1_IMAO/internal/usecase"
 	"errors"
+	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 	"sync"
 )
 
@@ -109,7 +109,7 @@ func (active *UsersList) SessionExists(sessionID string) bool {
 }
 
 func (active *UsersList) AddSession(email string) string {
-	sessionID := usecase.RandString(32)
+	sessionID := pkg.RandString(32)
 
 	active.mu.Lock()
 	defer active.mu.Unlock()
@@ -141,7 +141,7 @@ func NewActiveUser() *UsersList {
 			"example@mail.ru": {
 				ID:           1,
 				Email:        "example@mail.ru",
-				PasswordHash: usecase.HashPassword("123456"),
+				PasswordHash: pkg.HashPassword("123456"),
 			},
 		},
 		UsersCount: 1,

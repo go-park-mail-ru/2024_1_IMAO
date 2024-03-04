@@ -1,4 +1,4 @@
-module 2024_1_IMAO
+module github.com/go-park-mail-ru/2024_1_IMAO
 
 go 1.22
 

@@ -63,6 +63,5 @@ func SendOkResponse(writer http.ResponseWriter, response any) {
 
 func SendErrResponse(writer http.ResponseWriter, response any, code int) {
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(code)
 	sendResponse(writer, response)
 }

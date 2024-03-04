@@ -1,7 +1,7 @@
 package myhandlers
 
 import (
-	"2024_1_IMAO/internal/responses"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 	"log"
 	"net/http"
 )

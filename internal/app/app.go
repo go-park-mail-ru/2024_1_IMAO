@@ -1,7 +1,7 @@
 package app
 
 import (
-	myhandlers "2024_1_IMAO/internal/handlers"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"net/http"

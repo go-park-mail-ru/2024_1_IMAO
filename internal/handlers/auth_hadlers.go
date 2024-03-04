@@ -1,10 +1,10 @@
 package myhandlers
 
 import (
-	"2024_1_IMAO/internal/responses"
-	"2024_1_IMAO/internal/storage"
-	"2024_1_IMAO/internal/usecase"
 	"encoding/json"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
+	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 	"log"
 	"net/http"
 	"time"
@@ -57,7 +57,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	if !usecase.CheckPassword(password, expectedUser.PasswordHash) {
+	if !pkg.CheckPassword(password, expectedUser.PasswordHash) {
 		log.Println("Passwords do not match")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongCredentials), responses.StatusBadRequest)
@@ -158,7 +158,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	if !usecase.ValidatePassword(password) {
+	if !pkg.ValidatePassword(password) {
 		log.Println("Bad password format")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongPasswordFormat), responses.StatusBadRequest)
@@ -166,7 +166,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	if !usecase.ValidateEmail(email) {
+	if !pkg.ValidateEmail(email) {
 		log.Println("Bad email format")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongEmailFormat), responses.StatusBadRequest)
@@ -174,7 +174,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	user, err := usersList.CreateUser(email, usecase.HashPassword(password))
+	user, err := usersList.CreateUser(email, pkg.HashPassword(password))
 
 	if err != nil {
 		log.Println("User already exists")
