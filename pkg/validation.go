@@ -6,15 +6,24 @@ import (
 	"unicode"
 )
 
+const (
+	ErrTooShort    = "Password is too short"
+	ErrTooLong     = "Password is too long"
+	ErrWrongFormat = "Password does not contain specific symbols"
+)
+
 func ValidateEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
 
 	return err == nil
 }
 
-func ValidatePassword(password string) bool {
-	if len(password) < 8 || len(password) > 32 {
-		return false
+func ValidatePassword(password string) string {
+	switch {
+	case len(password) < 8:
+		return ErrTooShort
+	case len(password) > 32:
+		return ErrTooLong
 	}
 
 	specialChars := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
@@ -22,16 +31,21 @@ func ValidatePassword(password string) bool {
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
 
 	for _, char := range password {
-		if unicode.IsUpper(char) {
+		switch {
+		case unicode.IsUpper(char):
 			hasUpper = true
-		} else if unicode.IsLower(char) {
+		case unicode.IsLower(char):
 			hasLower = true
-		} else if unicode.IsDigit(char) {
+		case unicode.IsDigit(char):
 			hasDigit = true
-		} else if strings.ContainsRune(specialChars, char) {
+		case strings.ContainsRune(specialChars, char):
 			hasSpecial = true
 		}
 	}
 
-	return hasUpper && hasLower && hasDigit && hasSpecial
+	if !(hasLower && hasUpper && hasSpecial && hasDigit) {
+		return ErrWrongFormat
+	}
+
+	return ""
 }

@@ -16,8 +16,8 @@ type Image struct {
 }
 
 type Advert struct {
-	ID          uint   `json:"id"`
-	UserID      uint   `json:"user_id"`
+	ID          uint   `json:"ID"`
+	UserID      uint   `json:"userID"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       uint   `json:"price"`

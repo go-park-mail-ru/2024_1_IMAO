@@ -15,7 +15,7 @@ var (
 type UnauthorizedUser struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
-	PasswordRepeat string `json:"password_repeat"`
+	PasswordRepeat string `json:"passwordRepeat"`
 }
 
 type User struct {

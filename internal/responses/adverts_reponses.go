@@ -5,7 +5,7 @@ import (
 )
 
 type AdvertsOkResponse struct {
-	Code    int
+	Code    int               `json:"code"`
 	Adverts []*storage.Advert `json:"adverts"`
 }
 

@@ -19,13 +19,12 @@ const (
 )
 
 const (
-	ErrUserNotExists       = "User with same email does not exist"
-	ErrUserAlreadyExists   = "User with same email already exists"
-	ErrWrongCredentials    = "Wrong credentials"
-	ErrUnauthorized        = "User not authorized"
-	ErrAuthorized          = "User already authorized"
-	ErrWrongEmailFormat    = "Wrong email format"
-	ErrWrongPasswordFormat = "Wrong password format"
+	ErrUserAlreadyExists  = "User with same email already exists"
+	ErrWrongCredentials   = "Wrong credentials"
+	ErrUnauthorized       = "User not authorized"
+	ErrAuthorized         = "User already authorized"
+	ErrWrongEmailFormat   = "Wrong email format"
+	ErrDifferentPasswords = "Passwords do not match"
 
 	ErrAdvertNotExist = "Advert does not exist"
 	ErrTooManyAdverts = "Too many adverts specified"
