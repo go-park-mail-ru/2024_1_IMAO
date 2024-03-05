@@ -230,25 +230,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request",
-                        "schema": {
-                            "$ref": "#/definitions/responses.AuthErrResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "User not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/responses.AuthErrResponse"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
-                        "schema": {
-                            "$ref": "#/definitions/responses.AuthErrResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Passwords do not match",
                         "schema": {
                             "$ref": "#/definitions/responses.AuthErrResponse"
                         }

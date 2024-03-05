@@ -129,6 +129,9 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(writer, session)
 
+	userData := responses.NewAuthOkResponse(storage.User{}, "", false)
+	responses.SendOkResponse(writer, userData)
+
 	log.Println("You have been logged out")
 }
 
@@ -142,10 +145,10 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 // @Param password formData string true "User password"
 // @Param passwordRepeat formData string true "Password confirmation"
 // @Success 201 {object} responses.AuthOkResponse
-// @Failure 400 {object} responses.AuthErrResponse "Bad request"
-// @Failure 401 {object} responses.AuthErrResponse "User not authorized"
-// @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
-// @Failure 500 {object} responses.AuthErrResponse "Internal server error"
+// @Failure 400 {object} responses.AuthErrResponse "User already authorized"
+// @Failure 400 {object} responses.AuthErrResponse "Wrong email format"
+// @Failure 400 {object} responses.AuthErrResponse "User with same email already exists"
+// @Failure 400 {object} responses.AuthErrResponse "Passwords do not match"
 // @Router /signup [post]
 func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
 	if request.Method != http.MethodPost {
