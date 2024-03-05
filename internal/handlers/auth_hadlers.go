@@ -232,7 +232,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 // @Accept json
 // @Produce json
 // @Success 200 {object} responses.AuthOkResponse
-// @Router /checkauth [get]
+// @Router /check_auth [get]
 func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
