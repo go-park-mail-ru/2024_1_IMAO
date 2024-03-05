@@ -12,20 +12,18 @@ const (
 	ErrWrongFormat = "Password does not contain specific symbols"
 )
 
+const (
+	minLen = 8
+	maxLen = 32
+)
+
 func ValidateEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
 
 	return err == nil
 }
 
-func ValidatePassword(password string) string {
-	switch {
-	case len(password) < 8:
-		return ErrTooShort
-	case len(password) > 32:
-		return ErrTooLong
-	}
-
+func checkSymbols(password string) bool {
 	specialChars := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
@@ -43,7 +41,18 @@ func ValidatePassword(password string) string {
 		}
 	}
 
-	if !(hasLower && hasUpper && hasSpecial && hasDigit) {
+	return hasLower && hasUpper && hasSpecial && hasDigit
+}
+
+func ValidatePassword(password string) string {
+	switch {
+	case len(password) < minLen:
+		return ErrTooShort
+	case len(password) > maxLen:
+		return ErrTooLong
+	}
+
+	if !checkSymbols(password) {
 		return ErrWrongFormat
 	}
 

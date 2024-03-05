@@ -7,8 +7,8 @@ import (
 type AuthOkResponse struct {
 	Code      int          `json:"code"`
 	User      storage.User `json:"user"`
-	SessionID string       `json:"session_id"`
-	IsAuth    bool         `json:"is_auth"`
+	SessionID string       `json:"sessionId"`
+	IsAuth    bool         `json:"isAuth"`
 }
 
 type AuthErrResponse struct {

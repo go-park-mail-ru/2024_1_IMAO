@@ -16,8 +16,8 @@ type Image struct {
 }
 
 type Advert struct {
-	ID          uint   `json:"ID"`
-	UserID      uint   `json:"userID"`
+	ID          uint   `json:"id"`
+	UserID      uint   `json:"userId"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       uint   `json:"price"`
@@ -58,15 +58,15 @@ func (ads *AdvertsList) GetSeveralAdverts(number uint) ([]*Advert, error) {
 
 	returningAds := make([]*Advert, number)
 
-	for i := 0; i < int(number); i++ {
-		returningAds[i] = &Advert{
-			ID:          ads.Adverts[i].ID,
-			UserID:      ads.Adverts[i].UserID,
-			Title:       ads.Adverts[i].Title,
-			Description: ads.Adverts[i].Description,
-			Price:       ads.Adverts[i].Price,
-			Image:       ads.Adverts[i].Image,
-			Location:    ads.Adverts[i].Location,
+	for ind := 0; ind < int(number); ind++ {
+		returningAds[ind] = &Advert{
+			ID:          ads.Adverts[ind].ID,
+			UserID:      ads.Adverts[ind].UserID,
+			Title:       ads.Adverts[ind].Title,
+			Description: ads.Adverts[ind].Description,
+			Price:       ads.Adverts[ind].Price,
+			Image:       ads.Adverts[ind].Image,
+			Location:    ads.Adverts[ind].Location,
 		}
 	}
 

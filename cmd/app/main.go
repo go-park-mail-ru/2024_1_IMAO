@@ -8,9 +8,7 @@ import (
 func main() {
 	srv := new(app.Server)
 
-	err := srv.Run()
-
-	if err != nil {
+	if err := srv.Run(); err != nil {
 		log.Fatal("Error occurred while starting server:", err.Error())
 	}
 }

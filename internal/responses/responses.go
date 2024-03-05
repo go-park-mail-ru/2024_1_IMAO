@@ -60,7 +60,7 @@ func SendOkResponse(writer http.ResponseWriter, response any) {
 	sendResponse(writer, response)
 }
 
-func SendErrResponse(writer http.ResponseWriter, response any, code int) {
+func SendErrResponse(writer http.ResponseWriter, response any) {
 	writer.Header().Set("Content-Type", "application/json")
 	sendResponse(writer, response)
 }

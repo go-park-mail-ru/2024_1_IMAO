@@ -12,6 +12,10 @@ var (
 	errSessionNotExists = errors.New("session does not exist")
 )
 
+const (
+	sessionIDLen = 32
+)
+
 type UnauthorizedUser struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
@@ -27,7 +31,7 @@ type User struct {
 }
 
 type UsersList struct {
-	//Ключ - id сессии, значение - id пользователя
+	// Ключ - id сессии, значение - id пользователя
 	Sessions   map[string]uint
 	Users      map[string]*User
 	UsersCount uint
@@ -109,7 +113,7 @@ func (active *UsersList) SessionExists(sessionID string) bool {
 }
 
 func (active *UsersList) AddSession(email string) string {
-	sessionID := pkg.RandString(32)
+	sessionID := pkg.RandString(sessionIDLen)
 
 	active.mu.Lock()
 	defer active.mu.Unlock()

@@ -3,21 +3,35 @@ package app
 import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"net/http"
+	"time"
+)
+
+const (
+	Timeout = time.Second * 3
+	Address = ":8080"
 )
 
 type Server struct {
-	router *mux.Router
+	server *http.Server
 }
 
 func (srv *Server) Run() error {
-	srv.router = myhandlers.NewRouter()
+	router := myhandlers.NewRouter()
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	return http.ListenAndServe(":8080", handlers.CORS(credentials, originsOk, headersOk, methodsOk)(srv.router))
+	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
+
+	srv.server = &http.Server{
+		Addr:         Address,
+		Handler:      muxWithCORS,
+		ReadTimeout:  Timeout,
+		WriteTimeout: Timeout,
+	}
+
+	return srv.server.ListenAndServe()
 }
