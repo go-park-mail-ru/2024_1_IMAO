@@ -2,8 +2,9 @@ package storage
 
 import (
 	"errors"
-	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 	"sync"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 )
 
 var (

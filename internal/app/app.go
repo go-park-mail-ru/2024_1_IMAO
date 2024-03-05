@@ -1,10 +1,11 @@
 package app
 
 import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
-	"github.com/gorilla/handlers"
 	"net/http"
 	"time"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
+	"github.com/gorilla/handlers"
 )
 
 const (

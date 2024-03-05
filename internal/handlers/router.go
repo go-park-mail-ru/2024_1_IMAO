@@ -1,11 +1,12 @@
 package myhandlers
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 	"github.com/gorilla/mux"
-	"log"
-	"net/http"
 )
 
 type AuthHandler struct {

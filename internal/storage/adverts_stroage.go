@@ -1,9 +1,10 @@
 package storage
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"sync"
 )
 
@@ -12,8 +13,11 @@ var (
 	errWrongAdvertsAmount = errors.New("too many elements specified")
 )
 
-type Image struct {
-}
+const (
+	maxPrice = 1000
+)
+
+type Image struct{}
 
 type Advert struct {
 	ID          uint   `json:"id"`
@@ -89,6 +93,7 @@ func NewAdvertsList() *AdvertsList {
 
 func FillAdvertsList(ads *AdvertsList) {
 	for i := 1; i <= 60; i++ {
+		price, _ := rand.Int(rand.Reader, big.NewInt(int64(maxPrice)))
 		advertID := ads.GetLastID()
 		ads.Adverts = append(ads.Adverts, &Advert{
 			ID:          advertID,
@@ -96,7 +101,7 @@ func FillAdvertsList(ads *AdvertsList) {
 			Title:       fmt.Sprintf("Объявление № %d", advertID),
 			Image:       Image{},
 			Description: fmt.Sprintf("Текст в объявлениии № %d", advertID),
-			Price:       uint(rand.Intn(1000)) * advertID,
+			Price:       uint(price.Uint64()) * advertID,
 			Location:    "Москва",
 		})
 	}

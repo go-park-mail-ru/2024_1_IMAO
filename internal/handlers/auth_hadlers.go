@@ -1,12 +1,13 @@
 package myhandlers
 
 import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
-	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
+	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 )
 
 const (
@@ -40,8 +41,8 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	email := user.Email
 	password := user.Password
-	expectedUser, err := usersList.GetUserByEmail(email)
 
+	expectedUser, err := usersList.GetUserByEmail(email)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
@@ -82,7 +83,6 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	usersList := authHandler.List
 
 	session, err := request.Cookie("session_id")
-
 	if err != nil {
 		log.Println(err, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusUnauthorized,
@@ -92,7 +92,6 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	}
 
 	err = usersList.RemoveSession(session.Value)
-
 	if err != nil {
 		log.Println(err, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusUnauthorized,
@@ -107,6 +106,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	log.Println("You have been logged out")
 }
 
+//nolint:funlen
 func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)

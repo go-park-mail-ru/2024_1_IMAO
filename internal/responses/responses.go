@@ -20,7 +20,7 @@ const (
 
 const (
 	ErrUserAlreadyExists  = "User with same email already exists"
-	ErrWrongCredentials   = "Wrong credentials"
+	ErrWrongCredentials   = "Wrong credentials" //nolint:gosec
 	ErrUnauthorized       = "User not authorized"
 	ErrAuthorized         = "User already authorized"
 	ErrWrongEmailFormat   = "Wrong email format"
@@ -36,7 +36,6 @@ const (
 
 func sendResponse(writer http.ResponseWriter, response any) {
 	serverResponse, err := json.Marshal(response)
-
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, ErrInternalServer, StatusInternalServerError)
@@ -45,7 +44,6 @@ func sendResponse(writer http.ResponseWriter, response any) {
 	}
 
 	_, err = writer.Write(serverResponse)
-
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, ErrInternalServer, StatusInternalServerError)

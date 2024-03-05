@@ -1,9 +1,10 @@
 package myhandlers
 
 import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 	"log"
 	"net/http"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 )
 
 const (
@@ -20,7 +21,6 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 	list := advertsHandler.List
 
 	adsList, err := list.GetSeveralAdverts(advertsPerPage)
-
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,

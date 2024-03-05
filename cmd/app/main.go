@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/app"
 	"log"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/app"
 )
 
 func main() {
