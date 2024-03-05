@@ -27,3 +27,12 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 
 	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(adsList))
 }
+
+func PanicHandler(writer http.ResponseWriter) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Panic happened:", err)
+			http.Error(writer, responses.ErrInternalServer, responses.StatusInternalServerError)
+		}
+	}()
+}

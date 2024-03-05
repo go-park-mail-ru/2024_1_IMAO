@@ -24,7 +24,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	session, err := request.Cookie("session_id")
 
-	if err == nil || usersList.SessionExists(session.Value) {
+	if err == nil && usersList.SessionExists(session.Value) {
 		log.Println("User already authorized", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized), responses.StatusBadRequest)
@@ -35,14 +35,6 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	user := storage.UnauthorizedUser{
 		Email:    request.PostFormValue("email"),
 		Password: request.PostFormValue("password"),
-	}
-
-	if err != nil {
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest), responses.StatusBadRequest)
-
-		return
 	}
 
 	email := user.Email

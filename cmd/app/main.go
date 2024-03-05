@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-
 	srv := new(app.Server)
 
 	err := srv.Run()
