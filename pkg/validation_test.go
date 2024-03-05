@@ -33,53 +33,6 @@ func TestValidateEmail(t *testing.T) {
 	}
 }
 
-func TestCheckSymbols(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		password string
-		want     bool
-	}{
-		{
-			name:     "Valid password",
-			password: "Password123!",
-			want:     true,
-		},
-		{
-			name:     "Invalid password - missing special character",
-			password: "Password123",
-			want:     false,
-		},
-		{
-			name:     "Invalid password - missing uppercase",
-			password: "password123!",
-			want:     false,
-		},
-		{
-			name:     "Invalid password - missing lowercase",
-			password: "PASSWORD123!",
-			want:     false,
-		},
-		{
-			name:     "Invalid password - missing digit",
-			password: "Password!",
-			want:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := pkg.CheckSymbols(tt.password); got != tt.want {
-				t.Errorf("CheckSymbols() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestValidatePassword(t *testing.T) {
 	t.Parallel()
 

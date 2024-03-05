@@ -106,3 +106,9 @@ func FillAdvertsList(ads *AdvertsList) {
 		})
 	}
 }
+
+func AddAdvert(ads *AdvertsList, advert *Advert) {
+
+	ads.Adverts = append(ads.Adverts, advert)
+
+}

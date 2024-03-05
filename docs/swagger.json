@@ -9,8 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "109.120.183.3:8080",
-    "basePath": "/api/v1",
+    "host": "109.120.183.3:8008",
     "paths": {
         "/adverts": {
             "get": {

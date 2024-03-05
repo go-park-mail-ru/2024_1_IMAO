@@ -11,8 +11,7 @@ import (
 //	@description  This is a server of YULA server.
 //
 // @Schemes http
-// @host  109.120.183.3:8080
-// @BasePath  /api/v1
+// @host  109.120.183.3:8008
 func main() {
 	srv := new(app.Server)
 

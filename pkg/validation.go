@@ -23,7 +23,7 @@ func ValidateEmail(email string) bool {
 	return err == nil
 }
 
-func CheckSymbols(password string) bool {
+func checkSymbols(password string) bool {
 	specialChars := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
@@ -52,7 +52,7 @@ func ValidatePassword(password string) string {
 		return ErrTooLong
 	}
 
-	if !CheckSymbols(password) {
+	if !checkSymbols(password) {
 		return ErrWrongFormat
 	}
 

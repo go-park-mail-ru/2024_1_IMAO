@@ -345,8 +345,8 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "109.120.183.3:8080",
-	BasePath:         "/api/v1",
+	Host:             "109.120.183.3:8008",
+	BasePath:         "",
 	Schemes:          []string{"http"},
 	Title:            "YULA project API",
 	Description:      "This is a server of YULA server.",
