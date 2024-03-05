@@ -14,6 +14,20 @@ const (
 	sessionTime = 24 * time.Hour
 )
 
+// Login godoc
+// @Summary User login
+// @Description Authenticate user and create a new session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param email formData string true "User email"
+// @Param password formData string true "User password"
+// @Success 200 {object} responses.AuthOkResponse
+// @Failure 400 {object} responses.AuthErrResponse "Bad request"
+// @Failure 401 {object} responses.AuthErrResponse "Unauthorized"
+// @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
+// @Failure 500 {object} responses.AuthErrResponse "Internal server error"
+// @Router /login [post]
 func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -73,6 +87,18 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	log.Println("You have been authorized with session ID:", sessionID)
 }
 
+// Logout godoc
+// @Summary User logout
+// @Description Invalidate the user session and log the user out
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200
+// @Failure 400 {object} responses.AuthErrResponse "Bad request"
+// @Failure 401 {object} responses.AuthErrResponse "User not authorized"
+// @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
+// @Failure 500 {object} responses.AuthErrResponse "Internal server error"
+// @Router /logout [post]
 func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -106,8 +132,22 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	log.Println("You have been logged out")
 }
 
-//nolint:funlen
-func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) {
+// Signup godoc
+// @Summary User signup
+// @Description Register a new user and create a new session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param email formData string true "User email"
+// @Param password formData string true "User password"
+// @Param passwordRepeat formData string true "Password confirmation"
+// @Success 201 {object} responses.AuthOkResponse
+// @Failure 400 {object} responses.AuthErrResponse "Bad request"
+// @Failure 401 {object} responses.AuthErrResponse "User not authorized"
+// @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
+// @Failure 500 {object} responses.AuthErrResponse "Internal server error"
+// @Router /signup [post]
+func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
@@ -185,6 +225,14 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	log.Println("You have been authorized with session ID:", sessionID)
 }
 
+// CheckAuth godoc
+// @Summary Check user authentication
+// @Description Verify if the user is authenticated by checking the session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} responses.AuthOkResponse
+// @Router /checkauth [get]
 func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
