@@ -22,9 +22,9 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	usersList := authHandler.List
 
-	session, err := request.Cookie("session_id")
+	session, cookieErr := request.Cookie("session_id")
 
-	if err == nil && usersList.SessionExists(session.Value) {
+	if cookieErr == nil && usersList.SessionExists(session.Value) {
 		log.Println("User already authorized", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized))
@@ -116,9 +116,9 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	usersList := authHandler.List
 
-	session, err := request.Cookie("session_id")
+	session, cookieErr := request.Cookie("session_id")
 
-	if err == nil || usersList.SessionExists(session.Value) {
+	if cookieErr == nil && usersList.SessionExists(session.Value) {
 		log.Println("User already authorized", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized))
@@ -132,17 +132,25 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		PasswordRepeat: request.PostFormValue("passwordRepeat"),
 	}
 
-	if err != nil {
-		log.Println(err, responses.StatusBadRequest)
+	email := newUser.Email
+	password := newUser.Password
+	passwordRepeat := newUser.PasswordRepeat
+
+	if !pkg.ValidateEmail(email) {
+		log.Println("Bad email format", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+			responses.ErrWrongEmailFormat))
 
 		return
 	}
 
-	email := newUser.Email
-	password := newUser.Password
-	passwordRepeat := newUser.PasswordRepeat
+	if usersList.UserExists(email) {
+		log.Println("User already exists", responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
+			responses.ErrUserAlreadyExists))
+
+		return
+	}
 
 	if password != passwordRepeat {
 		log.Println("Passwords do not match")
@@ -161,23 +169,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	if !pkg.ValidateEmail(email) {
-		log.Println("Bad email format", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongEmailFormat))
-
-		return
-	}
-
-	user, err := usersList.CreateUser(email, pkg.HashPassword(password))
-
-	if err != nil {
-		log.Println("User already exists", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrUserAlreadyExists))
-
-		return
-	}
+	user, _ := usersList.CreateUser(email, pkg.HashPassword(password))
 
 	sessionID := usersList.AddSession(email)
 
