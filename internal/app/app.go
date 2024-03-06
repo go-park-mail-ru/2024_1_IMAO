@@ -1,10 +1,11 @@
 package app
 
 import (
+	"context"
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
+	myhandlers "github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
 	"github.com/gorilla/handlers"
 )
 
@@ -35,4 +36,14 @@ func (srv *Server) Run() error {
 	}
 
 	return srv.server.ListenAndServe()
+}
+
+func (srv *Server) Shutdown() error {
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+
+	if err := srv.server.Shutdown(ctx); err != nil {
+		return err
+	}
+	return nil
 }

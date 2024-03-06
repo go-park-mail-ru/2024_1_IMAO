@@ -506,3 +506,111 @@ func TestLoginAllowedMethods(t *testing.T) {
 		}
 	})
 }
+
+func TestSignUpAllowedMethods(t *testing.T) {
+	t.Parallel()
+
+	authHandler := &handler.AuthHandler{}
+
+	t.Run("GET request", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/signup", nil)
+		w := httptest.NewRecorder()
+
+		authHandler.Signup(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status MethodNotAllowed, got %v", w.Code)
+		}
+	})
+
+	t.Run("POST request", func(t *testing.T) {
+		t.Parallel()
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		if err := writer.WriteField("email", "example@mail.ru"); err != nil {
+			t.Fatalf("Failed to write 'email' field: %v", err)
+		}
+
+		if err := writer.Close(); err != nil {
+			t.Fatalf("Failed to close writer: %v", err)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, "/signup", body)
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		w := httptest.NewRecorder()
+
+		usersList := storage.NewActiveUser()
+		authHandler := &handler.AuthHandler{
+			List: usersList,
+		}
+
+		authHandler.Signup(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status OK, got %v", w.Code)
+		}
+	})
+}
+
+func TestLogoutAllowedMethods(t *testing.T) {
+	t.Parallel()
+
+	authHandler := &handler.AuthHandler{}
+
+	t.Run("GET request", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+		w := httptest.NewRecorder()
+
+		authHandler.Logout(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status MethodNotAllowed, got %v", w.Code)
+		}
+	})
+
+	t.Run("POST request", func(t *testing.T) {
+		t.Parallel()
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		if err := writer.WriteField("email", "example@mail.ru"); err != nil {
+			t.Fatalf("Failed to write 'email' field: %v", err)
+		}
+
+		if err := writer.Close(); err != nil {
+			t.Fatalf("Failed to close writer: %v", err)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, "/logout", body)
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		w := httptest.NewRecorder()
+
+		usersList := storage.NewActiveUser()
+		authHandler := &handler.AuthHandler{
+			List: usersList,
+		}
+
+		authHandler.Logout(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status OK, got %v", w.Code)
+		}
+	})
+}
