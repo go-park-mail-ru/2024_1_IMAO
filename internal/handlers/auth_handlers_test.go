@@ -474,13 +474,30 @@ func TestLoginAllowedMethods(t *testing.T) {
 	t.Run("POST request", func(t *testing.T) {
 		t.Parallel()
 
-		body, _ := createLoginRequestBody(t, &storage.UnauthorizedUser{
-			Email:          `example@mail.ru`,
-			Password:       "123456",
-			PasswordRepeat: "",
-		})
-		req := httptest.NewRequest(http.MethodPost, "/login", body)
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		if err := writer.WriteField("email", "example@mail.ru"); err != nil {
+			t.Fatalf("Failed to write 'email' field: %v", err)
+		}
+
+		if err := writer.Close(); err != nil {
+			t.Fatalf("Failed to close writer: %v", err)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, "/login", body)
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
 		w := httptest.NewRecorder()
+
+		usersList := storage.NewActiveUser()
+		authHandler := &handler.AuthHandler{
+			List: usersList,
+		}
 
 		authHandler.Login(w, req)
 
