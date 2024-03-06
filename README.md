@@ -24,6 +24,13 @@ http://109.120.183.3:8008
 `go run cmd/app/main.go`
 
 ### Тестирование
+```
+go test --cover  ./...
+```
+или
+```
+mkdir -p bin && go test -coverprofile=bin/cover.out ./internal/... && go tool cover -html=bin/cover.out -o=bin/cover.html && go tool cover --func bin/cover.out
+```
 
 
 ## Документация
