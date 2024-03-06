@@ -145,10 +145,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 // @Param password formData string true "User password"
 // @Param passwordRepeat formData string true "Password confirmation"
 // @Success 201 {object} responses.AuthOkResponse
-// @Failure 400 {object} responses.AuthErrResponse "User already authorized"
-// @Failure 400 {object} responses.AuthErrResponse "Wrong email format"
-// @Failure 400 {object} responses.AuthErrResponse "User with same email already exists"
-// @Failure 400 {object} responses.AuthErrResponse "Passwords do not match"
+// @Failure 400 {object} responses.AuthErrResponse
 // @Router /signup [post]
 func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
 	if request.Method != http.MethodPost {

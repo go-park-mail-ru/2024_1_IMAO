@@ -3,10 +3,12 @@ package myhandlers_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	handler "github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
@@ -199,5 +201,145 @@ func TestSignUpHandlerSuccessful(t *testing.T) { //nolint:funlen
 					resultResponse, testCase.expectedResponse)
 			}
 		})
+	}
+}
+
+func TestLogoutHandlerSuccessful(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	type TestCase struct {
+		name             string
+		inputUser        *storage.UnauthorizedUser
+		expectedResponse *responses.AuthOkResponse
+	}
+
+	testCases := [...]TestCase{
+		{
+			name: "Base Test",
+			inputUser: &storage.UnauthorizedUser{
+				Email:          "example@mail.ru",
+				Password:       "123456",
+				PasswordRepeat: "",
+			},
+			expectedResponse: responses.NewAuthOkResponse(storage.User{
+				ID:           0,
+				Name:         "",
+				Surname:      "",
+				Email:        "",
+				PasswordHash: "",
+			}, "", false),
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			body, writer := createLoginRequestBody(t, testCase.inputUser)
+			req, err := http.NewRequest(http.MethodPost, "/login", body)
+
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+
+			responseWriter1 := httptest.NewRecorder()
+			usersList := storage.NewActiveUser()
+			authHandler := &handler.AuthHandler{
+				List: usersList,
+			}
+			authHandler.Login(responseWriter1, req)
+
+			sessionID := extractSessionID(t, responseWriter1.Result())
+
+			req2, err := createLogoutRequest(sessionID)
+			if err != nil {
+				t.Fatalf("Failed to create logout request: %v", err)
+			}
+
+			responseWriter2 := httptest.NewRecorder()
+			authHandler.Logout(responseWriter2, req2)
+
+			resp := responseWriter2.Result()
+
+			defer resp.Body.Close()
+
+			checkLogoutResponse(t, resp, testCase.expectedResponse)
+		})
+	}
+}
+
+func createLoginRequestBody(t *testing.T, user *storage.UnauthorizedUser) (*bytes.Buffer, *multipart.Writer) {
+	t.Helper()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for _, field := range []struct {
+		Name  string
+		Value string
+	}{
+		{"email", user.Email},
+		{"password", user.Password},
+		{"passwordRepeat", user.PasswordRepeat},
+	} {
+		if err := writer.WriteField(field.Name, field.Value); err != nil {
+			t.Fatalf("Failed to write '%s' field: %v", field.Name, err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Failed to close writer: %v", err)
+	}
+
+	return body, writer
+}
+
+func createLogoutRequest(sessionID string) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodPost, "/logout", nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Cookie", fmt.Sprintf("session_id=%s", sessionID))
+
+	return req, nil
+}
+
+func extractSessionID(t *testing.T, resp *http.Response) string {
+	t.Helper()
+
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "session_id" {
+			return cookie.Value
+		}
+	}
+
+	t.Fatal("Failed to extract session_id from response")
+
+	return ""
+}
+
+func checkLogoutResponse(t *testing.T, resp *http.Response, expectedResponse *responses.AuthOkResponse) {
+	t.Helper()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK, got %v", resp.StatusCode)
+	}
+
+	var resultResponse responses.AuthOkResponse
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	err := json.Unmarshal(bodyBytes, &resultResponse)
+
+	if err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+
+	if !reflect.DeepEqual(resultResponse, *expectedResponse) {
+		t.Errorf("Expected response %+v, got %+v", *expectedResponse, resultResponse)
 	}
 }
