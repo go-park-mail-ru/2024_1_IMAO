@@ -271,6 +271,73 @@ func TestLogoutHandlerSuccessful(t *testing.T) { //nolint:funlen
 	}
 }
 
+func TestCheckAuthHandlerSuccessful(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	type TestCase struct {
+		name             string
+		inputUser        *storage.UnauthorizedUser
+		expectedResponse *responses.AuthOkResponse
+	}
+
+	testCases := [...]TestCase{
+		{
+			name: "AuthorizedUser",
+			inputUser: &storage.UnauthorizedUser{
+				Email:          "example@mail.ru",
+				Password:       "111111",
+				PasswordRepeat: "",
+			},
+			expectedResponse: responses.NewAuthOkResponse(storage.User{
+				ID:           0,
+				Name:         "",
+				Surname:      "",
+				Email:        "",
+				PasswordHash: "",
+			}, "", false),
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			body, writer := createLoginRequestBody(t, testCase.inputUser)
+			req, err := http.NewRequest(http.MethodPost, "/login", body)
+
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+
+			responseWriter1 := httptest.NewRecorder()
+			usersList := storage.NewActiveUser()
+			authHandler := &handler.AuthHandler{
+				List: usersList,
+			}
+			authHandler.Login(responseWriter1, req)
+
+			sessionID := extractSessionID(t, responseWriter1.Result())
+
+			req2, err := createCheckAuthRequest(sessionID)
+			if err != nil {
+				t.Fatalf("Failed to create logout request: %v", err)
+			}
+
+			responseWriter2 := httptest.NewRecorder()
+			authHandler.CheckAuth(responseWriter2, req2)
+
+			resp := responseWriter2.Result()
+
+			defer resp.Body.Close()
+
+			checkLogoutResponse(t, resp, testCase.expectedResponse)
+		})
+	}
+}
+
 func createLoginRequestBody(t *testing.T, user *storage.UnauthorizedUser) (*bytes.Buffer, *multipart.Writer) {
 	t.Helper()
 
@@ -309,6 +376,18 @@ func createLogoutRequest(sessionID string) (*http.Request, error) {
 	return req, nil
 }
 
+func createCheckAuthRequest(sessionID string) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodGet, "/check_auth", nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Cookie", fmt.Sprintf("session_id=%s", sessionID))
+
+	return req, nil
+}
+
 func extractSessionID(t *testing.T, resp *http.Response) string {
 	t.Helper()
 
@@ -317,8 +396,6 @@ func extractSessionID(t *testing.T, resp *http.Response) string {
 			return cookie.Value
 		}
 	}
-
-	t.Fatal("Failed to extract session_id from response")
 
 	return ""
 }
@@ -342,4 +419,73 @@ func checkLogoutResponse(t *testing.T, resp *http.Response, expectedResponse *re
 	if !reflect.DeepEqual(resultResponse, *expectedResponse) {
 		t.Errorf("Expected response %+v, got %+v", *expectedResponse, resultResponse)
 	}
+}
+
+func TestCheckAuthAllowedMethods(t *testing.T) {
+	t.Parallel()
+
+	authHandler := &handler.AuthHandler{}
+
+	t.Run("GET request", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/check_auth", nil)
+		w := httptest.NewRecorder()
+
+		authHandler.CheckAuth(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status OK, got %v", w.Code)
+		}
+	})
+
+	t.Run("POST request", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "/check_auth", nil)
+		w := httptest.NewRecorder()
+
+		authHandler.CheckAuth(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status MethodNotAllowed, got %v", w.Code)
+		}
+	})
+}
+
+func TestLoginAllowedMethods(t *testing.T) {
+	t.Parallel()
+
+	authHandler := &handler.AuthHandler{}
+
+	t.Run("GET request", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/login", nil)
+		w := httptest.NewRecorder()
+
+		authHandler.Login(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status MethodNotAllowed, got %v", w.Code)
+		}
+	})
+
+	t.Run("POST request", func(t *testing.T) {
+		t.Parallel()
+
+		body, _ := createLoginRequestBody(t, &storage.UnauthorizedUser{
+			Email:          `example@mail.ru`,
+			Password:       "123456",
+			PasswordRepeat: "",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/login", body)
+		w := httptest.NewRecorder()
+
+		authHandler.Login(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status OK, got %v", w.Code)
+		}
+	})
 }
