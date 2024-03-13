@@ -76,9 +76,10 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	sessionID := usersList.AddSession(email)
 
 	cookie := &http.Cookie{
-		Name:    "session_id",
-		Value:   sessionID,
-		Expires: time.Now().Add(sessionTime),
+		Name:     "session_id",
+		Value:    sessionID,
+		Expires:  time.Now().Add(sessionTime),
+		HttpOnly: true,
 	}
 	http.SetCookie(writer, cookie)
 
@@ -214,9 +215,10 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	sessionID := usersList.AddSession(email)
 
 	cookie := &http.Cookie{
-		Name:    "session_id",
-		Value:   sessionID,
-		Expires: time.Now().Add(sessionTime),
+		Name:     "session_id",
+		Value:    sessionID,
+		Expires:  time.Now().Add(sessionTime),
+		HttpOnly: true,
 	}
 	http.SetCookie(writer, cookie)
 
