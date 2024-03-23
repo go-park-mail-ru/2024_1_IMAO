@@ -34,12 +34,12 @@ func NewRouter() *mux.Router {
 
 	log.Println("Server is running")
 
-	router.HandleFunc("/", advertsHandler.Root)
+	router.HandleFunc("api/adverts/", advertsHandler.Root)
 
-	router.HandleFunc("/login", authHandler.Login)
-	router.HandleFunc("/check_auth", authHandler.CheckAuth)
-	router.HandleFunc("/logout", authHandler.Logout)
-	router.HandleFunc("/signup", authHandler.Signup)
+	router.HandleFunc("api/auth/login", authHandler.Login)
+	router.HandleFunc("api/auth/check_auth", authHandler.CheckAuth)
+	router.HandleFunc("api/auth/logout", authHandler.Logout)
+	router.HandleFunc("api/auth/signup", authHandler.Signup)
 
 	return router
 }

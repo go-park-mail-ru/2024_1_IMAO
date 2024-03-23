@@ -1,6 +1,7 @@
 package myhandlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -47,11 +48,9 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	user := storage.UnauthorizedUser{
-		Email:          request.PostFormValue("email"),
-		Password:       request.PostFormValue("password"),
-		PasswordRepeat: "",
-	}
+	var user storage.UnauthorizedUser
+
+	json.NewDecoder(request.Body).Decode(&user)
 
 	email := user.Email
 	password := user.Password
@@ -167,11 +166,9 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	newUser := storage.UnauthorizedUser{
-		Email:          request.PostFormValue("email"),
-		Password:       request.PostFormValue("password"),
-		PasswordRepeat: request.PostFormValue("passwordRepeat"),
-	}
+	var newUser storage.UnauthorizedUser
+
+	json.NewDecoder(request.Body).Decode(&newUser)
 
 	email := newUser.Email
 	password := newUser.Password
