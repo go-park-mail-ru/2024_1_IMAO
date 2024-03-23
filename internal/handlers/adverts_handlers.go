@@ -21,7 +21,7 @@ const (
 // @Failure 400 {object} responses.AdvertsErrResponse "Too many adverts specified"
 // @Failure 405 {object} responses.AdvertsErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
-// @Router /adverts [get]
+// @Router /api/adverts [get]
 func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)

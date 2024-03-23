@@ -2,14 +2,14 @@ package pkg
 
 import (
 	"net/mail"
-	"strings"
 	"unicode"
 )
 
 const (
-	ErrTooShort    = "Password is too short"
-	ErrTooLong     = "Password is too long"
-	ErrWrongFormat = "Password does not contain specific symbols"
+	ErrTooShort         = "Password is too short"
+	ErrTooLong          = "Password is too long"
+	ErrWrongFormat      = "Password does not contain required symbols"
+	ErrWrongEmailFormat = "Wrong email format"
 )
 
 const (
@@ -17,16 +17,14 @@ const (
 	maxLen = 32
 )
 
-func ValidateEmail(email string) bool {
+func validateEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
 
 	return err == nil
 }
 
 func checkSymbols(password string) bool {
-	specialChars := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-
-	var hasUpper, hasLower, hasDigit, hasSpecial bool
+	var hasUpper, hasLower, hasDigit bool
 
 	for _, char := range password {
 		switch {
@@ -36,25 +34,35 @@ func checkSymbols(password string) bool {
 			hasLower = true
 		case unicode.IsDigit(char):
 			hasDigit = true
-		case strings.ContainsRune(specialChars, char):
-			hasSpecial = true
 		}
 	}
 
-	return hasLower && hasUpper && hasSpecial && hasDigit
+	return hasLower && hasUpper && hasDigit
 }
 
-func ValidatePassword(password string) string {
+func validatePassword(password string) []string {
+	var errors []string
+
 	switch {
 	case len(password) < minLen:
-		return ErrTooShort
+		errors = append(errors, ErrTooShort)
 	case len(password) > maxLen:
-		return ErrTooLong
+		errors = append(errors, ErrTooLong)
 	}
 
 	if !checkSymbols(password) {
-		return ErrWrongFormat
+		errors = append(errors, ErrWrongFormat)
 	}
 
-	return ""
+	return errors
+}
+
+func Validate(email, password string) []string {
+	errors := validatePassword(password)
+
+	if !validateEmail(email) {
+		errors = append(errors, ErrWrongEmailFormat)
+	}
+
+	return errors
 }

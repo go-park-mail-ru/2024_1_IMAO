@@ -23,7 +23,6 @@ const (
 	ErrWrongCredentials   = "Wrong credentials" //nolint:gosec
 	ErrUnauthorized       = "User not authorized"
 	ErrAuthorized         = "User already authorized"
-	ErrWrongEmailFormat   = "Wrong email format"
 	ErrDifferentPasswords = "Passwords do not match"
 
 	ErrAdvertNotExist = "Advert does not exist"

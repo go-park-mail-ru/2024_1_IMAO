@@ -28,7 +28,7 @@ const (
 // @Failure 401 {object} responses.AuthErrResponse "Unauthorized"
 // @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AuthErrResponse "Internal server error"
-// @Router /login [post]
+// @Router /api/auth/login [post]
 func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -84,7 +84,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	userData := responses.NewAuthOkResponse(*expectedUser, sessionID, true)
 	responses.SendOkResponse(writer, userData)
-	log.Println("You have been authorized with session ID:", sessionID)
+	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
 }
 
 // Logout godoc
@@ -98,7 +98,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 // @Failure 401 {object} responses.AuthErrResponse "User not authorized"
 // @Failure 405 {object} responses.AuthErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AuthErrResponse "Internal server error"
-// @Router /logout [post]
+// @Router /api/auth/logout [post]
 func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -132,7 +132,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	userData := responses.NewAuthOkResponse(storage.User{}, "", false)
 	responses.SendOkResponse(writer, userData)
 
-	log.Println("You have been logged out")
+	log.Println("User have been logged out")
 }
 
 // Signup godoc
@@ -146,7 +146,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 // @Param passwordRepeat formData string true "Password confirmation"
 // @Success 201 {object} responses.AuthOkResponse
 // @Failure 400 {object} responses.AuthErrResponse
-// @Router /signup [post]
+// @Router /api/auth/signup [post]
 func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -174,14 +174,6 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	password := newUser.Password
 	passwordRepeat := newUser.PasswordRepeat
 
-	if !pkg.ValidateEmail(email) {
-		log.Println("Bad email format", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongEmailFormat))
-
-		return
-	}
-
 	if usersList.UserExists(email) {
 		log.Println("User already exists", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
@@ -190,19 +182,19 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	if password != passwordRepeat {
-		log.Println("Passwords do not match")
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrDifferentPasswords))
+	errors := pkg.Validate(email, password)
+	if errors != nil {
+		log.Println("Bad user data", responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewValidationErrResponse(responses.StatusBadRequest,
+			errors))
 
 		return
 	}
 
-	if pkg.ValidatePassword(password) != "" {
-		missed := pkg.ValidatePassword(password)
-		log.Println("Bad password format:", missed, responses.StatusBadRequest)
+	if password != passwordRepeat {
+		log.Println("Passwords do not match")
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
-			missed))
+			responses.ErrDifferentPasswords))
 
 		return
 	}
@@ -221,7 +213,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	responses.SendOkResponse(writer, responses.NewAuthOkResponse(*user, sessionID, true))
 
-	log.Println("You have been authorized with session ID:", sessionID)
+	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
 }
 
 // CheckAuth godoc
@@ -231,7 +223,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 // @Accept json
 // @Produce json
 // @Success 200 {object} responses.AuthOkResponse
-// @Router /check_auth [get]
+// @Router /api/auth/check_auth [get]
 func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)

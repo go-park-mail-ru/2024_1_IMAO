@@ -16,6 +16,11 @@ type AuthErrResponse struct {
 	Status string `json:"status"`
 }
 
+type ValidationErrResponse struct {
+	Code   int      `json:"code"`
+	Status []string `json:"status"`
+}
+
 func NewAuthOkResponse(user storage.User, sessionID string, isAuth bool) *AuthOkResponse {
 	return &AuthOkResponse{
 		Code:      StatusOk,
@@ -27,6 +32,13 @@ func NewAuthOkResponse(user storage.User, sessionID string, isAuth bool) *AuthOk
 
 func NewAuthErrResponse(code int, status string) *AuthErrResponse {
 	return &AuthErrResponse{
+		Code:   code,
+		Status: status,
+	}
+}
+
+func NewValidationErrResponse(code int, status []string) *ValidationErrResponse {
+	return &ValidationErrResponse{
 		Code:   code,
 		Status: status,
 	}
