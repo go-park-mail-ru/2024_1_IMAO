@@ -41,7 +41,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	session, cookieErr := request.Cookie("session_id")
 
 	if cookieErr == nil && usersList.SessionExists(session.Value) {
-		log.Println("User already authorized", responses.StatusBadRequest)
+		log.Println(responses.ErrAuthorized, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized))
 
@@ -50,7 +50,12 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	var user storage.UnauthorizedUser
 
-	json.NewDecoder(request.Body).Decode(&user)
+	err := json.NewDecoder(request.Body).Decode(&user)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
 
 	email := user.Email
 	password := user.Password
@@ -168,7 +173,12 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	var newUser storage.UnauthorizedUser
 
-	json.NewDecoder(request.Body).Decode(&newUser)
+	err := json.NewDecoder(request.Body).Decode(&newUser)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
 
 	email := newUser.Email
 	password := newUser.Password

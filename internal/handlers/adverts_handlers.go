@@ -1,6 +1,9 @@
 package myhandlers
 
 import (
+	"encoding/json"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 
@@ -9,6 +12,7 @@ import (
 
 const (
 	advertsPerPage = 30
+	defaultCity    = "Moskva"
 )
 
 // Root godoc
@@ -29,13 +33,33 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 		return
 	}
 
-	list := advertsHandler.List
+	vars := mux.Vars(request)
+	city := vars["city"]
 
-	adsList, err := list.GetSeveralAdverts(advertsPerPage)
+	list := advertsHandler.List
+	var data storage.ReceivedAdsData
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	if city == "" && data.City != "" {
+		city = data.City
+	} else if city == "" {
+		city = defaultCity
+	}
+
+	count := data.Count
+	startID := data.StartID
+
+	adsList, err := list.GetAdvertsByCity(city, count, startID)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
-			responses.ErrTooManyAdverts))
+			responses.ErrBadRequest))
 
 		return
 	}
@@ -43,11 +67,54 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(adsList))
 }
 
-func PanicHandler(writer http.ResponseWriter) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println("Panic happened:", err)
-			http.Error(writer, responses.ErrInternalServer, responses.StatusInternalServerError)
-		}
-	}()
+func (advertsHandler *AdvertsHandler) GetCategoryAds(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	vars := mux.Vars(request)
+	city := vars["city"]
+	category := vars["category"]
+
+	list := advertsHandler.List
+	var data storage.ReceivedAdsData
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	count := data.Count
+	startID := data.StartID
+
+	adsList, err := list.GetAdvertsByCategory(city, category, count, startID)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(adsList))
+}
+
+func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
+
+}
+
+func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
+
+}
+
+func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, request *http.Request) {
+
+}
+
+func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
+
 }
