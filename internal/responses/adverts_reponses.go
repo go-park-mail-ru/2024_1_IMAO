@@ -5,8 +5,8 @@ import (
 )
 
 type AdvertsOkResponse struct {
-	Code    int               `json:"code"`
-	Adverts []*storage.Advert `json:"adverts"`
+	Code  int                        `json:"code"`
+	Items []*storage.ReturningAdvert `json:"items"`
 }
 
 type AdvertsErrResponse struct {
@@ -14,10 +14,10 @@ type AdvertsErrResponse struct {
 	Status string `json:"status"`
 }
 
-func NewAdvertsOkResponse(adverts []*storage.Advert) *AdvertsOkResponse {
+func NewAdvertsOkResponse(adverts []*storage.ReturningAdvert) *AdvertsOkResponse {
 	return &AdvertsOkResponse{
-		Code:    StatusOk,
-		Adverts: adverts,
+		Code:  StatusOk,
+		Items: adverts,
 	}
 }
 

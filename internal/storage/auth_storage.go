@@ -44,7 +44,7 @@ type UsersInfo interface {
 	CreateUser(email, password string) (*User, error)
 	GetUserByEmail(email string) (*User, error)
 	GetUserBySession(sessionID string) (*User, error)
-	GetLastID() uint
+	getLastID() uint
 
 	SessionExists(sessionID string) bool
 	AddSession(email string) string
@@ -61,7 +61,7 @@ func (active *UsersList) UserExists(email string) bool {
 	return exists
 }
 
-func (active *UsersList) GetLastID() uint {
+func (active *UsersList) getLastID() uint {
 	active.UsersCount++
 
 	return active.UsersCount
@@ -76,7 +76,7 @@ func (active *UsersList) CreateUser(email, passwordHash string) (*User, error) {
 	defer active.mu.Unlock()
 
 	active.Users[email] = &User{
-		ID:           active.GetLastID(),
+		ID:           active.getLastID(),
 		PasswordHash: passwordHash,
 		Email:        email,
 	}
