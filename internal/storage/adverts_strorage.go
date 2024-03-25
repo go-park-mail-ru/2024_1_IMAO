@@ -24,10 +24,21 @@ const (
 
 type Image struct{}
 
-type ReceivedAdsData struct {
+type GettingAdsData struct {
 	Count   uint   `json:"count"`
 	City    string `json:"city"`
 	StartID uint   `json:"startId"`
+}
+
+type ReceivedAdData struct {
+	UserID      uint   `json:"userId"`
+	City        string `json:"city"`
+	Category    string `json:"category"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Price       uint   `json:"price"`
+	Image       Image  `json:"image"`
+	IsUsed      bool   `json:"isUsed"`
 }
 
 type Category struct {
@@ -77,6 +88,8 @@ type AdvertsInfo interface {
 	GetAdvert(advertID uint) (*ReturningAdvert, error)
 	GetAdvertsByCity(city string, startID, number uint) ([]*ReturningAdvert, error)
 	GetAdvertsByCategory(category, city string, startID, number uint) ([]*ReturningAdvert, error)
+
+	CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, error)
 
 	getCityID(city string) (uint, error)
 	getCategoryID(city string) (uint, error)
@@ -175,6 +188,46 @@ func (ads *AdvertsList) GetAdvertsByCategory(city, category string, number, star
 	return returningAds, nil
 }
 
+func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, error) {
+	cityID, err := ads.getCityID(data.City)
+	if err != nil {
+		return nil, err
+	}
+
+	categoryID, err := ads.getCategoryID(data.Category)
+	if err != nil {
+		return nil, err
+	}
+
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+
+	newAd := &Advert{
+		ID:          ads.getLastAdvertID(),
+		UserID:      data.UserID,
+		CityID:      cityID,
+		CategoryID:  categoryID,
+		Title:       data.Title,
+		Description: data.Description,
+		Price:       data.Price,
+		Created:     time.Now(),
+		Image:       data.Image,
+		Active:      true,
+		IsUsed:      data.IsUsed,
+	}
+
+	ads.Adverts = append(ads.Adverts, newAd)
+
+	var returningAds []*ReturningAdvert
+	returningAds = append(returningAds, &ReturningAdvert{
+		Advert:   *newAd,
+		City:     *ads.Cities[cityID-1],
+		Category: *ads.Categories[categoryID-1],
+	})
+
+	return returningAds, nil
+}
+
 func (ads *AdvertsList) getCityID(city string) (uint, error) {
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
@@ -193,7 +246,7 @@ func (ads *AdvertsList) getCategoryID(category string) (uint, error) {
 	defer ads.mu.Unlock()
 
 	for _, val := range ads.Categories {
-		if val.Translation == category {
+		if val.Name == category || val.Translation == category {
 			return val.ID, nil
 		}
 	}

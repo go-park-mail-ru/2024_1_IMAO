@@ -37,7 +37,7 @@ func (advertsHandler *AdvertsHandler) Root(writer http.ResponseWriter, request *
 	city := vars["city"]
 
 	list := advertsHandler.List
-	var data storage.ReceivedAdsData
+	var data storage.GettingAdsData
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
@@ -79,7 +79,7 @@ func (advertsHandler *AdvertsHandler) GetCategoryAds(writer http.ResponseWriter,
 	category := vars["category"]
 
 	list := advertsHandler.List
-	var data storage.ReceivedAdsData
+	var data storage.GettingAdsData
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
@@ -104,7 +104,32 @@ func (advertsHandler *AdvertsHandler) GetCategoryAds(writer http.ResponseWriter,
 }
 
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
+		return
+	}
+
+	list := advertsHandler.List
+	var data storage.ReceivedAdData
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	adsList, err := list.CreateAdvert(data)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(adsList))
 }
 
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
