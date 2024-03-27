@@ -23,6 +23,11 @@ type UnauthorizedUser struct {
 	PasswordRepeat string `json:"passwordRepeat"`
 }
 
+type UnauthorizedUserTruncated struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type User struct {
 	ID           uint   `json:"id"`
 	Name         string `json:"name"`
