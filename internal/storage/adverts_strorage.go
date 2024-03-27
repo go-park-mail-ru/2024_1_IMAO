@@ -24,12 +24,6 @@ const (
 
 type Image struct{}
 
-type GettingAdsData struct {
-	Count   uint   `json:"count"`
-	City    string `json:"city"`
-	StartID uint   `json:"startId"`
-}
-
 type ReceivedAdData struct {
 	UserID      uint   `json:"userId"`
 	City        string `json:"city"`
