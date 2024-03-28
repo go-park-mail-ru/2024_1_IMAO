@@ -21,7 +21,8 @@ const (
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param UnauthorizedUserTruncated body storage.UnauthorizedUserTruncated true "User data for login"
+// @Param email formData string true "User email"
+// @Param password formData string true "User password"
 // @Success 200 {object} responses.AuthOkResponse
 // @Failure 400 {object} responses.AuthErrResponse "Bad request"
 // @Failure 401 {object} responses.AuthErrResponse "Unauthorized"
@@ -140,7 +141,9 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param UnauthorizedUser body storage.UnauthorizedUser true "User data for signup"
+// @Param email formData string true "User email"
+// @Param password formData string true "User password"
+// @Param passwordRepeat formData string true "Password confirmation"
 // @Success 201 {object} responses.AuthOkResponse
 // @Failure 400 {object} responses.AuthErrResponse
 // @Router /api/auth/signup [post]

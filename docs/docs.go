@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/adverts": {
+        "/adverts": {
             "get": {
                 "description": "Get a paginated list of adverts",
                 "consumes": [
@@ -56,7 +56,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/check_auth": {
+        "/check_auth": {
             "get": {
                 "description": "Verify if the user is authenticated by checking the session",
                 "consumes": [
@@ -79,7 +79,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/login": {
+        "/login": {
             "post": {
                 "description": "Authenticate user and create a new session",
                 "consumes": [
@@ -94,13 +94,18 @@ const docTemplate = `{
                 "summary": "User login",
                 "parameters": [
                     {
-                        "description": "User data for login",
-                        "name": "UnauthorizedUserTruncated",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/storage.UnauthorizedUserTruncated"
-                        }
+                        "type": "string",
+                        "description": "User email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -137,7 +142,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/logout": {
+        "/logout": {
             "post": {
                 "description": "Invalidate the user session and log the user out",
                 "consumes": [
@@ -181,7 +186,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/signup": {
+        "/signup": {
             "post": {
                 "description": "Register a new user and create a new session",
                 "consumes": [
@@ -196,13 +201,25 @@ const docTemplate = `{
                 "summary": "User signup",
                 "parameters": [
                     {
-                        "description": "User data for signup",
-                        "name": "UnauthorizedUser",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/storage.UnauthorizedUser"
-                        }
+                        "type": "string",
+                        "description": "User email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password confirmation",
+                        "name": "passwordRepeat",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -213,7 +230,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Passwords do not match",
                         "schema": {
                             "$ref": "#/definitions/responses.AuthErrResponse"
                         }
@@ -304,31 +321,6 @@ const docTemplate = `{
         },
         "storage.Image": {
             "type": "object"
-        },
-        "storage.UnauthorizedUser": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "passwordRepeat": {
-                    "type": "string"
-                }
-            }
-        },
-        "storage.UnauthorizedUserTruncated": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
         },
         "storage.User": {
             "type": "object",

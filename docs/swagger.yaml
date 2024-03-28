@@ -52,22 +52,6 @@ definitions:
     type: object
   storage.Image:
     type: object
-  storage.UnauthorizedUser:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      passwordRepeat:
-        type: string
-    type: object
-  storage.UnauthorizedUserTruncated:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    type: object
   storage.User:
     properties:
       email:
@@ -86,7 +70,7 @@ info:
   title: YULA project API
   version: "1.0"
 paths:
-  /api/adverts:
+  /adverts:
     get:
       consumes:
       - application/json
@@ -113,7 +97,7 @@ paths:
       summary: Retrieve a list of adverts
       tags:
       - adverts
-  /api/auth/check_auth:
+  /check_auth:
     get:
       consumes:
       - application/json
@@ -128,18 +112,22 @@ paths:
       summary: Check user authentication
       tags:
       - auth
-  /api/auth/login:
+  /login:
     post:
       consumes:
       - application/json
       description: Authenticate user and create a new session
       parameters:
-      - description: User data for login
-        in: body
-        name: UnauthorizedUserTruncated
+      - description: User email
+        in: formData
+        name: email
         required: true
-        schema:
-          $ref: '#/definitions/storage.UnauthorizedUserTruncated'
+        type: string
+      - description: User password
+        in: formData
+        name: password
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -166,7 +154,7 @@ paths:
       summary: User login
       tags:
       - auth
-  /api/auth/logout:
+  /logout:
     post:
       consumes:
       - application/json
@@ -195,18 +183,27 @@ paths:
       summary: User logout
       tags:
       - auth
-  /api/auth/signup:
+  /signup:
     post:
       consumes:
       - application/json
       description: Register a new user and create a new session
       parameters:
-      - description: User data for signup
-        in: body
-        name: UnauthorizedUser
+      - description: User email
+        in: formData
+        name: email
         required: true
-        schema:
-          $ref: '#/definitions/storage.UnauthorizedUser'
+        type: string
+      - description: User password
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: Password confirmation
+        in: formData
+        name: passwordRepeat
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -215,7 +212,7 @@ paths:
           schema:
             $ref: '#/definitions/responses.AuthOkResponse'
         "400":
-          description: Bad Request
+          description: Passwords do not match
           schema:
             $ref: '#/definitions/responses.AuthErrResponse'
       summary: User signup
