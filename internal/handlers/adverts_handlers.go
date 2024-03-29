@@ -2,11 +2,12 @@ package myhandlers
 
 import (
 	"encoding/json"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
+	"github.com/gorilla/mux"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 )

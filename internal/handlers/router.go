@@ -17,6 +17,12 @@ type AdvertsHandler struct {
 	List *storage.AdvertsList
 }
 
+type CartHandler struct {
+	ListCart    *storage.CartList
+	ListAdverts *storage.AdvertsList
+	ListUsers   *storage.UsersList
+}
+
 func NewRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
@@ -32,6 +38,13 @@ func NewRouter() *mux.Router {
 		List: advertsList,
 	}
 
+	cartList := storage.NewCartList()
+	cartHandler := &CartHandler{
+		ListCart:    cartList,
+		ListAdverts: advertsList,
+		ListUsers:   usersList,
+	}
+
 	log.Println("Server is running")
 
 	router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
@@ -43,6 +56,9 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/auth/check_auth", authHandler.CheckAuth)
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
+
+	router.HandleFunc("/api/cart/append", cartHandler.AppendCart)
+	router.HandleFunc("/api/cart/list", cartHandler.GetCartList)
 
 	return router
 }
