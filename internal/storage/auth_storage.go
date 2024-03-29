@@ -49,6 +49,8 @@ type UsersInfo interface {
 	SessionExists(sessionID string) bool
 	AddSession(email string) string
 	RemoveSession(sessionID string)
+
+	UsersList
 }
 
 func (active *UsersList) UserExists(email string) bool {

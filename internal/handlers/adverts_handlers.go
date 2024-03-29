@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	advertsPerPage = 30
-	defaultCity    = "Moskva"
+	defaultCity = "Moskva"
 )
 
 // GetAdsList godoc
@@ -69,6 +68,35 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(adsList))
 }
 
+func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	vars := mux.Vars(request)
+	city := vars["city"]
+	category := vars["category"]
+	id, _ := strconv.Atoi(vars["id"])
+
+	list := advertsHandler.List
+
+	var ad []*storage.ReturningAdvert
+	var err error
+
+	ad, err = list.GetAdvert(uint(id), city, category)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(ad))
+}
+
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -99,13 +127,82 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 }
 
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
+		return
+	}
+
+	list := advertsHandler.List
+	var data storage.ReceivedAdData
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	ad, err := list.EditAdvert(data)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(ad))
 }
 
 func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
+		return
+	}
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	list := advertsHandler.List
+
+	err := list.DeleteAdvert(uint(id))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	adResponse := responses.NewAdvertsOkResponse(nil)
+
+	responses.SendOkResponse(writer, adResponse)
 }
 
 func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
+		return
+	}
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	list := advertsHandler.List
+
+	err := list.CloseAdvert(uint(id))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	adResponse := responses.NewAdvertsOkResponse(nil)
+
+	responses.SendOkResponse(writer, adResponse)
 }
