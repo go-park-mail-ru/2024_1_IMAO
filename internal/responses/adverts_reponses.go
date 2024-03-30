@@ -1,12 +1,8 @@
 package responses
 
-import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
-)
-
 type AdvertsOkResponse struct {
-	Code  int                        `json:"code"`
-	Items []*storage.ReturningAdvert `json:"items"`
+	Code  int `json:"code"`
+	Items any `json:"items"`
 }
 
 type AdvertsErrResponse struct {
@@ -14,7 +10,7 @@ type AdvertsErrResponse struct {
 	Status string `json:"status"`
 }
 
-func NewAdvertsOkResponse(adverts []*storage.ReturningAdvert) *AdvertsOkResponse {
+func NewAdvertsOkResponse(adverts any) *AdvertsOkResponse {
 	return &AdvertsOkResponse{
 		Code:  StatusOk,
 		Items: adverts,

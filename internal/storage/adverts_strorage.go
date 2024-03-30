@@ -73,6 +73,13 @@ type ReturningAdvert struct {
 	Category Category `json:"category"`
 }
 
+type ReturningAdInList struct {
+	ID    uint   `json:"id"`
+	Title string `json:"title"`
+	Price uint   `json:"price"`
+	Image Image  `json:"image"`
+}
+
 type AdvertsList struct {
 	Adverts           []*Advert
 	Categories        []*Category
@@ -84,12 +91,12 @@ type AdvertsList struct {
 }
 
 type AdvertsInfo interface {
-	GetAdvert(advertID uint, city, category string) ([]*ReturningAdvert, error)
-	GetAdvertsByCity(city string, startID, number uint) ([]*ReturningAdvert, error)
-	GetAdvertsByCategory(category, city string, startID, number uint) ([]*ReturningAdvert, error)
+	GetAdvert(advertID uint, city, category string) (*ReturningAdvert, error)
+	GetAdvertsByCity(city string, startID, number uint) ([]*ReturningAdInList, error)
+	GetAdvertsByCategory(category, city string, startID, number uint) ([]*ReturningAdInList, error)
 
-	CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, error)
-	EditAdvert(data ReceivedAdData) ([]*ReturningAdvert, error)
+	CreateAdvert(data ReceivedAdData) (*ReturningAdvert, error)
+	EditAdvert(data ReceivedAdData) (*ReturningAdvert, error)
 	DeleteAdvert(advertID uint) error
 	CloseAdvert(advertID uint) error
 
@@ -103,7 +110,7 @@ type AdvertsInfo interface {
 	AdvertsList
 }
 
-func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) ([]*ReturningAdvert, error) {
+func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) (*ReturningAdvert, error) {
 	cityID, err := ads.getCityID(city)
 	if err != nil {
 		return nil, err
@@ -129,17 +136,15 @@ func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) ([]*Retu
 		return nil, errWrongIDinCategory
 	}
 
-	var returningAd []*ReturningAdvert
-
-	return append(returningAd, &ReturningAdvert{
+	return &ReturningAdvert{
 		Advert:   *ads.Adverts[advertID-1],
 		City:     *ads.Cities[cityID-1],
 		Category: *ads.Categories[categoryID-1],
-	}), nil
+	}, nil
 }
 
-func (ads *AdvertsList) GetAdvertsByCity(city string, number, startID uint) ([]*ReturningAdvert, error) {
-	if number > ads.AdvertsCounter {
+func (ads *AdvertsList) GetAdvertsByCity(city string, startID, num uint) ([]*ReturningAdInList, error) {
+	if num > ads.AdvertsCounter {
 		return nil, errWrongAdvertsAmount
 	}
 
@@ -151,18 +156,19 @@ func (ads *AdvertsList) GetAdvertsByCity(city string, number, startID uint) ([]*
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
 
-	var returningAds []*ReturningAdvert
+	var returningAds []*ReturningAdInList
 	var counter uint = 0
 
-	for counter != number && counter+startID-1 != ads.AdvertsCounter {
+	for counter != num && counter+startID-1 != ads.AdvertsCounter {
 		ad := ads.Adverts[startID+counter-1]
 		exists := ad.Active && !ad.Deleted
 
 		if exists && ad.CityID == cityID {
-			returningAds = append(returningAds, &ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.Cities[cityID-1],
-				Category: *ads.Categories[ad.CategoryID-1],
+			returningAds = append(returningAds, &ReturningAdInList{
+				ID:    ad.ID,
+				Title: ad.Title,
+				Price: ad.Price,
+				Image: ad.Image,
 			})
 		}
 
@@ -172,8 +178,8 @@ func (ads *AdvertsList) GetAdvertsByCity(city string, number, startID uint) ([]*
 	return returningAds, nil
 }
 
-func (ads *AdvertsList) GetAdvertsByCategory(city, category string, number, startID uint) ([]*ReturningAdvert, error) {
-	if number > ads.AdvertsCounter {
+func (ads *AdvertsList) GetAdvertsByCategory(category, city string, startID, num uint) ([]*ReturningAdInList, error) {
+	if num > ads.AdvertsCounter {
 		return nil, errWrongAdvertsAmount
 	}
 
@@ -190,18 +196,19 @@ func (ads *AdvertsList) GetAdvertsByCategory(city, category string, number, star
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
 
-	var returningAds []*ReturningAdvert
+	var returningAds []*ReturningAdInList
 	var counter uint = 0
 
-	for counter != number && counter+startID-1 != ads.AdvertsCounter {
+	for counter != num && counter+startID-1 != ads.AdvertsCounter {
 		ad := ads.Adverts[startID+counter-1]
 		exists := ad.Active && !ad.Deleted
 
 		if exists && ad.CityID == cityID && ad.CategoryID == categoryID {
-			returningAds = append(returningAds, &ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.Cities[cityID-1],
-				Category: *ads.Categories[categoryID-1],
+			returningAds = append(returningAds, &ReturningAdInList{
+				ID:    ad.ID,
+				Title: ad.Title,
+				Price: ad.Price,
+				Image: ad.Image,
 			})
 		}
 
@@ -211,7 +218,7 @@ func (ads *AdvertsList) GetAdvertsByCategory(city, category string, number, star
 	return returningAds, nil
 }
 
-func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, error) {
+func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) (*ReturningAdvert, error) {
 	cityID, err := ads.getCityID(data.City)
 	if err != nil {
 		return nil, err
@@ -241,12 +248,11 @@ func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, e
 
 	ads.Adverts = append(ads.Adverts, newAd)
 
-	var returningAd []*ReturningAdvert
-	return append(returningAd, &ReturningAdvert{
+	return &ReturningAdvert{
 		Advert:   *newAd,
 		City:     *ads.Cities[cityID-1],
 		Category: *ads.Categories[categoryID-1],
-	}), nil
+	}, nil
 }
 
 func (ads *AdvertsList) CloseAdvert(advertID uint) error {
@@ -273,7 +279,7 @@ func (ads *AdvertsList) DeleteAdvert(advertID uint) error {
 	return nil
 }
 
-func (ads *AdvertsList) EditAdvert(data ReceivedAdData) ([]*ReturningAdvert, error) {
+func (ads *AdvertsList) EditAdvert(data ReceivedAdData) (*ReturningAdvert, error) {
 	id := data.ID
 	if id > ads.AdvertsCounter || ads.Adverts[id-1].Deleted {
 		return nil, errWrongAdvertID
@@ -281,8 +287,6 @@ func (ads *AdvertsList) EditAdvert(data ReceivedAdData) ([]*ReturningAdvert, err
 
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
-
-	var returningAds []*ReturningAdvert
 
 	ads.Adverts[id-1] = &Advert{
 		ID:          id,
@@ -299,11 +303,11 @@ func (ads *AdvertsList) EditAdvert(data ReceivedAdData) ([]*ReturningAdvert, err
 		Deleted:     false,
 	}
 
-	return append(returningAds, &ReturningAdvert{
+	return &ReturningAdvert{
 		Advert:   *ads.Adverts[id-1],
 		Category: *ads.Categories[ads.Adverts[id-1].CategoryID-1],
 		City:     *ads.Cities[ads.Adverts[id-1].CityID-1],
-	}), nil
+	}, nil
 }
 
 func (ads *AdvertsList) getCityID(city string) (uint, error) {

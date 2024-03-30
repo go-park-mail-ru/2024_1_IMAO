@@ -35,8 +35,8 @@ func NewRouter() *mux.Router {
 	log.Println("Server is running")
 
 	router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
-	router.HandleFunc("/api/adverts/list", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/edit", advertsHandler.EditAdvert)
+	router.HandleFunc("/api/adverts/", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}/{id:[0-9]+}", advertsHandler.GetAdvert)

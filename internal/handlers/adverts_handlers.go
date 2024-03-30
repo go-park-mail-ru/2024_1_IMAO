@@ -44,17 +44,17 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 
 	if city == "" && request.URL.Query().Get("city") != "" {
 		city = request.URL.Query().Get("city")
-	} else {
+	} else if city == "" {
 		city = defaultCity
 	}
 
-	var adsList []*storage.ReturningAdvert
+	var adsList []*storage.ReturningAdInList
 	var err error
 
 	if category != "" {
-		adsList, err = list.GetAdvertsByCategory(city, category, uint(count), uint(startID))
+		adsList, err = list.GetAdvertsByCategory(category, city, uint(startID), uint(count))
 	} else {
-		adsList, err = list.GetAdvertsByCity(city, uint(count), uint(startID))
+		adsList, err = list.GetAdvertsByCity(city, uint(startID), uint(count))
 	}
 
 	if err != nil {
@@ -82,10 +82,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 
 	list := advertsHandler.List
 
-	var ad []*storage.ReturningAdvert
-	var err error
-
-	ad, err = list.GetAdvert(uint(id), city, category)
+	ad, err := list.GetAdvert(uint(id), city, category)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
