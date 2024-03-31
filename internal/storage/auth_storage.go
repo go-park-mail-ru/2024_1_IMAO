@@ -92,6 +92,19 @@ func (active *UsersList) GetUserByEmail(email string) (*User, error) {
 	return active.Users[email], nil
 }
 
+func (active *UsersList) GetUserByID(userID uint) (*User, error) {
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
+	for _, val := range active.Users {
+		if val.ID == userID {
+			return val, nil
+		}
+	}
+
+	return nil, errUserNotExists
+}
+
 func (active *UsersList) GetUserBySession(sessionID string) (*User, error) {
 	active.mu.Lock()
 	defer active.mu.Unlock()

@@ -10,26 +10,42 @@ import (
 )
 
 type AuthHandler struct {
-	List *storage.UsersList
+	UsersList   *storage.UsersList
+	ProfileList *storage.ProfileList
 }
 
 type AdvertsHandler struct {
 	List *storage.AdvertsList
 }
 
+type ProfileHandler struct {
+	AdvertsList *storage.AdvertsList
+	ProfileList *storage.ProfileList
+	UsersList   *storage.UsersList
+}
+
 func NewRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
 
-	usersList := storage.NewActiveUser()
-	authHandler := &AuthHandler{
-		List: usersList,
-	}
-
 	advertsList := storage.NewAdvertsList()
 	storage.FillAdvertsList(advertsList)
+	profileList := storage.NewProfileList()
+	usersList := storage.NewActiveUser()
+	
 	advertsHandler := &AdvertsHandler{
 		List: advertsList,
+	}
+	
+	profileHandler := &ProfileHandler{
+		ProfileList: profileList,
+		AdvertsList: advertsList,
+		UsersList:   usersList,
+	}
+	
+	authHandler := &AuthHandler{
+		UsersList:   usersList,
+		ProfileList: profileList,
 	}
 
 	log.Println("Server is running")
@@ -43,6 +59,17 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/auth/check_auth", authHandler.CheckAuth)
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
+
+	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
+	router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
+	router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
+	router.HandleFunc("/api/profile/edit", profileHandler.ProfileEdit)
+	
+	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
+	router.HandleFunc("/api/profile/avatar", profileHandler.SetProfileAvatar)
+	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
+	
+	router.HandleFunc("/api/profile/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
 
 	return router
 }

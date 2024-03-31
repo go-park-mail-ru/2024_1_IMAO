@@ -182,6 +182,38 @@ func (ads *AdvertsList) GetAdvertsByCategory(city, category string, number, star
 	return returningAds, nil
 }
 
+func (ads *AdvertsList) GetAdvertsByUserID(userID uint) ([]*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+	var returningAds []*ReturningAdvert
+	for _, ad := range ads.Adverts {
+		if ad.UserID == userID {
+			returningAds = append(returningAds, &ReturningAdvert{
+				Advert:   *ad,
+				City:     *ads.Cities[ad.CityID-1],
+				Category: *ads.Categories[ad.CategoryID-1],
+			})
+		}
+	}
+	return returningAds, nil
+}
+
+func (ads *AdvertsList) GetToggledAdvertsByUserID(userID uint, active bool) ([]*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+	var returningAds []*ReturningAdvert
+	for _, ad := range ads.Adverts {
+		if ad.UserID == userID && ad.Active == active {
+			returningAds = append(returningAds, &ReturningAdvert{
+				Advert:   *ad,
+				City:     *ads.Cities[ad.CityID-1],
+				Category: *ads.Categories[ad.CategoryID-1],
+			})
+		}
+	}
+	return returningAds, nil
+}
+
 func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) ([]*ReturningAdvert, error) {
 	cityID, err := ads.getCityID(data.City)
 	if err != nil {

@@ -36,7 +36,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	usersList := authHandler.List
+	usersList := authHandler.UsersList
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -111,7 +111,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 		return
 	}
 
-	usersList := authHandler.List
+	usersList := authHandler.UsersList
 
 	session, err := request.Cookie("session_id")
 	if err != nil {
@@ -159,7 +159,8 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	usersList := authHandler.List
+	usersList := authHandler.UsersList
+	profileList := authHandler.ProfileList
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -210,6 +211,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 
 	user, _ := usersList.CreateUser(email, pkg.HashPassword(password))
+	profileList.CreateProfile(user.ID)
 
 	sessionID := usersList.AddSession(email)
 
@@ -241,7 +243,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
-	usersList := authHandler.List
+	usersList := authHandler.UsersList
 
 	session, err := request.Cookie("session_id")
 
