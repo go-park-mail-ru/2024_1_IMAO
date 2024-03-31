@@ -35,7 +35,6 @@ type ReceivedAdData struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       uint   `json:"price"`
-	Image       Image  `json:"image"`
 	IsUsed      bool   `json:"isUsed"`
 }
 
@@ -47,7 +46,7 @@ type Category struct {
 
 type City struct {
 	ID          uint   `json:"id"`
-	CityName    string `json:"cityName"`
+	Name        string `json:"name"`
 	Translation string `json:"translation"`
 }
 
@@ -60,7 +59,6 @@ type Advert struct {
 	Description string    `json:"description"`
 	Price       uint      `json:"price"`
 	CreatedTime time.Time `json:"created"`
-	Image       Image     `json:"image"`
 	ClosedTime  time.Time `json:"closed"`
 	Active      bool      `json:"active"`
 	IsUsed      bool      `json:"isUsed"`
@@ -74,10 +72,11 @@ type ReturningAdvert struct {
 }
 
 type ReturningAdInList struct {
-	ID    uint   `json:"id"`
-	Title string `json:"title"`
-	Price uint   `json:"price"`
-	Image Image  `json:"image"`
+	ID       uint   `json:"id"`
+	Title    string `json:"title"`
+	Price    uint   `json:"price"`
+	City     string `json:"city"`
+	Category string `json:"category"`
 }
 
 type AdvertsList struct {
@@ -165,10 +164,11 @@ func (ads *AdvertsList) GetAdvertsByCity(city string, startID, num uint) ([]*Ret
 
 		if exists && ad.CityID == cityID {
 			returningAds = append(returningAds, &ReturningAdInList{
-				ID:    ad.ID,
-				Title: ad.Title,
-				Price: ad.Price,
-				Image: ad.Image,
+				ID:       ad.ID,
+				Title:    ad.Title,
+				Price:    ad.Price,
+				City:     ads.Cities[ad.CityID].Translation,
+				Category: ads.Categories[ad.CategoryID].Translation,
 			})
 		}
 
@@ -205,10 +205,11 @@ func (ads *AdvertsList) GetAdvertsByCategory(category, city string, startID, num
 
 		if exists && ad.CityID == cityID && ad.CategoryID == categoryID {
 			returningAds = append(returningAds, &ReturningAdInList{
-				ID:    ad.ID,
-				Title: ad.Title,
-				Price: ad.Price,
-				Image: ad.Image,
+				ID:       ad.ID,
+				Title:    ad.Title,
+				Price:    ad.Price,
+				City:     ads.Cities[ad.CityID].Translation,
+				Category: ads.Categories[ad.CategoryID].Translation,
 			})
 		}
 
@@ -241,7 +242,6 @@ func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) (*ReturningAdvert, err
 		Description: data.Description,
 		Price:       data.Price,
 		CreatedTime: time.Now(),
-		Image:       data.Image,
 		Active:      true,
 		IsUsed:      data.IsUsed,
 	}
@@ -292,7 +292,6 @@ func (ads *AdvertsList) EditAdvert(data ReceivedAdData) (*ReturningAdvert, error
 		ID:          id,
 		UserID:      data.UserID,
 		Title:       data.Title,
-		Image:       data.Image,
 		Description: data.Description,
 		Price:       data.Price,
 		CityID:      ads.Adverts[id-1].CityID,
@@ -315,7 +314,7 @@ func (ads *AdvertsList) getCityID(city string) (uint, error) {
 	defer ads.mu.Unlock()
 
 	for _, val := range ads.Cities {
-		if val.CityName == city || val.Translation == city {
+		if val.Name == city || val.Translation == city {
 			return val.ID, nil
 		}
 	}
@@ -370,7 +369,7 @@ func FillAdvertsList(ads *AdvertsList) {
 	locationID := ads.getLastLocationID()
 	ads.Cities = append(ads.Cities, &City{
 		ID:          locationID,
-		CityName:    "Москва",
+		Name:        "Москва",
 		Translation: translit.Ru("Москва"),
 	})
 
@@ -381,14 +380,13 @@ func FillAdvertsList(ads *AdvertsList) {
 		Translation: translit.Ru("Тест"),
 	})
 
-	for i := 1; i <= 60; i++ {
+	for i := 1; i <= 100; i++ {
 		price, _ := rand.Int(rand.Reader, big.NewInt(int64(maxPrice)))
 		advertID := ads.getLastAdvertID()
 		ads.Adverts = append(ads.Adverts, &Advert{
 			ID:          advertID,
 			UserID:      1,
 			Title:       fmt.Sprintf("Объявление № %d", advertID),
-			Image:       Image{},
 			Description: fmt.Sprintf("Текст в объявлениии № %d", advertID),
 			Price:       uint(price.Uint64()) * advertID,
 			CityID:      1,
