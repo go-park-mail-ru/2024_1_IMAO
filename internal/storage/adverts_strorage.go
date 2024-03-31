@@ -167,8 +167,8 @@ func (ads *AdvertsList) GetAdvertsByCity(city string, startID, num uint) ([]*Ret
 				ID:       ad.ID,
 				Title:    ad.Title,
 				Price:    ad.Price,
-				City:     ads.Cities[ad.CityID].Translation,
-				Category: ads.Categories[ad.CategoryID].Translation,
+				City:     ads.Cities[ad.CityID-1].Translation,
+				Category: ads.Categories[ad.CategoryID-1].Translation,
 			})
 		}
 
@@ -208,8 +208,8 @@ func (ads *AdvertsList) GetAdvertsByCategory(category, city string, startID, num
 				ID:       ad.ID,
 				Title:    ad.Title,
 				Price:    ad.Price,
-				City:     ads.Cities[ad.CityID].Translation,
-				Category: ads.Categories[ad.CategoryID].Translation,
+				City:     ads.Cities[ad.CityID-1].Translation,
+				Category: ads.Categories[ad.CategoryID-1].Translation,
 			})
 		}
 
