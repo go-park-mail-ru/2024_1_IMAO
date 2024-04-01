@@ -181,8 +181,44 @@ func (pl *ProfileList) ProfileEdit(userID uint, data ProfileEditNec) (*Profile, 
 	return pl.Profiles[userID], nil
 }
 
+// func NewProfileList() *ProfileList {
+// 	return &ProfileList{
+// 		mu: sync.RWMutex{},
+// 	}
+// }
+
 func NewProfileList() *ProfileList {
 	return &ProfileList{
+		Profiles: map[uint]*Profile{
+			1: {
+				UserID: 1,
+				City: City{
+					ID:          1,
+					Name:        "Moscow",
+					Translation: "Москва",
+				},
+				Phone:          "1234567890",
+				Avatar:         Image{}, // Предполагается, что Image имеет конструктор по умолчанию
+				RegisterTime:   time.Now(),
+				Rating:         5.0,
+				ReactionsCount: 10,
+				Approved:       true,
+			},
+			2: {
+				UserID: 2,
+				City: City{
+					ID:          1,
+					Name:        "Kaluga",
+					Translation: "Калуга",
+				},
+				Phone:          "1234567890",
+				Avatar:         Image{}, // Предполагается, что Image имеет конструктор по умолчанию
+				RegisterTime:   time.Now(),
+				Rating:         4.4,
+				ReactionsCount: 10,
+				Approved:       false,
+			},
+		},
 		mu: sync.RWMutex{},
 	}
 }

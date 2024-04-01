@@ -32,17 +32,17 @@ func NewRouter() *mux.Router {
 	storage.FillAdvertsList(advertsList)
 	profileList := storage.NewProfileList()
 	usersList := storage.NewActiveUser()
-	
+
 	advertsHandler := &AdvertsHandler{
 		List: advertsList,
 	}
-	
+
 	profileHandler := &ProfileHandler{
 		ProfileList: profileList,
 		AdvertsList: advertsList,
 		UsersList:   usersList,
 	}
-	
+
 	authHandler := &AuthHandler{
 		UsersList:   usersList,
 		ProfileList: profileList,
@@ -51,9 +51,13 @@ func NewRouter() *mux.Router {
 	log.Println("Server is running")
 
 	router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
-	router.HandleFunc("/api/adverts/list", advertsHandler.GetAdsList)
+	router.HandleFunc("/api/adverts/edit", advertsHandler.EditAdvert)
+	router.HandleFunc("/api/adverts/", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}", advertsHandler.GetAdsList)
+	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}/{id:[0-9]+}", advertsHandler.GetAdvert)
+	router.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
+	router.HandleFunc("/api/adverts/close/{id:[0-9]+}", advertsHandler.CloseAdvert)
 
 	router.HandleFunc("/api/auth/login", authHandler.Login)
 	router.HandleFunc("/api/auth/check_auth", authHandler.CheckAuth)
@@ -64,11 +68,11 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
 	router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
 	router.HandleFunc("/api/profile/edit", profileHandler.ProfileEdit)
-	
+
 	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
 	router.HandleFunc("/api/profile/avatar", profileHandler.SetProfileAvatar)
 	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
-	
+
 	router.HandleFunc("/api/profile/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
 
 	return router
