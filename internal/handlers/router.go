@@ -63,14 +63,14 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/auth/check_auth", authHandler.CheckAuth)
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
+	router.HandleFunc("/api/auth/edit", authHandler.EditUser)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
 	router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
 	router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
-	router.HandleFunc("/api/profile/edit", profileHandler.ProfileEdit)
-
+	router.HandleFunc("/api/profile/edit", profileHandler.EditProfile)
+	router.HandleFunc("/api/profile/set", profileHandler.SetProfile)
 	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
-	router.HandleFunc("/api/profile/avatar", profileHandler.SetProfileAvatar)
 	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)

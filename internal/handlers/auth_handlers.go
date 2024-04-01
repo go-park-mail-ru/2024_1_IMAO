@@ -77,7 +77,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	sessionID := usersList.AddSession(email)
+	sessionID := usersList.AddSession(expectedUser.ID)
 
 	cookie := &http.Cookie{
 		Name:     "session_id",
@@ -213,7 +213,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	user, _ := usersList.CreateUser(email, pkg.HashPassword(password))
 	profileList.CreateProfile(user.ID)
 
-	sessionID := usersList.AddSession(email)
+	sessionID := usersList.AddSession(user.ID)
 
 	cookie := &http.Cookie{
 		Name:     "session_id",
@@ -258,4 +258,63 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 
 	log.Println("User authorized")
 	responses.SendOkResponse(writer, responses.NewAuthOkResponse(*user, session.Value, true))
+}
+
+func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	usersList := authHandler.UsersList
+
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil {
+		log.Println(err, responses.StatusUnauthorized)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusUnauthorized,
+			responses.ErrUnauthorized))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
+	
+	var newUser storage.UnauthorizedUser
+
+	err = json.NewDecoder(request.Body).Decode(&newUser)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	email := newUser.Email
+	password := newUser.Password
+	passwordRepeat := newUser.PasswordRepeat
+
+	errors := pkg.Validate(email, password)
+	if errors != nil {
+		log.Println("Bad user data", responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewValidationErrResponse(responses.StatusBadRequest,
+			errors))
+
+		return
+	}
+
+	if password != passwordRepeat {
+		log.Println("Passwords do not match")
+		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusBadRequest,
+			responses.ErrDifferentPasswords))
+
+		return
+	}
+
+	usersList.EditUser(user.ID, email, password)
+
+	responses.SendOkResponse(writer, responses.NewAuthOkResponse(*user, session.Value, true))
+
+	log.Println("User", user.Email, "successfully changed his authorization data.")
 }

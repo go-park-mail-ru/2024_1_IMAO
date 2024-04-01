@@ -25,8 +25,6 @@ type UnauthorizedUser struct {
 
 type User struct {
 	ID           uint   `json:"id"`
-	Name         string `json:"name"`
-	Surname      string `json:"surname"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
 }
@@ -34,17 +32,19 @@ type User struct {
 type UsersList struct {
 	// Ключ - id сессии, значение - id пользователя
 	Sessions   map[string]uint
-	Users      map[string]*User
+	Users      map[uint]*User
 	UsersCount uint
 	mu         sync.RWMutex
 }
 
 type UsersInfo interface {
 	UserExists(email string) bool
-	CreateUser(email, password string) (*User, error)
+	CreateUser(email, passwordHash string) (*User, error)
 	GetUserByEmail(email string) (*User, error)
 	GetUserBySession(sessionID string) (*User, error)
 	getLastID() uint
+
+	EditUser(email, passwordHash string) (*User, error)
 
 	SessionExists(sessionID string) bool
 	AddSession(email string) string
@@ -52,19 +52,28 @@ type UsersInfo interface {
 }
 
 func (active *UsersList) UserExists(email string) bool {
-	active.mu.Lock()
+	_, err := active.getIDByEmail(email)
 
-	_, exists := active.Users[email]
-
-	active.mu.Unlock()
-
-	return exists
+	return err == nil
 }
 
 func (active *UsersList) getLastID() uint {
 	active.UsersCount++
 
 	return active.UsersCount
+}
+
+func (active *UsersList) getIDByEmail(email string) (uint, error) {
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
+	for _, val := range active.Users {
+		if val.Email == email {
+			return val.ID, nil
+		}
+	}
+
+	return 0, errUserNotExists
 }
 
 func (active *UsersList) CreateUser(email, passwordHash string) (*User, error) {
@@ -75,31 +84,55 @@ func (active *UsersList) CreateUser(email, passwordHash string) (*User, error) {
 	active.mu.Lock()
 	defer active.mu.Unlock()
 
-	active.Users[email] = &User{
-		ID:           active.getLastID(),
+	id := active.getLastID()
+
+	active.Users[id] = &User{
+		ID:           id,
 		PasswordHash: passwordHash,
 		Email:        email,
 	}
 
-	return active.Users[email], nil
+	return active.Users[id], nil
 }
 
-func (active *UsersList) GetUserByEmail(email string) (*User, error) {
-	if !active.UserExists(email) {
+func (active *UsersList) EditUser(id uint, email, passwordHash string) (*User, error) {
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
+	usr, ok := active.Users[id]
+
+	if !ok {
 		return nil, errUserNotExists
 	}
 
-	return active.Users[email], nil
+	usr.PasswordHash = passwordHash
+	usr.Email = email
+
+	return usr, nil
+}
+
+func (active *UsersList) GetUserByEmail(email string) (*User, error) {
+	active.mu.Lock()
+	defer active.mu.Unlock()
+
+	usr, err := active.getIDByEmail(email)
+
+	if err != nil {
+
+		return nil, errUserNotExists
+	}
+
+	return active.Users[usr], nil
 }
 
 func (active *UsersList) GetUserByID(userID uint) (*User, error) {
 	active.mu.Lock()
 	defer active.mu.Unlock()
 
-	for _, val := range active.Users {
-		if val.ID == userID {
-			return val, nil
-		}
+	usr, ok := active.Users[userID]
+
+	if ok {
+		return usr, nil
 	}
 
 	return nil, errUserNotExists
@@ -126,13 +159,13 @@ func (active *UsersList) SessionExists(sessionID string) bool {
 	return exists
 }
 
-func (active *UsersList) AddSession(email string) string {
+func (active *UsersList) AddSession(id uint) string {
 	sessionID := pkg.RandString(sessionIDLen)
 
 	active.mu.Lock()
 	defer active.mu.Unlock()
 
-	user := active.Users[email]
+	user := active.Users[id]
 
 	active.Sessions[sessionID] = user.ID
 
@@ -155,8 +188,8 @@ func (active *UsersList) RemoveSession(sessionID string) error {
 func NewActiveUser() *UsersList {
 	return &UsersList{
 		Sessions: make(map[string]uint, 1),
-		Users: map[string]*User{
-			"example@mail.ru": {
+		Users: map[uint]*User{
+			1: {
 				ID:           1,
 				Email:        "example@mail.ru",
 				PasswordHash: pkg.HashPassword("123456"),

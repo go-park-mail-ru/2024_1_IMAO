@@ -63,7 +63,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.SetProfileCity(user.ID, data.City)
+	p, err := h.ProfileList.SetProfileCity(user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
@@ -106,49 +106,7 @@ func (h *ProfileHandler) SetProfileRating(writer http.ResponseWriter, request *h
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.SetProfileRating(uint(userID), data.Reaction)
-	if err != nil {
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
-
-		return
-	}
-
-	responses.SendOkResponse(writer, responses.NewProfileOkResponse(p))
-}
-
-func (h *ProfileHandler) SetProfileAvatar(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
-	usersList := h.UsersList
-
-	session, err := request.Cookie("session_id")
-
-	if err != nil || !usersList.SessionExists(session.Value) {
-		log.Println("User not authorized")
-		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
-
-		return
-	}
-
-	user, _ := usersList.GetUserBySession(session.Value)
-
-	var data storage.SetProfileAvatarNec
-
-	err = json.NewDecoder(request.Body).Decode(&data)
-	if err != nil {
-		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusInternalServerError,
-			responses.ErrInternalServer))
-	}
-
-	p, err := h.ProfileList.SetProfileAvatar(user.ID, data.Avatar)
+	p, err := h.ProfileList.SetProfileRating(uint(userID), data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
@@ -190,7 +148,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.SetProfilePhone(user.ID, data.Phone)
+	p, err := h.ProfileList.SetProfilePhone(user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
@@ -202,7 +160,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	responses.SendOkResponse(writer, responses.NewProfileOkResponse(p))
 }
 
-func (h *ProfileHandler) ProfileEdit(writer http.ResponseWriter, request *http.Request) {
+func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
@@ -223,7 +181,7 @@ func (h *ProfileHandler) ProfileEdit(writer http.ResponseWriter, request *http.R
 
 	user, _ := usersList.GetUserBySession(session.Value)
 
-	var data storage.ProfileEditNec
+	var data storage.EditProfileNec
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
@@ -232,7 +190,7 @@ func (h *ProfileHandler) ProfileEdit(writer http.ResponseWriter, request *http.R
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.ProfileEdit(user.ID, data)
+	p, err := h.ProfileList.EditProfile(user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
@@ -266,6 +224,132 @@ func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request 
 	user, _ := usersList.GetUserBySession(session.Value)
 
 	p, err := h.ProfileList.SetProfileApproved(user.ID)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewProfileOkResponse(p))
+}
+
+func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	usersList := h.UsersList
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusUnauthorized,
+			responses.ErrUnauthorized))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
+
+	var data storage.SetProfileNec
+
+	err = json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	p, err := h.ProfileList.SetProfile(user.ID, data)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewProfileOkResponse(p))
+}
+
+func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	usersList := h.UsersList
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusUnauthorized,
+			responses.ErrUnauthorized))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
+
+	var data storage.SetProfileNec
+
+	err = json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	p, err := h.ProfileList.SetProfile(user.ID, data)
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewProfileOkResponse(p))
+}
+
+func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	usersList := h.UsersList
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusUnauthorized,
+			responses.ErrUnauthorized))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
+
+	var data storage.SetProfileNec
+
+	err = json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	p, err := h.ProfileList.SetProfile(user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, responses.NewProfileErrResponse(responses.StatusBadRequest,
