@@ -550,7 +550,7 @@
 # ERDiagram
 
 Код **mermaid** диаграммы представлен
-ниже. [Визуализация в вебе](https://www.mermaidchart.com/raw/8bdbfa77-0510-4967-8b91-692e472fc415?version=v0.1&theme=light&format=svg)
+ниже. 
 
 ```mermaid
 
