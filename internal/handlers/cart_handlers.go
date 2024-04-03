@@ -58,7 +58,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 		return
 	}
-
+	log.Println("Get cart for user", user.ID)
 	responses.SendOkResponse(writer, responses.NewCartOkResponse(adsList))
 }
 
@@ -92,6 +92,12 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	user, _ := usersList.GetUserBySession(session.Value)
 
 	isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
+
+	if isAppended {
+		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
+	} else {
+		log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
+	}
 
 	responses.SendOkResponse(writer, responses.NewCartChangeResponse(isAppended))
 }
@@ -136,6 +142,8 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 			return
 		}
 	}
+
+	log.Println("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
 
 	responses.SendOkResponse(writer, responses.NewCartChangeResponse(false))
 }

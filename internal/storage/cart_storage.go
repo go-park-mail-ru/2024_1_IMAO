@@ -1,7 +1,12 @@
 package storage
 
 import (
+	"errors"
 	"sync"
+)
+
+var (
+	errNotInCart = errors.New("there is no advert in the cart")
 )
 
 type ReceivedCartItem struct {
@@ -68,7 +73,7 @@ func (cl *CartList) DeleteAdvByIDs(userID uint, advertID uint, userList UsersInf
 		return nil
 	}
 
-	return nil
+	return errNotInCart
 }
 
 func (cl *CartList) AppendAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) bool {
