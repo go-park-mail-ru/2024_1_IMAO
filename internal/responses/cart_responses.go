@@ -9,9 +9,21 @@ type CartOkResponse struct {
 	Items []*storage.Advert `json:"items"`
 }
 
+type CartChangeResponse struct {
+	Code       int  `json:"code"`
+	IsAppended bool `json:"isAppended"`
+}
+
 type CartErrResponse struct {
 	Code   int    `json:"code"`
 	Status string `json:"status"`
+}
+
+func NewCartChangeResponse(isAppended bool) *CartChangeResponse {
+	return &CartChangeResponse{
+		Code:       StatusOk,
+		IsAppended: isAppended,
+	}
 }
 
 func NewCartOkResponse(adverts []*storage.Advert) *CartOkResponse {

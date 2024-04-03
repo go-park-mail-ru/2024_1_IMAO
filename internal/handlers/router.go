@@ -57,8 +57,9 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
 
-	router.HandleFunc("/api/cart/append", cartHandler.AppendCart)
 	router.HandleFunc("/api/cart/list", cartHandler.GetCartList)
+	router.HandleFunc("/api/cart/change", cartHandler.ChangeCart)
+	router.HandleFunc("/api/cart/delete", cartHandler.DeleteFromCart)
 
 	return router
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 
@@ -34,27 +33,23 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 		return
 	}
 
-	// vars := mux.Vars(request)
-	// city := vars["city"]
-	// category := vars["category"]
-
 	list := cartHandler.ListCart
+	usersList := cartHandler.ListUsers
 
-	userId, err := strconv.Atoi(request.URL.Query().Get("userId"))
-	// startID, _ := strconv.Atoi(request.URL.Query().Get("startId"))
+	session, err := request.Cookie("session_id")
 
-	// if city == "" && request.URL.Query().Get("city") != "" {
-	// 	city = request.URL.Query().Get("city")
-	// } else {
-	// 	city = defaultCity
-	// }
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendOkResponse(writer, responses.NewAuthOkResponse(storage.User{}, "", false))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
 
 	var adsList []*storage.Advert
-	//var err error
 
-	if err == nil {
-		adsList, err = list.GetCartByUserID(uint(userId), cartHandler.ListUsers, cartHandler.ListAdverts)
-	}
+	adsList, err = list.GetCartByUserID(uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -67,7 +62,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	responses.SendOkResponse(writer, responses.NewCartOkResponse(adsList))
 }
 
-func (cartHandler *CartHandler) AppendCart(writer http.ResponseWriter, request *http.Request) {
+func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
@@ -75,6 +70,7 @@ func (cartHandler *CartHandler) AppendCart(writer http.ResponseWriter, request *
 	}
 
 	list := cartHandler.ListCart
+	usersList := cartHandler.ListUsers
 	var data storage.ReceivedCartItem
 
 	err := json.NewDecoder(request.Body).Decode(&data)
@@ -84,28 +80,62 @@ func (cartHandler *CartHandler) AppendCart(writer http.ResponseWriter, request *
 			responses.ErrInternalServer))
 	}
 
-	_, err = list.AppendAdvByIDs(data, cartHandler.ListUsers, cartHandler.ListAdverts)
-	if err != nil {
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, responses.NewCartErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+	session, err := request.Cookie("session_id")
+
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendOkResponse(writer, responses.NewAuthOkResponse(storage.User{}, "", false))
 
 		return
 	}
 
-	adsList, _ := cartHandler.ListCart.GetCartByUserID(data.UserID, cartHandler.ListUsers, cartHandler.ListAdverts)
+	user, _ := usersList.GetUserBySession(session.Value)
 
-	responses.SendOkResponse(writer, responses.NewCartOkResponse(adsList))
+	isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
+
+	responses.SendOkResponse(writer, responses.NewCartChangeResponse(isAppended))
 }
 
-// func (cartHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
+func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
-// }
+		return
+	}
 
-// func (cartHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, request *http.Request) {
+	list := cartHandler.ListCart
+	usersList := cartHandler.ListUsers
+	var data storage.ReceivedCartItems
 
-// }
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewCartErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
 
-// func (cartHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
+	session, err := request.Cookie("session_id")
 
-// }
+	if err != nil || !usersList.SessionExists(session.Value) {
+		log.Println("User not authorized")
+		responses.SendOkResponse(writer, responses.NewAuthOkResponse(storage.User{}, "", false))
+
+		return
+	}
+
+	user, _ := usersList.GetUserBySession(session.Value)
+
+	for _, item := range data.AdvertIDs {
+		err = list.DeleteAdvByIDs(user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)
+
+		if err != nil {
+			log.Println(err, responses.StatusBadRequest)
+			responses.SendErrResponse(writer, responses.NewCartErrResponse(responses.StatusBadRequest,
+				responses.ErrBadRequest))
+
+			return
+		}
+	}
+
+	responses.SendOkResponse(writer, responses.NewCartChangeResponse(false))
+}

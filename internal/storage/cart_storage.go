@@ -1,16 +1,22 @@
 package storage
 
-import "sync"
+import (
+	"sync"
+)
 
 type ReceivedCartItem struct {
-	UserID   uint `json:"userID"`
+	// UserID   uint `json:"userID"`
 	AdvertID uint `json:"advertID"`
+}
+
+type ReceivedCartItems struct {
+	// UserID    uint    `json:"userID"`
+	AdvertIDs []uint `json:"advertIDs"`
 }
 
 type CartItem struct {
 	UserID   uint
 	AdvertID uint
-	deleted  bool
 }
 
 type CartList struct {
@@ -20,8 +26,8 @@ type CartList struct {
 
 type CartInfo interface {
 	GetCartByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*Advert, error)
-	DeleteAdvByIDs(data ReceivedCartItem, userList UsersInfo, advertsList AdvertsInfo) (bool, error)
-	AppendAdvByIDs(data ReceivedCartItem, userList UsersInfo, advertsList AdvertsInfo) (bool, error)
+	DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error
+	AppendAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) bool
 }
 
 func (cl *CartList) GetCartByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*Advert, error) {
@@ -32,7 +38,7 @@ func (cl *CartList) GetCartByUserID(userID uint, userList UsersInfo, advertsList
 		item := cl.Items[i]
 		cl.mu.Unlock()
 
-		if item.UserID != userID || item.deleted {
+		if item.UserID != userID {
 			continue
 		}
 		advert, err := advertsList.GetAdvert(item.AdvertID)
@@ -47,30 +53,43 @@ func (cl *CartList) GetCartByUserID(userID uint, userList UsersInfo, advertsList
 	return cart, nil
 }
 
-func (cl *CartList) DeleteAdvByIDs(data ReceivedCartItem, userList UsersInfo, advertsList AdvertsInfo) (bool, error) {
+func (cl *CartList) DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error {
 	for i := range cl.Items {
 		cl.mu.Lock()
 		item := cl.Items[i]
 		cl.mu.Unlock()
 
-		if item.UserID != data.UserID || item.AdvertID != data.AdvertID || item.deleted {
+		if item.UserID != userID || item.AdvertID != advertID {
 			continue
 		}
-
-		item.deleted = true
-
-		return true, nil
+		cl.mu.Lock()
+		cl.Items = append(cl.Items[:i], cl.Items[i+1:]...)
+		cl.mu.Unlock()
+		return nil
 	}
 
-	return true, nil
+	return nil
 }
 
-func (cl *CartList) AppendAdvByIDs(data ReceivedCartItem, userList UsersInfo, advertsList AdvertsInfo) (bool, error) {
-	cartItem := CartItem{data.UserID, data.AdvertID, false}
+func (cl *CartList) AppendAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) bool {
+	for i := range cl.Items {
+		cl.mu.Lock()
+		item := cl.Items[i]
+		cl.mu.Unlock()
+
+		if item.UserID != userID || item.AdvertID != advertID {
+			continue
+		}
+		cl.mu.Lock()
+		cl.Items = append(cl.Items[:i], cl.Items[i+1:]...)
+		cl.mu.Unlock()
+		return false
+	}
+	cartItem := CartItem{userID, advertID}
 	cl.mu.Lock()
 	cl.Items = append(cl.Items, &cartItem)
 	cl.mu.Unlock()
-	return true, nil
+	return true
 }
 
 func NewCartList() *CartList {
