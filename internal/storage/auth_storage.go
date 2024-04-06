@@ -48,7 +48,7 @@ type UsersInfo interface {
 
 	SessionExists(sessionID string) bool
 	AddSession(email string) string
-	RemoveSession(sessionID string)
+	RemoveSession(sessionID string) error
 
 	UsersList
 }

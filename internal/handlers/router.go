@@ -24,6 +24,19 @@ type ProfileHandler struct {
 	UsersList   *storage.UsersList
 }
 
+type CartHandler struct {
+	ListCart    *storage.CartList
+	ListAdverts *storage.AdvertsList
+	ListUsers   *storage.UsersList
+}
+
+type OrderHandler struct {
+	ListOrder   *storage.OrderList
+	ListCart    *storage.CartList
+	ListAdverts *storage.AdvertsList
+	ListUsers   *storage.UsersList
+}
+
 func NewRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
@@ -46,6 +59,21 @@ func NewRouter() *mux.Router {
 	authHandler := &AuthHandler{
 		UsersList:   usersList,
 		ProfileList: profileList,
+	}
+
+	cartList := storage.NewCartList()
+	cartHandler := &CartHandler{
+		ListCart:    cartList,
+		ListAdverts: advertsList,
+		ListUsers:   usersList,
+	}
+
+	orderList := storage.NewOrderList()
+	orderHandler := &OrderHandler{
+		ListOrder:   orderList,
+		ListCart:    cartList,
+		ListAdverts: advertsList,
+		ListUsers:   usersList,
 	}
 
 	log.Println("Server is running")
@@ -74,6 +102,13 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
+
+	router.HandleFunc("/api/cart/list", cartHandler.GetCartList)
+	router.HandleFunc("/api/cart/change", cartHandler.ChangeCart)
+	router.HandleFunc("/api/cart/delete", cartHandler.DeleteFromCart)
+
+	router.HandleFunc("/api/order/list", orderHandler.GetOrderList)
+	router.HandleFunc("/api/order/create", orderHandler.CreateOrder)
 
 	return router
 }
