@@ -12,6 +12,7 @@ const (
 
 	StatusBadRequest   = 400
 	StatusUnauthorized = 401
+	StatusForbidden    = 403
 	StatusNotFound     = 404
 	StatusNotAllowed   = 405
 
@@ -26,11 +27,11 @@ const (
 	ErrDifferentPasswords = "Passwords do not match"
 
 	ErrAdvertNotExist = "Advert does not exist"
-	ErrTooManyAdverts = "Too many adverts specified"
 
 	ErrInternalServer = "Server error"
 	ErrBadRequest     = "Bad request"
 	ErrNotAllowed     = "Method not allowed"
+	ErrForbidden      = "User have no access to this content"
 )
 
 func sendResponse(writer http.ResponseWriter, response any) {
