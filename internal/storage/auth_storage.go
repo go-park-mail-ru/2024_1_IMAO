@@ -112,10 +112,10 @@ func (active *UsersList) EditUser(id uint, email, passwordHash string) (*User, e
 }
 
 func (active *UsersList) GetUserByEmail(email string) (*User, error) {
+	usr, err := active.getIDByEmail(email)
+
 	active.mu.Lock()
 	defer active.mu.Unlock()
-
-	usr, err := active.getIDByEmail(email)
 
 	if err != nil {
 
