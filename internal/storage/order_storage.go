@@ -62,13 +62,13 @@ type OrderList struct {
 }
 
 type OrderInfo interface {
-	GetOrdersByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*OrderItem, error)
-	GetReturningOrderByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*ReturningOrder, error)
+	GetOrdersByUserID(userID uint, advertsList AdvertsInfo) ([]*OrderItem, error)
+	GetReturningOrderByUserID(userID uint, advertsList AdvertsInfo) ([]*ReturningOrder, error)
 	//DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error
-	CreateOrderByIDs(userID uint, orderItem ReceivedOrderItem, userList UsersInfo, advertsList AdvertsInfo) bool
+	CreateOrderByID(userID uint, orderItem *ReceivedOrderItem, advertsList AdvertsInfo) bool
 }
 
-func (ol *OrderList) GetOrdersByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*OrderItem, error) {
+func (ol *OrderList) GetOrdersByUserID(userID uint, advertsList AdvertsInfo) ([]*OrderItem, error) {
 	cart := []*OrderItem{}
 
 	for i := range ol.Items {
@@ -86,8 +86,8 @@ func (ol *OrderList) GetOrdersByUserID(userID uint, userList UsersInfo, advertsL
 	return cart, nil
 }
 
-func (ol *OrderList) GetReturningOrderByUserID(userID uint, userList UsersInfo, advertsList AdvertsInfo) ([]*ReturningOrder, error) {
-	cart := []*ReturningOrder{}
+func (ol *OrderList) GetReturningOrderByUserID(userID uint, advertsList AdvertsInfo) ([]*ReturningOrder, error) {
+	order := []*ReturningOrder{}
 
 	for i := range ol.Items {
 		ol.mu.Lock()
@@ -100,16 +100,16 @@ func (ol *OrderList) GetReturningOrderByUserID(userID uint, userList UsersInfo, 
 		advert, err := advertsList.GetAdvert(item.AdvertID)
 
 		if err != nil {
-			return cart, err
+			return order, err
 		}
 
-		cart = append(cart, &ReturningOrder{
+		order = append(order, &ReturningOrder{
 			OrderItem: *item,
 			Advert:    advert.Advert,
 		})
 	}
 
-	return cart, nil
+	return order, nil
 }
 
 // func (cl *CartList) DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error {
@@ -130,7 +130,7 @@ func (ol *OrderList) GetReturningOrderByUserID(userID uint, userList UsersInfo, 
 // 	return errNotInCart
 // }
 
-func (ol *OrderList) CreateOrderByIDs(userID uint, orderItem ReceivedOrderItem, userList UsersInfo, advertsList AdvertsInfo) bool {
+func (ol *OrderList) CreateOrderByID(userID uint, orderItem *ReceivedOrderItem, advertsList AdvertsInfo) error {
 
 	newOrderItem := OrderItem{
 		ID:            0,
@@ -149,7 +149,7 @@ func (ol *OrderList) CreateOrderByIDs(userID uint, orderItem ReceivedOrderItem, 
 	ol.mu.Lock()
 	ol.Items = append(ol.Items, &newOrderItem)
 	ol.mu.Unlock()
-	return true
+	return nil
 }
 
 func NewOrderList() *OrderList {
