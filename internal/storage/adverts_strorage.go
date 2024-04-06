@@ -46,7 +46,7 @@ type Category struct {
 
 type City struct {
 	ID          uint   `json:"id"`
-	Name        string `json:"name"`
+	CityName    string `json:"cityName"`
 	Translation string `json:"translation"`
 }
 
@@ -71,14 +71,6 @@ type ReturningAdvert struct {
 	Category Category `json:"category"`
 }
 
-type ReturningAdInList struct {
-	ID       uint   `json:"id"`
-	Title    string `json:"title"`
-	Price    uint   `json:"price"`
-	City     string `json:"city"`
-	Category string `json:"category"`
-}
-
 type AdvertsList struct {
 	Adverts           []*Advert
 	Categories        []*Category
@@ -89,15 +81,21 @@ type AdvertsList struct {
 	mu                sync.RWMutex
 }
 
+type ReturningAdInList struct {
+	ID       uint   `json:"id"`
+	Title    string `json:"title"`
+	Price    uint   `json:"price"`
+	City     string `json:"city"`
+	Category string `json:"category"`
+}
+
 type AdvertsInfo interface {
 	GetAdvert(advertID uint, city, category string) (*ReturningAdvert, error)
-	GetAdvertsByCity(city string, startID, number uint) ([]*ReturningAdInList, error)
-	GetAdvertsByCategory(category, city string, startID, number uint) ([]*ReturningAdInList, error)
+	GetAdvertsByCity(city string, startID, num uint) ([]*ReturningAdInList, error)
+	GetAdvertsByCategory(category, city string, startID, num uint) ([]*ReturningAdInList, error)
+	GetAdvertByOnlyByID(advertID uint) (*ReturningAdvert, error)
 
 	CreateAdvert(data ReceivedAdData) (*ReturningAdvert, error)
-	EditAdvert(data ReceivedAdData) (*ReturningAdvert, error)
-	DeleteAdvert(advertID uint) error
-	CloseAdvert(advertID uint) error
 
 	getCityID(city string) (uint, error)
 	getCategoryID(city string) (uint, error)
@@ -105,8 +103,24 @@ type AdvertsInfo interface {
 	getLastAdvertID() uint
 	getLastLocationID() uint
 	getLastCategoryID() uint
+}
 
-	AdvertsList
+func (ads *AdvertsList) GetAdvertByOnlyByID(advertID uint) (*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+
+	if advertID > ads.AdvertsCounter {
+		return nil, errWrongAdvertID
+	}
+
+	cityID := ads.Adverts[advertID-1].CityID
+	categoryID := ads.Adverts[advertID-1].CategoryID
+
+	return &ReturningAdvert{
+		Advert:   *ads.Adverts[advertID-1],
+		City:     *ads.Cities[cityID-1],
+		Category: *ads.Categories[categoryID-1],
+	}, nil
 }
 
 func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) (*ReturningAdvert, error) {
@@ -140,38 +154,6 @@ func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) (*Return
 		City:     *ads.Cities[cityID-1],
 		Category: *ads.Categories[categoryID-1],
 	}, nil
-}
-
-func (ads *AdvertsList) GetAdvertsByUserID(userID uint) ([]*ReturningAdvert, error) {
-	ads.mu.Lock()
-	defer ads.mu.Unlock()
-	var returningAds []*ReturningAdvert
-	for _, ad := range ads.Adverts {
-		if ad.UserID == userID {
-			returningAds = append(returningAds, &ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.Cities[ad.CityID-1],
-				Category: *ads.Categories[ad.CategoryID-1],
-			})
-		}
-	}
-	return returningAds, nil
-}
-
-func (ads *AdvertsList) GetToggledAdvertsByUserID(userID uint, active bool) ([]*ReturningAdvert, error) {
-	ads.mu.Lock()
-	defer ads.mu.Unlock()
-	var returningAds []*ReturningAdvert
-	for _, ad := range ads.Adverts {
-		if ad.UserID == userID && ad.Active == active {
-			returningAds = append(returningAds, &ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.Cities[ad.CityID-1],
-				Category: *ads.Categories[ad.CategoryID-1],
-			})
-		}
-	}
-	return returningAds, nil
 }
 
 func (ads *AdvertsList) GetAdvertsByCity(city string, startID, num uint) ([]*ReturningAdInList, error) {
@@ -251,6 +233,38 @@ func (ads *AdvertsList) GetAdvertsByCategory(category, city string, startID, num
 	return returningAds, nil
 }
 
+func (ads *AdvertsList) GetAdvertsByUserID(userID uint) ([]*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+	var returningAds []*ReturningAdvert
+	for _, ad := range ads.Adverts {
+		if ad.UserID == userID {
+			returningAds = append(returningAds, &ReturningAdvert{
+				Advert:   *ad,
+				City:     *ads.Cities[ad.CityID-1],
+				Category: *ads.Categories[ad.CategoryID-1],
+			})
+		}
+	}
+	return returningAds, nil
+}
+
+func (ads *AdvertsList) GetToggledAdvertsByUserID(userID uint, active bool) ([]*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+	var returningAds []*ReturningAdvert
+	for _, ad := range ads.Adverts {
+		if ad.UserID == userID && ad.Active == active {
+			returningAds = append(returningAds, &ReturningAdvert{
+				Advert:   *ad,
+				City:     *ads.Cities[ad.CityID-1],
+				Category: *ads.Categories[ad.CategoryID-1],
+			})
+		}
+	}
+	return returningAds, nil
+}
+
 func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) (*ReturningAdvert, error) {
 	cityID, err := ads.getCityID(data.City)
 	if err != nil {
@@ -287,30 +301,6 @@ func (ads *AdvertsList) CreateAdvert(data ReceivedAdData) (*ReturningAdvert, err
 	}, nil
 }
 
-func (ads *AdvertsList) CloseAdvert(advertID uint) error {
-	if advertID > ads.AdvertsCounter || ads.Adverts[advertID-1].Deleted {
-		return errWrongAdvertID
-	}
-
-	if !ads.Adverts[advertID-1].Active {
-		return errAlreadyClosed
-	}
-
-	ads.Adverts[advertID-1].Active = false
-
-	return nil
-}
-
-func (ads *AdvertsList) DeleteAdvert(advertID uint) error {
-	if advertID > ads.AdvertsCounter || ads.Adverts[advertID-1].Deleted {
-		return errWrongAdvertID
-	}
-
-	ads.Adverts[advertID-1].Deleted = true
-
-	return nil
-}
-
 func (ads *AdvertsList) EditAdvert(data ReceivedAdData) (*ReturningAdvert, error) {
 	id := data.ID
 	if id > ads.AdvertsCounter || ads.Adverts[id-1].Deleted {
@@ -341,12 +331,36 @@ func (ads *AdvertsList) EditAdvert(data ReceivedAdData) (*ReturningAdvert, error
 	}, nil
 }
 
+func (ads *AdvertsList) CloseAdvert(advertID uint) error {
+	if advertID > ads.AdvertsCounter || ads.Adverts[advertID-1].Deleted {
+		return errWrongAdvertID
+	}
+
+	if !ads.Adverts[advertID-1].Active {
+		return errAlreadyClosed
+	}
+
+	ads.Adverts[advertID-1].Active = false
+
+	return nil
+}
+
+func (ads *AdvertsList) DeleteAdvert(advertID uint) error {
+	if advertID > ads.AdvertsCounter || ads.Adverts[advertID-1].Deleted {
+		return errWrongAdvertID
+	}
+
+	ads.Adverts[advertID-1].Deleted = true
+
+	return nil
+}
+
 func (ads *AdvertsList) getCityID(city string) (uint, error) {
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
 
 	for _, val := range ads.Cities {
-		if val.Name == city || val.Translation == city {
+		if val.CityName == city || val.Translation == city {
 			return val.ID, nil
 		}
 	}
@@ -401,7 +415,7 @@ func FillAdvertsList(ads *AdvertsList) {
 	locationID := ads.getLastLocationID()
 	ads.Cities = append(ads.Cities, &City{
 		ID:          locationID,
-		Name:        "Москва",
+		CityName:    "Москва",
 		Translation: translit.Ru("Москва"),
 	})
 

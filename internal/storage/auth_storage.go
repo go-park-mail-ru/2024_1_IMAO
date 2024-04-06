@@ -44,13 +44,11 @@ type UsersInfo interface {
 	GetUserBySession(sessionID string) (*User, error)
 	getLastID() uint
 
-	EditUser(email, passwordHash string) (*User, error)
+	EditUser(id uint, email, passwordHash string) (*User, error)
 
 	SessionExists(sessionID string) bool
-	AddSession(email string) string
+	AddSession(email uint) string
 	RemoveSession(sessionID string) error
-
-	UsersList
 }
 
 func (active *UsersList) UserExists(email string) bool {

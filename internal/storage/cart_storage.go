@@ -46,7 +46,7 @@ func (cl *CartList) GetCartByUserID(userID uint, userList UsersInfo, advertsList
 		if item.UserID != userID {
 			continue
 		}
-		advert, err := advertsList.GetAdvert(item.AdvertID)
+		advert, err := advertsList.GetAdvertByOnlyByID(item.AdvertID)
 
 		if err != nil {
 			return cart, err

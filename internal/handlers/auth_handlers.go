@@ -271,7 +271,6 @@ func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *ht
 
 	usersList := authHandler.UsersList
 
-
 	session, err := request.Cookie("session_id")
 
 	if err != nil {
@@ -283,7 +282,7 @@ func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *ht
 	}
 
 	user, _ := usersList.GetUserBySession(session.Value)
-	
+
 	var newUser storage.UnauthorizedUser
 
 	err = json.NewDecoder(request.Body).Decode(&newUser)

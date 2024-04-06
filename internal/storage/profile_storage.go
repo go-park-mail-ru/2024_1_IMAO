@@ -226,7 +226,7 @@ func NewProfileList() *ProfileList {
 				Surname: "Vasilievich",
 				City: City{
 					ID:          1,
-					Name:        "Moscow",
+					CityName:    "Moscow",
 					Translation: "Москва",
 				},
 				Phone:          "1234567890",
@@ -245,7 +245,7 @@ func NewProfileList() *ProfileList {
 				UserID:  2,
 				City: City{
 					ID:          1,
-					Name:        "Kaluga",
+					CityName:    "Kaluga",
 					Translation: "Калуга",
 				},
 				Phone:          "1234567890",

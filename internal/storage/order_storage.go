@@ -97,7 +97,7 @@ func (ol *OrderList) GetReturningOrderByUserID(userID uint, advertsList AdvertsI
 		if item.UserID != userID {
 			continue
 		}
-		advert, err := advertsList.GetAdvert(item.AdvertID)
+		advert, err := advertsList.GetAdvertByOnlyByID(item.AdvertID)
 
 		if err != nil {
 			return order, err
