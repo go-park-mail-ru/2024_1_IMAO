@@ -233,28 +233,12 @@ func (ads *AdvertsList) GetAdvertsByCategory(category, city string, startID, num
 	return returningAds, nil
 }
 
-func (ads *AdvertsList) GetAdvertsByUserID(userID uint) ([]*ReturningAdvert, error) {
+func (ads *AdvertsList) GetAdvertsByUserIDFiltered(userID uint, filter func(*Advert) bool) ([]*ReturningAdvert, error) {
 	ads.mu.Lock()
 	defer ads.mu.Unlock()
 	var returningAds []*ReturningAdvert
 	for _, ad := range ads.Adverts {
-		if ad.UserID == userID {
-			returningAds = append(returningAds, &ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.Cities[ad.CityID-1],
-				Category: *ads.Categories[ad.CategoryID-1],
-			})
-		}
-	}
-	return returningAds, nil
-}
-
-func (ads *AdvertsList) GetToggledAdvertsByUserID(userID uint, active bool) ([]*ReturningAdvert, error) {
-	ads.mu.Lock()
-	defer ads.mu.Unlock()
-	var returningAds []*ReturningAdvert
-	for _, ad := range ads.Adverts {
-		if ad.UserID == userID && ad.Active == active {
+		if ad.UserID == userID && filter(ad) {
 			returningAds = append(returningAds, &ReturningAdvert{
 				Advert:   *ad,
 				City:     *ads.Cities[ad.CityID-1],

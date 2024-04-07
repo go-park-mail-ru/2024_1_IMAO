@@ -378,11 +378,20 @@ func (h *ProfileHandler) ProfileAdverts(writer http.ResponseWriter, request *htt
 	
 	switch storage.AdvertsFilter(filter) {
 	case storage.FilterAll:
-		ads, err = h.AdvertsList.GetAdvertsByUserID(uint(id))
+		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+			func(ad *storage.Advert) bool {
+				return true
+		})
 	case storage.FilterActive:
-		ads, err = h.AdvertsList.GetToggledAdvertsByUserID(uint(id), true)
+		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+			func(ad *storage.Advert) bool {
+				return ad.Active
+		})
 	default:
-		ads, err = h.AdvertsList.GetToggledAdvertsByUserID(uint(id), false)
+		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+			func(ad *storage.Advert) bool {
+				return !ad.Active
+		})
 	}
 	
 	if err != nil {
