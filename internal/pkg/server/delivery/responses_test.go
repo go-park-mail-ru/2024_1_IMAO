@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 )
 
 func TestSendOkResponse(t *testing.T) {

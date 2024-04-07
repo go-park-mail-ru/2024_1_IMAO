@@ -10,10 +10,6 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
-
-	handler "github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 )
 
 func TestLoginHandlerSuccessful(t *testing.T) { //nolint:funlen

@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	handler "github.com/go-park-mail-ru/2024_1_IMAO/internal/handlers"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 )
 
 //nolint:funlen

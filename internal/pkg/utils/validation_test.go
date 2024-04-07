@@ -1,9 +1,7 @@
-package pkg_test
+package utils_test
 
 import (
 	"testing"
-
-	"github.com/go-park-mail-ru/2024_1_IMAO/pkg"
 )
 
 func TestValidateEmail(t *testing.T) {

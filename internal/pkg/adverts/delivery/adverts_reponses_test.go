@@ -2,9 +2,6 @@ package delivery_test
 
 import (
 	"testing"
-
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 )
 
 func TestNewAdvertsOkResponse(t *testing.T) {
