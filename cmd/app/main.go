@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/app"
+	app "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
 )
 
 //	@title      YULA project API
