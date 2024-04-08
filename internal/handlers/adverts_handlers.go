@@ -138,9 +138,10 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		isUsed = false
 	}
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
+	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
 
 	data := storage.ReceivedAdData{
-		UserID:      1,
+		UserID:      uint(userID),
 		City:        request.PostFormValue("city"),
 		Category:    request.PostFormValue("category"),
 		Title:       request.PostFormValue("title"),
@@ -182,9 +183,12 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		isUsed = false
 	}
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
+	id, _ := strconv.Atoi(request.PostFormValue("id"))
+	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
 
 	data := storage.ReceivedAdData{
-		UserID:      1,
+		ID:          uint(id),
+		UserID:      uint(userID),
 		City:        request.PostFormValue("city"),
 		Category:    request.PostFormValue("category"),
 		Title:       request.PostFormValue("title"),
