@@ -6,7 +6,8 @@ import (
 )
 
 type Profile struct {
-	UserID         uint      `json:"id"`
+	ID             uint      `json:"id"`
+	UserID         uint      `json:"user_id"`
 	Name           string    `json:"name"`
 	Surname        string    `json:"surname"`
 	City           City      `json:"city"`
@@ -19,6 +20,12 @@ type Profile struct {
 	MerchantsName  string    `json:"merchantsName"`
 	SubersCount    int       `json:"subersCount"`
 	SubonsCount    int       `json:"subonsCount"`
+}
+
+type ProfilePad struct {
+	Name    *string `json:"name"`
+	Surname *string `json:"surname"`
+	Phone   *string `json:"phoneNumber"`
 }
 
 type AdvertsFilter int

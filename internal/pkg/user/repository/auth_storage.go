@@ -134,6 +134,7 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 
 		return nil, err
 	}
+
 	fmt.Println("user", user)
 	return &user, nil
 

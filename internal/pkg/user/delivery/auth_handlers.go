@@ -226,7 +226,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 
 	user, _ := usersList.CreateUser(ctx, email, utils.HashPassword(password))
-	profileList.CreateProfile(user.ID)
+	profileList.CreateProfile(ctx, user.ID)
 
 	sessionID := usersList.AddSession(user.ID)
 

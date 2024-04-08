@@ -30,10 +30,12 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
+	ctx := request.Context()
+
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
 
-	p, err := h.ProfileList.GetProfileByUserID(uint(id))
+	p, err := h.ProfileList.GetProfileByUserID(ctx, uint(id))
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
