@@ -45,6 +45,8 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 		return
 	}
 
+	ctx := request.Context()
+
 	list := orderHandler.ListOrder
 	usersList := orderHandler.ListUsers
 
@@ -57,7 +59,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var ordersList []*models.ReturningOrder
 
@@ -81,6 +83,8 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 		return
 	}
 
+	ctx := request.Context()
+
 	list := orderHandler.ListOrder
 	cartlist := orderHandler.ListCart
 	usersList := orderHandler.ListUsers
@@ -103,7 +107,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	for _, receivedOrderItem := range data.Adverts {
 		isDeleted := cartlist.DeleteAdvByIDs(uint(user.ID), receivedOrderItem.AdvertID, usersList, orderHandler.ListAdverts)

@@ -44,6 +44,8 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := authHandler.UsersList
 
 	session, cookieErr := request.Cookie("session_id")
@@ -68,7 +70,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	email := user.Email
 	password := user.Password
 
-	expectedUser, err := usersList.GetUserByEmail(email)
+	expectedUser, err := usersList.GetUserByEmail(ctx, email)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
@@ -259,6 +261,8 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := authHandler.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -270,7 +274,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	log.Println("User authorized")
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, session.Value, true))
@@ -282,6 +286,8 @@ func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *ht
 
 		return
 	}
+
+	ctx := request.Context()
 
 	usersList := authHandler.UsersList
 
@@ -295,7 +301,7 @@ func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var newUser models.UnauthorizedUser
 

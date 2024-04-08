@@ -52,6 +52,8 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -64,7 +66,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.SetProfileCityNec
 
@@ -137,6 +139,8 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -149,7 +153,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.SetProfilePhoneNec
 
@@ -179,6 +183,8 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -191,7 +197,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.EditProfileNec
 
@@ -221,6 +227,8 @@ func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request 
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -233,7 +241,7 @@ func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	p, err := h.ProfileList.SetProfileApproved(user.ID)
 	if err != nil {
@@ -254,6 +262,8 @@ func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -266,7 +276,7 @@ func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.SetProfileNec
 
@@ -296,6 +306,8 @@ func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request 
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -308,7 +320,7 @@ func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.SetProfileNec
 
@@ -338,6 +350,8 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 		return
 	}
 
+	ctx := request.Context()
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -350,7 +364,7 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var data models.SetProfileNec
 

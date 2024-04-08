@@ -43,6 +43,8 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 		return
 	}
 
+	ctx := request.Context()
+
 	list := cartHandler.ListCart
 	usersList := cartHandler.ListUsers
 
@@ -55,7 +57,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	var adsList []*models.Advert
 
@@ -79,6 +81,8 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 		return
 	}
 
+	ctx := request.Context()
+
 	list := cartHandler.ListCart
 	usersList := cartHandler.ListUsers
 	var data models.ReceivedCartItem
@@ -99,7 +103,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
 
@@ -118,6 +122,8 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 		return
 	}
+
+	ctx := request.Context()
 
 	list := cartHandler.ListCart
 	usersList := cartHandler.ListUsers
@@ -139,7 +145,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(session.Value)
+	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	for _, item := range data.AdvertIDs {
 		err = list.DeleteAdvByIDs(user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)

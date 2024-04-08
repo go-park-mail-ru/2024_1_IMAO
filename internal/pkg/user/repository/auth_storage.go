@@ -52,10 +52,20 @@ func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bo
 	return exists
 }
 
-func (active *UsersListWrapper) GetLastID() uint {
-	active.UsersList.UsersCount++
+func (active *UsersListWrapper) GetLastID(ctx context.Context) uint {
+	var lastID uint
+	_ = pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
+		if err != nil {
 
-	return active.UsersList.UsersCount
+			return fmt.Errorf("Something went wrong getting user id from seq", err)
+		}
+		lastID = uint(id)
+
+		return nil
+	})
+
+	return lastID
 }
 
 func (active *UsersListWrapper) getIDByEmail(email string) (uint, error) {
@@ -111,13 +121,8 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 		return nil
 	})
 
-	// userInsertQuery := fmt.Sprintf(`INSERT INTO public."user"(email, password_hash) VALUES ('%s', '%s')`, email, passwordHash)
-	// execquery.ExecuteInsertQuery(active.Pool, userInsertQuery)
-
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
-
-	//id := active.GetLastID()
 
 	active.UsersList.Users[user.ID] = &models.User{
 		ID:           user.ID,
@@ -150,46 +155,91 @@ func (active *UsersListWrapper) EditUser(id uint, email, passwordHash string) (*
 	return usr, nil
 }
 
-func (active *UsersListWrapper) GetUserByEmail(email string) (*models.User, error) {
-	usr, err := active.getIDByEmail(email)
+func (active *UsersListWrapper) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+	SQLUserByEmail := `SELECT id, email, password_hash	FROM public."user" where email = $1 `
+	userLine := tx.QueryRow(ctx, SQLUserByEmail, email)
 
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
+	user := models.User{}
+
+	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// НЕ ПРОТЕСТИРОВАНО
+func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user *models.User
+
+	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		userInner, err := active.getUserByEmail(ctx, tx, email)
+		user = userInner
+
+		return err
+	})
 
 	if err != nil {
-
 		return nil, errUserNotExists
 	}
 
-	return active.UsersList.Users[usr], nil
+	return user, nil
 }
 
-func (active *UsersListWrapper) GetUserByID(userID uint) (*models.User, error) {
+func (active *UsersListWrapper) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
+	SQLUserById := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
+	userLine := tx.QueryRow(ctx, SQLUserById, id)
+
+	user := models.User{}
+
+	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// НЕ ПРОТЕСТИРОВАНО
+func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
+	var user *models.User
+
+	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		userInner, err := active.getUserByID(ctx, tx, userID)
+		user = userInner
+
+		return err
+	})
+
+	if err != nil {
+		return nil, errUserNotExists
+	}
+
+	return user, nil
+}
+
+// НЕ ПРОТЕСТИРОВАНО
+func (active *UsersListWrapper) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
 
-	usr, ok := active.UsersList.Users[userID]
+	userID := active.UsersList.Sessions[sessionID]
 
-	if ok {
-		return usr, nil
+	var user *models.User
+
+	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		userInner, err := active.getUserByID(ctx, tx, userID)
+		user = userInner
+
+		return err
+	})
+
+	if err != nil {
+		return nil, errUserNotExists
 	}
 
-	return nil, errUserNotExists
-}
-
-func (active *UsersListWrapper) GetUserBySession(sessionID string) (*models.User, error) {
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
-
-	id := active.UsersList.Sessions[sessionID]
-
-	for _, val := range active.UsersList.Users {
-		if val.ID == id {
-			return val, nil
-		}
-	}
-
-	return nil, errUserNotExists
+	return user, nil
 }
 
 func (active *UsersListWrapper) SessionExists(sessionID string) bool {
