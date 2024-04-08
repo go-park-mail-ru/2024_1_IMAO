@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,7 +10,6 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	authresp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 )
 
 const (
@@ -108,14 +106,29 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
-	list := advertsHandler.List
-	var data models.ReceivedAdData
-
-	err := json.NewDecoder(request.Body).Decode(&data)
+	err := request.ParseMultipartForm(0)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, authresp.NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
+	}
+
+	list := advertsHandler.List
+
+	isUsed := true
+	if request.PostFormValue("condition") == "1" {
+		isUsed = false
+	}
+	price, _ := strconv.Atoi(request.PostFormValue("price"))
+
+	data := models.ReceivedAdData{
+		UserID:      1,
+		City:        request.PostFormValue("city"),
+		Category:    request.PostFormValue("category"),
+		Title:       request.PostFormValue("title"),
+		Description: request.PostFormValue("description"),
+		Price:       uint(price),
+		IsUsed:      isUsed,
 	}
 
 	adsList, err := list.CreateAdvert(data)
@@ -137,14 +150,29 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
-	list := advertsHandler.List
-	var data models.ReceivedAdData
-
-	err := json.NewDecoder(request.Body).Decode(&data)
+	err := request.ParseMultipartForm(0)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, authresp.NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
+	}
+
+	list := advertsHandler.List
+
+	isUsed := true
+	if request.PostFormValue("condition") == "1" {
+		isUsed = false
+	}
+	price, _ := strconv.Atoi(request.PostFormValue("price"))
+
+	data := models.ReceivedAdData{
+		UserID:      1,
+		City:        request.PostFormValue("city"),
+		Category:    request.PostFormValue("category"),
+		Title:       request.PostFormValue("title"),
+		Description: request.PostFormValue("description"),
+		Price:       uint(price),
+		IsUsed:      isUsed,
 	}
 
 	ad, err := list.EditAdvert(data)

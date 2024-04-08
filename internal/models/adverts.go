@@ -30,7 +30,7 @@ type Category struct {
 
 type City struct {
 	ID          uint   `json:"id"`
-	CityName    string `json:"cityName"`
+	CityName    string `json:"name"`
 	Translation string `json:"translation"`
 }
 
