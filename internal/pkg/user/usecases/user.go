@@ -1,12 +1,14 @@
 package usecases
 
 import (
+	"context"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 )
 
 type UsersInfo interface {
-	UserExists(email string) bool
-	CreateUser(email, passwordHash string) (*models.User, error)
+	UserExists(ctx context.Context, email string) bool
+	CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserBySession(sessionID string) (*models.User, error)
 	GetLastID() uint

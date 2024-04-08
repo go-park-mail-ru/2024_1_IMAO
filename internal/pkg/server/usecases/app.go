@@ -2,12 +2,15 @@ package usecases
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
 	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/router"
+	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 
 	"github.com/gorilla/handlers"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -20,7 +23,12 @@ type Server struct {
 }
 
 func (srv *Server) Run() error {
-	router := myrouter.NewRouter()
+	connPool, err := pgxpool.NewWithConfig(context.Background(), pgxpoolconfig.PGXPoolConfig())
+	if err != nil {
+		log.Fatal("Error while creating connection to the database!!")
+	}
+
+	router := myrouter.NewRouter(connPool)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

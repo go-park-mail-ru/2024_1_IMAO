@@ -17,16 +17,17 @@ import (
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter() *mux.Router {
+func NewRouter(pool *pgxpool.Pool) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
 
-	advertsList := advrepo.NewAdvertsList()
+	advertsList := advrepo.NewAdvertsList(pool)
 	advrepo.FillAdvertsList(advertsList)
-	profileList := profrepo.NewProfileList()
-	usersList := authrepo.NewActiveUser()
+	profileList := profrepo.NewProfileList(pool)
+	usersList := authrepo.NewActiveUser(pool)
 
 	advertsHandler := &advdel.AdvertsHandler{
 		List: advertsList,
@@ -43,14 +44,14 @@ func NewRouter() *mux.Router {
 		ProfileList: profileList,
 	}
 
-	cartList := cartrepo.NewCartList()
+	cartList := cartrepo.NewCartList(pool)
 	cartHandler := &cartdel.CartHandler{
 		ListCart:    cartList,
 		ListAdverts: advertsList,
 		ListUsers:   usersList,
 	}
 
-	orderList := orderrepo.NewOrderList()
+	orderList := orderrepo.NewOrderList(pool)
 	orderHandler := &orderdel.OrderHandler{
 		ListOrder:   orderList,
 		ListCart:    cartList,

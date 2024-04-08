@@ -101,6 +101,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	userData := NewAuthOkResponse(*expectedUser, sessionID, true)
 	responses.SendOkResponse(writer, userData)
 	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
+
 }
 
 // Logout godoc
@@ -170,6 +171,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
+	ctx := request.Context()
 	usersList := authHandler.UsersList
 	profileList := authHandler.ProfileList
 
@@ -196,7 +198,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	password := newUser.Password
 	passwordRepeat := newUser.PasswordRepeat
 
-	if usersList.UserExists(email) {
+	if usersList.UserExists(ctx, email) {
 		log.Println("User already exists", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrUserAlreadyExists))
@@ -221,7 +223,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	user, _ := usersList.CreateUser(email, utils.HashPassword(password))
+	user, _ := usersList.CreateUser(ctx, email, utils.HashPassword(password))
 	profileList.CreateProfile(user.ID)
 
 	sessionID := usersList.AddSession(user.ID)

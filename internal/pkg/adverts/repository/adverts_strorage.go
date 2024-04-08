@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mdigger/translit"
 )
 
@@ -24,6 +25,7 @@ var (
 
 type AdvertsListWrapper struct {
 	AdvertsList *models.AdvertsList
+	Pool        *pgxpool.Pool
 }
 
 func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(advertID uint) (*models.ReturningAdvert, error) {
@@ -304,7 +306,7 @@ func (ads *AdvertsListWrapper) GetLastCategoryID() uint {
 	return ads.AdvertsList.CategoriesCounter
 }
 
-func NewAdvertsList() *AdvertsListWrapper {
+func NewAdvertsList(pool *pgxpool.Pool) *AdvertsListWrapper {
 	return &AdvertsListWrapper{
 		AdvertsList: &models.AdvertsList{
 			AdvertsCounter:    0,
@@ -315,6 +317,7 @@ func NewAdvertsList() *AdvertsListWrapper {
 			Categories:        make([]*models.Category, 0),
 			Mux:               sync.RWMutex{},
 		},
+		Pool: pool,
 	}
 }
 

@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var errProfileNotExists = errors.New("profile does not exist")
 
 type ProfileListWrapper struct {
 	ProfileList *models.ProfileList
+	Pool        *pgxpool.Pool
 }
 
 func (pl *ProfileListWrapper) CreateProfile(userID uint) *models.Profile {
@@ -149,7 +151,7 @@ func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNe
 // 	}
 // }
 
-func NewProfileList() *ProfileListWrapper {
+func NewProfileList(pool *pgxpool.Pool) *ProfileListWrapper {
 	return &ProfileListWrapper{
 		ProfileList: &models.ProfileList{
 			Profiles: map[uint]*models.Profile{
@@ -194,5 +196,6 @@ func NewProfileList() *ProfileListWrapper {
 			},
 			Mux: sync.RWMutex{},
 		},
+		Pool: pool,
 	}
 }

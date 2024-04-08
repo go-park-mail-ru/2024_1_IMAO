@@ -7,6 +7,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	useruc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -15,6 +16,7 @@ var (
 
 type CartListWrapper struct {
 	CartList *models.CartList
+	Pool     *pgxpool.Pool
 }
 
 func (cl *CartListWrapper) GetCartByUserID(userID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) ([]*models.Advert, error) {
@@ -82,11 +84,12 @@ func (cl *CartListWrapper) AppendAdvByIDs(userID uint, advertID uint, userList u
 	return true
 }
 
-func NewCartList() *CartListWrapper {
+func NewCartList(pool *pgxpool.Pool) *CartListWrapper {
 	return &CartListWrapper{
 		CartList: &models.CartList{
 			Items: make([]*models.CartItem, 0),
 			Mux:   sync.RWMutex{},
 		},
+		Pool: pool,
 	}
 }

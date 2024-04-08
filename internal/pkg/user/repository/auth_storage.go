@@ -1,27 +1,55 @@
 package storage
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
 	errUserNotExists    = errors.New("user does not exist")
 	errUserExists       = errors.New("user already exists")
 	errSessionNotExists = errors.New("session does not exist")
+	NameSeqUser         = pgx.Identifier{"public", "user_id_seq"} //nolint:gochecknoglobals
 )
 
 type UsersListWrapper struct {
 	UsersList *models.UsersList
+	Pool      *pgxpool.Pool
 }
 
-func (active *UsersListWrapper) UserExists(email string) bool {
-	_, err := active.getIDByEmail(email)
+func (active *UsersListWrapper) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=$1 );`
+	userLine := tx.QueryRow(ctx, SQLUserExists, email)
 
-	return err == nil
+	var exists bool
+
+	if err := userLine.Scan(&exists); err != nil {
+
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bool {
+	var exists bool
+
+	_ = pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		userExists, err := active.userExists(ctx, tx, email)
+		exists = userExists
+
+		return err
+	})
+
+	return exists
 }
 
 func (active *UsersListWrapper) GetLastID() uint {
@@ -43,23 +71,67 @@ func (active *UsersListWrapper) getIDByEmail(email string) (uint, error) {
 	return 0, errUserNotExists
 }
 
-func (active *UsersListWrapper) CreateUser(email, passwordHash string) (*models.User, error) {
-	if active.UserExists(email) {
+func (active *UsersListWrapper) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
+	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
+
+	var err error
+
+	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
+
+	if err != nil {
+		return fmt.Errorf("Something went wrong while executing create user query", err)
+	}
+
+	return nil
+}
+
+func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+	if active.UserExists(ctx, email) {
 		return nil, errUserExists
 	}
+
+	user := models.User{
+		Email:        email,
+		PasswordHash: passwordHash,
+	}
+
+	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		err := active.createUser(ctx, tx, &user)
+		if err != nil {
+
+			return fmt.Errorf("Something went wrong while creating user", err)
+		}
+		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
+		if err != nil {
+
+			return fmt.Errorf("Something went wrong getting user id from seq", err)
+		}
+		user.ID = uint(id)
+
+		return nil
+	})
+
+	// userInsertQuery := fmt.Sprintf(`INSERT INTO public."user"(email, password_hash) VALUES ('%s', '%s')`, email, passwordHash)
+	// execquery.ExecuteInsertQuery(active.Pool, userInsertQuery)
 
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
 
-	id := active.GetLastID()
+	//id := active.GetLastID()
 
-	active.UsersList.Users[id] = &models.User{
-		ID:           id,
-		PasswordHash: passwordHash,
-		Email:        email,
+	active.UsersList.Users[user.ID] = &models.User{
+		ID:           user.ID,
+		PasswordHash: user.PasswordHash,
+		Email:        user.Email,
 	}
 
-	return active.UsersList.Users[id], nil
+	if err != nil {
+
+		return nil, err
+	}
+	fmt.Println("user", user)
+	return &user, nil
+
 }
 
 func (active *UsersListWrapper) EditUser(id uint, email, passwordHash string) (*models.User, error) {
@@ -152,7 +224,7 @@ func (active *UsersListWrapper) RemoveSession(sessionID string) error {
 	return nil
 }
 
-func NewActiveUser() *UsersListWrapper {
+func NewActiveUser(pool *pgxpool.Pool) *UsersListWrapper {
 	return &UsersListWrapper{
 		UsersList: &models.UsersList{
 			Sessions: make(map[string]uint, 1),
@@ -165,5 +237,6 @@ func NewActiveUser() *UsersListWrapper {
 			},
 			UsersCount: 1,
 			Mux:        sync.RWMutex{}},
+		Pool: pool,
 	}
 }
