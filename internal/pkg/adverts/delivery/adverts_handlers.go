@@ -99,6 +99,30 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
 }
 
+func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	list := advertsHandler.List
+
+	ad, err := list.GetAdvertByOnlyByID(uint(id))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
+}
+
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
