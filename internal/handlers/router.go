@@ -40,6 +40,7 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z]+}/{category:[a-zA-Z]+}/{id:[0-9]+}", advertsHandler.GetAdvert)
+	router.HandleFunc("/api/adverts/{id:[0-9]+}", advertsHandler.GetAdvertByID)
 	router.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
 	router.HandleFunc("/api/adverts/close/{id:[0-9]+}", advertsHandler.CloseAdvert)
 

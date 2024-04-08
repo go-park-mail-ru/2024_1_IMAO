@@ -91,6 +91,7 @@ type AdvertsList struct {
 
 type AdvertsInfo interface {
 	GetAdvert(advertID uint, city, category string) (*ReturningAdvert, error)
+	GetAdvertByID(advertID uint) (*ReturningAdvert, error)
 	GetAdvertsByCity(city string, startID, number uint) ([]*ReturningAdInList, error)
 	GetAdvertsByCategory(category, city string, startID, number uint) ([]*ReturningAdInList, error)
 
@@ -139,6 +140,23 @@ func (ads *AdvertsList) GetAdvert(advertID uint, city, category string) (*Return
 		Advert:   *ads.Adverts[advertID-1],
 		City:     *ads.Cities[cityID-1],
 		Category: *ads.Categories[categoryID-1],
+	}, nil
+}
+
+func (ads *AdvertsList) GetAdvertByID(advertID uint) (*ReturningAdvert, error) {
+	ads.mu.Lock()
+	defer ads.mu.Unlock()
+
+	if advertID > ads.AdvertsCounter || ads.Adverts[advertID-1].Deleted {
+		return nil, errWrongAdvertID
+	}
+
+	advert := *ads.Adverts[advertID-1]
+
+	return &ReturningAdvert{
+		Advert:   advert,
+		City:     *ads.Cities[advert.CityID-1],
+		Category: *ads.Categories[advert.CategoryID-1],
 	}, nil
 }
 

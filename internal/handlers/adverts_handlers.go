@@ -1,7 +1,6 @@
 package myhandlers
 
 import (
-	"encoding/json"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 	"github.com/gorilla/mux"
 	"log"
@@ -94,6 +93,30 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(ad))
 }
 
+func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	list := advertsHandler.List
+
+	ad, err := list.GetAdvertByID(uint(id))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, responses.NewAdvertsOkResponse(ad))
+}
+
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
@@ -101,14 +124,29 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
-	list := advertsHandler.List
-	var data storage.ReceivedAdData
-
-	err := json.NewDecoder(request.Body).Decode(&data)
+	err := request.ParseMultipartForm(0)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
+	}
+
+	list := advertsHandler.List
+
+	isUsed := true
+	if request.PostFormValue("condition") == "1" {
+		isUsed = false
+	}
+	price, _ := strconv.Atoi(request.PostFormValue("price"))
+
+	data := storage.ReceivedAdData{
+		UserID:      1,
+		City:        request.PostFormValue("city"),
+		Category:    request.PostFormValue("category"),
+		Title:       request.PostFormValue("title"),
+		Description: request.PostFormValue("description"),
+		Price:       uint(price),
+		IsUsed:      isUsed,
 	}
 
 	adsList, err := list.CreateAdvert(data)
@@ -130,14 +168,29 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
-	list := advertsHandler.List
-	var data storage.ReceivedAdData
-
-	err := json.NewDecoder(request.Body).Decode(&data)
+	err := request.ParseMultipartForm(0)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
+	}
+
+	list := advertsHandler.List
+
+	isUsed := true
+	if request.PostFormValue("condition") == "1" {
+		isUsed = false
+	}
+	price, _ := strconv.Atoi(request.PostFormValue("price"))
+
+	data := storage.ReceivedAdData{
+		UserID:      1,
+		City:        request.PostFormValue("city"),
+		Category:    request.PostFormValue("category"),
+		Title:       request.PostFormValue("title"),
+		Description: request.PostFormValue("description"),
+		Price:       uint(price),
+		IsUsed:      isUsed,
 	}
 
 	ad, err := list.EditAdvert(data)
