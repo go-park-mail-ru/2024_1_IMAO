@@ -1,11 +1,15 @@
 package myhandlers
 
 import (
+	"fmt"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/storage"
 	"github.com/gorilla/mux"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/responses"
 )
@@ -124,7 +128,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
-	err := request.ParseMultipartForm(0)
+	err := request.ParseMultipartForm(20 << 20)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, responses.NewAdvertsErrResponse(responses.StatusInternalServerError,
@@ -139,6 +143,37 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	}
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
 	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
+	photos := request.MultipartForm.File["photos"]
+
+	for _, file := range photos {
+		uploadedFile, err := file.Open()
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer uploadedFile.Close()
+
+		currentTime := time.Now()
+
+		dirName := fmt.Sprintf("./uploads/%d-%02d-%02d", currentTime.Year(), currentTime.Month(), currentTime.Day())
+
+		err = os.MkdirAll(dirName, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		destination, err := os.Create(dirName + "/" + file.Filename)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer destination.Close()
+
+		if _, err := io.Copy(destination, uploadedFile); err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	data := storage.ReceivedAdData{
 		UserID:      uint(userID),
