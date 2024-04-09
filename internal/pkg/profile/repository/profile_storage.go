@@ -129,7 +129,7 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 	rand.Seed(time.Now().UnixNano())
 	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
 	profile.ReactionsCount = 10
-	profile.Approved = true
+	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
 	profile.SubersCount = rand.Intn(10)
 	profile.SubonsCount = rand.Intn(10)
@@ -138,14 +138,6 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 }
 
 func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
-	// pl.ProfileList.Mux.Lock()
-	// defer pl.ProfileList.Mux.Unlock()
-
-	// p, ok := pl.ProfileList.Profiles[userID]
-	// if !ok {
-	// 	return nil, errProfileNotExists
-	// }
-
 	var profile *models.Profile
 
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
@@ -155,7 +147,7 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 		return err
 	})
 
-	fmt.Println("err", err)
+	fmt.Println("err GetProfileByUserID", err)
 
 	if err != nil {
 		return nil, errProfileNotExists
@@ -164,36 +156,168 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 	fmt.Println("profile", profile)
 
 	return profile, nil
-
-	//return p, nil
 }
 
-func (pl *ProfileListWrapper) SetProfileCity(userID uint, data models.SetProfileCityNec) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
+func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, userID uint, data models.City) (*models.Profile, error) {
 
-	p, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
+	SQLUpdateProfileCity := `UPDATE public.profile p
+	SET city_id = $1
+	FROM public.city c
+	WHERE c.id = $1 AND p.user_id = $2
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;
+	`
+
+	profileLine := tx.QueryRow(ctx, SQLUpdateProfileCity, data.ID, userID)
+
+	profile := models.Profile{}
+	city := models.City{}
+	profilePad := models.ProfilePad{}
+	var avatar_url *string // ЗАГЛУШКА
+
+	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+
+		return nil, err
+	}
+
+	phoneToInsert := ""
+	if profilePad.Phone != nil {
+		phoneToInsert = *profilePad.Phone
+	}
+
+	nameToInsert := ""
+	if profilePad.Name != nil {
+		nameToInsert = *profilePad.Name
+	}
+
+	surnameToInsert := ""
+	if profilePad.Surname != nil {
+		surnameToInsert = *profilePad.Surname
+	}
+
+	profile.Phone = phoneToInsert
+	profile.Name = nameToInsert
+	profile.Surname = surnameToInsert
+	profile.Avatar = models.Image{}
+	profile.City = city
+
+	rand.Seed(time.Now().UnixNano())
+	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.ReactionsCount = 10
+	//profile.Approved = true
+	profile.MerchantsName = nameToInsert
+	profile.SubersCount = rand.Intn(10)
+	profile.SubonsCount = rand.Intn(10)
+
+	return &profile, nil
+}
+
+func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, data models.City) (*models.Profile, error) {
+	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
+	// if pl.ProfileExists(ctx, id) {
+	// 	return nil, errProfileDoNotExists
+	// }
+
+	var profile *models.Profile
+
+	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+		profileInner, err := pl.setProfileCity(ctx, tx, userID, data)
+		profile = profileInner
+
+		return err
+	})
+
+	fmt.Println("err SetProfileCity", err)
+
+	if err != nil {
 		return nil, errProfileNotExists
 	}
 
-	p.City = data.City
+	fmt.Println("profile", profile)
 
-	return p, nil
+	return profile, nil
 }
 
-func (pl *ProfileListWrapper) SetProfilePhone(userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
+func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
 
-	p, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
+	SQLUpdateProfilePhone := `UPDATE public.profile p
+	SET phone = $1
+	FROM public.city c
+	WHERE c.id = p.city_id AND p.user_id = $2
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;
+	`
+
+	profileLine := tx.QueryRow(ctx, SQLUpdateProfilePhone, data.Phone, userID)
+
+	profile := models.Profile{}
+	city := models.City{}
+	profilePad := models.ProfilePad{}
+	var avatar_url *string // ЗАГЛУШКА
+
+	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+
+		return nil, err
+	}
+
+	phoneToInsert := ""
+	if profilePad.Phone != nil {
+		phoneToInsert = *profilePad.Phone
+	}
+
+	nameToInsert := ""
+	if profilePad.Name != nil {
+		nameToInsert = *profilePad.Name
+	}
+
+	surnameToInsert := ""
+	if profilePad.Surname != nil {
+		surnameToInsert = *profilePad.Surname
+	}
+
+	profile.Phone = phoneToInsert
+	profile.Name = nameToInsert
+	profile.Surname = surnameToInsert
+	profile.Avatar = models.Image{}
+	profile.City = city
+
+	rand.Seed(time.Now().UnixNano())
+	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.ReactionsCount = 10
+	//profile.Approved = true
+	profile.MerchantsName = nameToInsert
+	profile.SubersCount = rand.Intn(10)
+	profile.SubonsCount = rand.Intn(10)
+
+	return &profile, nil
+}
+
+func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
+	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
+	// if pl.ProfileExists(ctx, id) {
+	// 	return nil, errProfileDoNotExists
+	// }
+
+	fmt.Println("data.Phone", data.Phone)
+
+	var profile *models.Profile
+
+	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+		profileInner, err := pl.setProfilePhone(ctx, tx, userID, data)
+		profile = profileInner
+
+		return err
+	})
+
+	fmt.Println("err SetProfilePhone", err)
+
+	if err != nil {
 		return nil, errProfileNotExists
 	}
 
-	p.Phone = data.Phone
+	fmt.Println("profile", profile)
 
-	return p, nil
+	return profile, nil
 }
 
 func (pl *ProfileListWrapper) SetProfileRating(userID uint, data models.SetProfileRatingNec) (*models.Profile, error) {

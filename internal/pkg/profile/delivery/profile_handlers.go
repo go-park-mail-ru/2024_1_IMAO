@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -56,6 +57,8 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	ctx := request.Context()
 
+	fmt.Println("aboba")
+
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
@@ -70,7 +73,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
-	var data models.SetProfileCityNec
+	var data models.City
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
@@ -79,7 +82,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.SetProfileCity(user.ID, data)
+	p, err := h.ProfileList.SetProfileCity(ctx, user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
@@ -166,7 +169,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.SetProfilePhone(user.ID, data)
+	p, err := h.ProfileList.SetProfilePhone(ctx, user.ID, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,

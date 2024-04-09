@@ -121,15 +121,6 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 		return nil
 	})
 
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
-
-	active.UsersList.Users[user.ID] = &models.User{
-		ID:           user.ID,
-		PasswordHash: user.PasswordHash,
-		Email:        user.Email,
-	}
-
 	if err != nil {
 
 		return nil, err
@@ -254,6 +245,10 @@ func (active *UsersListWrapper) AddSession(id uint) string {
 
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
+
+	active.UsersList.Users[id] = &models.User{
+		ID: id,
+	}
 
 	user := active.UsersList.Users[id]
 
