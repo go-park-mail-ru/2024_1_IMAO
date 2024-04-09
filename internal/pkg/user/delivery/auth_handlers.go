@@ -296,7 +296,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, session.Value, true))
 }
 
-func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *http.Request) {
+func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
@@ -331,29 +331,27 @@ func (authHandler *AuthHandler) EditUser(writer http.ResponseWriter, request *ht
 	}
 
 	email := newUser.Email
-	password := newUser.Password
-	passwordRepeat := newUser.PasswordRepeat
 
-	errors := utils.Validate(email, password)
+	errors := utils.ValidateEmail(email)
 	if errors != nil {
-		authHandler.UsersList.Logger.Error("Bad user data", responses.StatusBadRequest)
-		log.Println("Bad user data", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewValidationErrResponse(responses.StatusBadRequest,
-			errors))
-
-		return
-	}
-
-	if password != passwordRepeat {
-		authHandler.UsersList.Logger.Info("Passwords do not match")
-		log.Println("Passwords do not match")
+		authHandler.UsersList.Logger.Error("Email is not valid", responses.StatusBadRequest)
+		log.Println("Email is not valid", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrDifferentPasswords))
+			"Email is not valid"))
 
 		return
 	}
 
-	usersList.EditUser(user.ID, email, password)
+	user, err = usersList.EditUserEmail(ctx, user.ID, email)
+
+	if err != nil {
+		authHandler.UsersList.Logger.Error("This email is already in use", responses.StatusBadRequest)
+		log.Println("This email is already in use", responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
+			"This email is already in use"))
+
+		return
+	}
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, session.Value, true))
 

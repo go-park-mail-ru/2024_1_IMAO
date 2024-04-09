@@ -83,7 +83,7 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger) *mux.Router {
 	router.HandleFunc("/api/auth/check_auth", authHandler.CheckAuth)
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
-	router.HandleFunc("/api/auth/edit", authHandler.EditUser)
+	router.HandleFunc("/api/auth/edit/email", authHandler.EditUserEmail)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
 	router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)

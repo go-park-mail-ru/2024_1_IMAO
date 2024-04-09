@@ -66,3 +66,9 @@ func Validate(email, password string) []string {
 
 	return errors
 }
+
+func ValidateEmail(email string) error {
+	_, err := mail.ParseAddress(email)
+
+	return err
+}

@@ -140,6 +140,41 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 
 }
 
+func (active *UsersListWrapper) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
+	SQLUserExists := `UPDATE public."user"	SET email=$1 WHERE id=$2 RETURNING id, email;`
+	active.Logger.Infof(`UPDATE public."user"	SET email=%s WHERE id=%s RETURNING id, email;`, email, id)
+	userLine := tx.QueryRow(ctx, SQLUserExists, email, id)
+
+	user := models.User{}
+
+	if err := userLine.Scan(&user.ID, &user.Email); err != nil {
+		active.Logger.Errorf("Error while scanning edit user email, err=%v", err)
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (active *UsersListWrapper) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
+	var user *models.User
+
+	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+		userInner, err := active.editUserEmail(ctx, tx, id, email)
+		user = userInner
+
+		return err
+	})
+
+	if err != nil {
+		active.Logger.Errorf("Something went wrong while editing user profile , err=%v", errUserNotExists)
+
+		return nil, errUserNotExists
+	}
+
+	return user, nil
+}
+
 func (active *UsersListWrapper) EditUser(id uint, email, passwordHash string) (*models.User, error) {
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
