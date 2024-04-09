@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mdigger/translit"
+	"go.uber.org/zap"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 type AdvertsListWrapper struct {
 	AdvertsList *models.AdvertsList
 	Pool        *pgxpool.Pool
+	Logger      *zap.SugaredLogger
 }
 
 func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(advertID uint) (*models.ReturningAdvert, error) {
@@ -306,7 +308,7 @@ func (ads *AdvertsListWrapper) GetLastCategoryID() uint {
 	return ads.AdvertsList.CategoriesCounter
 }
 
-func NewAdvertsList(pool *pgxpool.Pool) *AdvertsListWrapper {
+func NewAdvertsList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *AdvertsListWrapper {
 	return &AdvertsListWrapper{
 		AdvertsList: &models.AdvertsList{
 			AdvertsCounter:    0,
@@ -317,7 +319,8 @@ func NewAdvertsList(pool *pgxpool.Pool) *AdvertsListWrapper {
 			Categories:        make([]*models.Category, 0),
 			Mux:               sync.RWMutex{},
 		},
-		Pool: pool,
+		Pool:   pool,
+		Logger: logger,
 	}
 }
 

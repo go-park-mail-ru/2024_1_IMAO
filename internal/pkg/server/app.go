@@ -1,21 +1,25 @@
-package usecases
+package server
 
 import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/router"
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
+	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
 
 	"github.com/gorilla/handlers"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
-	Timeout = time.Second * 3
-	Address = ":8080"
+	Timeout            = time.Second * 3
+	Address            = ":8080"
+	outputLogPath      = "stdout logs.json"
+	errorOutputLogPath = "stderr err_logs.json"
 )
 
 type Server struct {
@@ -28,7 +32,13 @@ func (srv *Server) Run() error {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	router := myrouter.NewRouter(connPool)
+	logger, err := logger.NewLogger(strings.Split(outputLogPath, " "),
+		strings.Split(errorOutputLogPath, " "))
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	router := myrouter.NewRouter(connPool, logger)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

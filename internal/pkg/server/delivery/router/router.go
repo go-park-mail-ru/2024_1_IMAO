@@ -6,6 +6,7 @@ import (
 
 	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
 	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
+	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
 	profrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
@@ -13,21 +14,24 @@ import (
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
+	citydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/delivery"
 	orderdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/delivery"
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
-func NewRouter(pool *pgxpool.Pool) *mux.Router {
+func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
 
-	advertsList := advrepo.NewAdvertsList(pool)
+	advertsList := advrepo.NewAdvertsList(pool, logger)
 	advrepo.FillAdvertsList(advertsList)
-	profileList := profrepo.NewProfileList(pool)
-	usersList := authrepo.NewActiveUser(pool)
+	profileList := profrepo.NewProfileList(pool, logger)
+	usersList := authrepo.NewActiveUser(pool, logger)
+	cityList := cityrepo.NewCityList(pool, logger)
 
 	advertsHandler := &advdel.AdvertsHandler{
 		List: advertsList,
@@ -44,19 +48,23 @@ func NewRouter(pool *pgxpool.Pool) *mux.Router {
 		ProfileList: profileList,
 	}
 
-	cartList := cartrepo.NewCartList(pool)
+	cartList := cartrepo.NewCartList(pool, logger)
 	cartHandler := &cartdel.CartHandler{
 		ListCart:    cartList,
 		ListAdverts: advertsList,
 		ListUsers:   usersList,
 	}
 
-	orderList := orderrepo.NewOrderList(pool)
+	orderList := orderrepo.NewOrderList(pool, logger)
 	orderHandler := &orderdel.OrderHandler{
 		ListOrder:   orderList,
 		ListCart:    cartList,
 		ListAdverts: advertsList,
 		ListUsers:   usersList,
+	}
+
+	cityHandler := &citydel.CityHandler{
+		CityList: cityList,
 	}
 
 	log.Println("Server is running")
@@ -84,6 +92,8 @@ func NewRouter(pool *pgxpool.Pool) *mux.Router {
 	router.HandleFunc("/api/profile/set", profileHandler.SetProfile)
 	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
 	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
+
+	router.HandleFunc("/api/city", cityHandler.GetCityList)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
 

@@ -8,6 +8,7 @@ import (
 	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	resp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 var (
@@ -17,6 +18,7 @@ var (
 type OrderListWrapper struct {
 	OrderList *models.OrderList
 	Pool      *pgxpool.Pool
+	Logger    *zap.SugaredLogger
 }
 
 func (ol *OrderListWrapper) GetOrdersByUserID(userID uint, advertsList advuc.AdvertsInfo) ([]*models.OrderItem, error) {
@@ -103,12 +105,13 @@ func (ol *OrderListWrapper) CreateOrderByID(userID uint, orderItem *models.Recei
 	return nil
 }
 
-func NewOrderList(pool *pgxpool.Pool) *OrderListWrapper {
+func NewOrderList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *OrderListWrapper {
 	return &OrderListWrapper{
 		OrderList: &models.OrderList{
 			Items: make([]*models.OrderItem, 0),
 			Mux:   sync.RWMutex{},
 		},
-		Pool: pool,
+		Pool:   pool,
+		Logger: logger,
 	}
 }

@@ -28,12 +28,6 @@ type Category struct {
 	Translation string `json:"translation"`
 }
 
-type City struct {
-	ID          uint   `json:"id"`
-	CityName    string `json:"name"`
-	Translation string `json:"translation"`
-}
-
 type Advert struct {
 	ID          uint      `json:"id"`
 	UserID      uint      `json:"userId"`

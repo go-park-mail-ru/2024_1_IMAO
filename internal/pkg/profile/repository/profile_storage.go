@@ -13,6 +13,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 var (
@@ -23,16 +24,20 @@ var (
 type ProfileListWrapper struct {
 	ProfileList *models.ProfileList
 	Pool        *pgxpool.Pool
+	Logger      *zap.SugaredLogger
 }
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
 	SQLCreateProfile := `INSERT INTO public.profile(user_id) VALUES ($1);`
+	pl.Logger.Infof(`INSERT INTO public.profile(user_id) VALUES (%s);`, profile)
 
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID)
 
 	if err != nil {
+		pl.Logger.Errorf("Something went wrong while executing create profile query, err=%v", err)
+
 		return fmt.Errorf("Something went wrong while executing create profile query", err)
 	}
 
@@ -49,11 +54,12 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
 		err := pl.createProfile(ctx, tx, &profile)
 		if err != nil {
-
+			pl.Logger.Errorf("Something went wrong while creating profile, err=%v", err)
 			return fmt.Errorf("Something went wrong while creating profile", err)
 		}
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqProfile)
 		if err != nil {
+			pl.Logger.Errorf("Something went wrong getting user id from seq, err=%v", err)
 
 			return fmt.Errorf("Something went wrong getting user id from seq", err)
 		}
@@ -66,7 +72,7 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 
 		return nil
 	}
-	fmt.Println("profile", profile)
+
 	return &profile
 }
 
@@ -92,6 +98,27 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 			p.city_id = c.id
 		WHERE 
 			p.user_id = $1`
+	pl.Logger.Infof(`
+	SELECT 
+		p.id, 
+		p.user_id, 
+		p.city_id, 
+		p.phone, 
+		p.name, 
+		p.surname, 
+		p.regtime, 
+		p.verified, 
+		p.avatar_url,
+		c.name AS city_name,
+		c.translation AS city_translation
+	FROM 
+		public.profile p
+	INNER JOIN 
+		public.city c
+	ON 
+		p.city_id = c.id
+	WHERE 
+		p.user_id = %s`, id)
 	profileLine := tx.QueryRow(ctx, SQLUserById, id)
 
 	profile := models.Profile{}
@@ -101,6 +128,8 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+
+		pl.Logger.Errorf("Something went wrong while scanning profile, err=%v", err)
 
 		return nil, err
 	}
@@ -147,13 +176,11 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 		return err
 	})
 
-	fmt.Println("err GetProfileByUserID", err)
-
 	if err != nil {
+		pl.Logger.Errorf("Something went wrong while getting profile by UserID , err=%v", errProfileNotExists)
+
 		return nil, errProfileNotExists
 	}
-
-	fmt.Println("profile", profile)
 
 	return profile, nil
 }
@@ -164,8 +191,13 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 	SET city_id = $1
 	FROM public.city c
 	WHERE c.id = $1 AND p.user_id = $2
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;
-	`
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+
+	pl.Logger.Infof(`UPDATE public.profile p
+	SET city_id = %s
+	FROM public.city c
+	WHERE c.id = %s AND p.user_id = %s
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`, data.ID, data.ID, userID)
 
 	profileLine := tx.QueryRow(ctx, SQLUpdateProfileCity, data.ID, userID)
 
@@ -176,6 +208,8 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+
+		pl.Logger.Errorf("Something went wrong while scanning profile lines, err=%v", err)
 
 		return nil, err
 	}
@@ -227,13 +261,11 @@ func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, d
 		return err
 	})
 
-	fmt.Println("err SetProfileCity", err)
-
 	if err != nil {
+		pl.Logger.Errorf("Something went wrong while updating profile city, err=%v", errProfileNotExists)
+
 		return nil, errProfileNotExists
 	}
-
-	fmt.Println("profile", profile)
 
 	return profile, nil
 }
@@ -244,8 +276,13 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 	SET phone = $1
 	FROM public.city c
 	WHERE c.id = p.city_id AND p.user_id = $2
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;
-	`
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+
+	pl.Logger.Infof(`UPDATE public.profile p
+	SET phone = %s
+	FROM public.city c
+	WHERE c.id = p.city_id AND p.user_id = %s
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`, data.Phone, userID)
 
 	profileLine := tx.QueryRow(ctx, SQLUpdateProfilePhone, data.Phone, userID)
 
@@ -256,6 +293,8 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+
+		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
 
 		return nil, err
 	}
@@ -298,8 +337,6 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 	// 	return nil, errProfileDoNotExists
 	// }
 
-	fmt.Println("data.Phone", data.Phone)
-
 	var profile *models.Profile
 
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
@@ -309,13 +346,11 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 		return err
 	})
 
-	fmt.Println("err SetProfilePhone", err)
-
 	if err != nil {
+		pl.Logger.Errorf("Something went wrong while updating profile phone , err=%v", errProfileNotExists)
+
 		return nil, errProfileNotExists
 	}
-
-	fmt.Println("profile", profile)
 
 	return profile, nil
 }
@@ -403,7 +438,7 @@ func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNe
 // 	}
 // }
 
-func NewProfileList(pool *pgxpool.Pool) *ProfileListWrapper {
+func NewProfileList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileListWrapper {
 	return &ProfileListWrapper{
 		ProfileList: &models.ProfileList{
 			Profiles: map[uint]*models.Profile{
@@ -448,6 +483,7 @@ func NewProfileList(pool *pgxpool.Pool) *ProfileListWrapper {
 			},
 			Mux: sync.RWMutex{},
 		},
-		Pool: pool,
+		Pool:   pool,
+		Logger: logger,
 	}
 }

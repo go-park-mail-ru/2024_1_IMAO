@@ -1,4 +1,4 @@
-package usecases_test
+package server_test
 
 import (
 	"net/http"
