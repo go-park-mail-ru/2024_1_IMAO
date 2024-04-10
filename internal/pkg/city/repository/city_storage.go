@@ -23,9 +23,9 @@ type CityListWrapper struct {
 }
 
 func (cl *CityListWrapper) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
-	SQLUserByEmail := `SELECT id, name, translation FROM public.city;`
+	SQLCityList := `SELECT id, name, translation FROM public.city;`
 	cl.Logger.Infof(`SELECT id, name, translation FROM public.city;`)
-	rows, err := tx.Query(ctx, SQLUserByEmail)
+	rows, err := tx.Query(ctx, SQLCityList)
 	if err != nil {
 		cl.Logger.Errorf("Something went wrong while executing select city query, err=%v", err)
 

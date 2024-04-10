@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -38,14 +39,23 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		return
 	}
 
+	ctx := request.Context()
+
 	vars := mux.Vars(request)
 	city := vars["city"]
 	category := vars["category"]
 
 	list := advertsHandler.List
 
-	count, _ := strconv.Atoi(request.URL.Query().Get("count"))
-	startID, _ := strconv.Atoi(request.URL.Query().Get("startId"))
+	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
+	startID, errstartID := strconv.Atoi(request.URL.Query().Get("startId"))
+	userID, errUser := strconv.Atoi(request.URL.Query().Get("userId"))
+	deleted, errdeleted := strconv.Atoi(request.URL.Query().Get("deleted"))
+
+	fmt.Println("errCount", errCount)
+	fmt.Println("errstartID", errstartID)
+	fmt.Println("errUser", errUser)
+	fmt.Println("errdeleted", errdeleted)
 
 	if city == "" && request.URL.Query().Get("city") != "" {
 		city = request.URL.Query().Get("city")
@@ -58,10 +68,11 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 
 	if category != "" {
 		adsList, err = list.GetAdvertsByCategory(category, city, uint(startID), uint(count))
-	} else {
+	} else if errCount == nil && errstartID == nil {
 		adsList, err = list.GetAdvertsByCity(city, uint(startID), uint(count))
+	} else if errUser == nil && errdeleted == nil {
+		adsList, err = list.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}
-
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,

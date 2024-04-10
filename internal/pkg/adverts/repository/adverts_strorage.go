@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mdigger/translit"
 	"go.uber.org/zap"
@@ -156,6 +158,117 @@ func (ads *AdvertsListWrapper) GetAdvertsByCategory(category, city string, start
 	}
 
 	return returningAds, nil
+}
+
+func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {
+
+	statusID := 23
+	if deleted == 1 {
+		statusID = 24
+	}
+
+	SQLGetAdvertsForUserWhereStatusIs := `SELECT 
+		a.id, 
+		a.user_id, 
+		a.city_id, 
+		a.category_id, 
+		a.title, 
+		a.description, 
+		a.price, 
+		a.created_time, 
+		a.closed_time, 
+		a.is_used, 
+		a.status_id,
+		c.name AS city_name,
+		c.translation AS city_translation,
+		cat.name AS category_name,
+		cat.translation AS category_translation
+	FROM 
+		public.advert a
+	INNER JOIN 
+		city c ON a.city_id = c.id
+	INNER JOIN 
+		category cat ON a.category_id = cat.id
+	WHERE 
+		a.user_id = $1 AND a.status_id = $2;
+	`
+	ads.Logger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.status_id, c.name AS city_name,
+		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
+		INNER JOIN category cat ON a.category_id = cat.id WHERE 	a.user_id = %s AND a.status_id = %s; `, userId, statusID)
+
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, statusID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing select adverts for user where status is, err=%v", err)
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	returningAdvertList := models.ReturningAdvertList{}
+	for rows.Next() {
+		advert := models.Advert{}
+		city := models.City{}
+		category := models.Category{}
+		var status uint // ЗАГЛУШКА
+
+		if err := rows.Scan(&advert.ID, &advert.UserID, &advert.CityID, &advert.CategoryID, &advert.Title, &advert.Description, &advert.Price, &advert.CreatedTime, &advert.ClosedTime, &advert.IsUsed, &status,
+			&city.CityName, &city.Translation, &category.Name, &category.Translation); err != nil {
+
+			ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+
+			return nil, err
+		}
+		advert.Deleted = false
+		if status == 24 {
+			advert.Deleted = true
+		}
+		city.ID = advert.CityID
+		category.ID = advert.CategoryID
+		returningAdvert := models.ReturningAdvert{
+			Advert:   advert,
+			City:     city,
+			Category: category,
+		}
+
+		returningAdvertList.AdvertItems = append(returningAdvertList.AdvertItems, &returningAdvert)
+	}
+
+	if err := rows.Err(); err != nil {
+		ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+
+		return nil, err
+	}
+
+	return &returningAdvertList, nil
+}
+
+func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error) {
+
+	var advertsList []*models.ReturningAdInList
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted)
+		for _, num := range advertsListInner.AdvertItems {
+			returningAdInList := models.ReturningAdInList{
+				ID:       num.Advert.ID,
+				Title:    num.Advert.Title,
+				Price:    num.Advert.Price,
+				City:     num.City.Translation,
+				Category: num.Category.Translation,
+			}
+			advertsList = append(advertsList, &returningAdInList)
+		}
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+
+		return nil, err
+	}
+
+	return advertsList, nil
 }
 
 func (ads *AdvertsListWrapper) GetAdvertsByUserIDFiltered(userID uint, filter func(*models.Advert) bool) ([]*models.ReturningAdvert, error) {

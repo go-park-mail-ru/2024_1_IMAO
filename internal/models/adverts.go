@@ -66,3 +66,35 @@ type ReturningAdInList struct {
 	City     string `json:"city"`
 	Category string `json:"category"`
 }
+
+type ReturningAdvertList struct {
+	AdvertItems []*ReturningAdvert
+	Mux         sync.RWMutex
+}
+
+// type AdvertDB struct {
+// 	ID          uint      `json:"id"`
+// 	UserID      uint      `json:"userId"`
+// 	CityID      uint      `json:"cityId"`
+// 	CategoryID  uint      `json:"categoryId"`
+// 	Title       string    `json:"title"`
+// 	Description string    `json:"description"`
+// 	Price       uint      `json:"price"`
+// 	CreatedTime time.Time `json:"created"`
+// 	ClosedTime  time.Time `json:"closed"`
+// 	Active      bool      `json:"active"`
+// 	IsUsed      bool      `json:"isUsed"`
+// 	StatusID    uint      `json:"statusID"`
+// }
+
+// type ReturningAdvertDB struct {
+// 	Advert   Advert   `json:"advert"`
+// 	City     City     `json:"city"`
+// 	Category Category `json:"category"`
+// 	Status   Status   `json:"status"`
+// }
+
+// type ReturningAdvertDBList struct {
+// 	AdvertItems []*ReturningAdvertDB
+// 	Mux       sync.RWMutex
+// }
