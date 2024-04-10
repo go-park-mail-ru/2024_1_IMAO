@@ -30,12 +30,17 @@ type ProfileListWrapper struct {
 }
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
-	SQLCreateProfile := `INSERT INTO public.profile(user_id) VALUES ($1);`
-	pl.Logger.Infof(`INSERT INTO public.profile(user_id) VALUES (%s);`, profile)
+	cityIdDefault := 100
+	phoneDefault := "0 000 000 00 00"
+	nameDefault := "Пользователь"
+	surnameDefault := "Фамилия"
+	avatar_url := "images/img_avatar.png"
+	SQLCreateProfile := `INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES ($1, $2, $3, $4, $5, $6);`
+	pl.Logger.Infof(`INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES (%s, %s, %s, %s, %s, %s);`, profile.UserID, cityIdDefault, phoneDefault, nameDefault, surnameDefault, avatar_url)
 
 	var err error
 
-	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID)
+	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID, cityIdDefault, phoneDefault, nameDefault, surnameDefault, avatar_url)
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while executing create profile query, err=%v", err)
