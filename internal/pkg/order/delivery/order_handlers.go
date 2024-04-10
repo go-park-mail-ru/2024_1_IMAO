@@ -53,6 +53,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
+		orderHandler.ListUsers.Logger.Error("User not authorized", err)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -101,6 +102,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
+		orderHandler.ListUsers.Logger.Error("User not authorized", err)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -120,6 +122,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 		}
 
 		list.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.ListAdverts)
+		orderHandler.ListUsers.Logger.Info("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
 

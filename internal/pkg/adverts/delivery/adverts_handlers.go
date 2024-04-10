@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -52,11 +51,6 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	userID, errUser := strconv.Atoi(request.URL.Query().Get("userId"))
 	deleted, errdeleted := strconv.Atoi(request.URL.Query().Get("deleted"))
 
-	fmt.Println("errCount", errCount)
-	fmt.Println("errstartID", errstartID)
-	fmt.Println("errUser", errUser)
-	fmt.Println("errdeleted", errdeleted)
-
 	if city == "" && request.URL.Query().Get("city") != "" {
 		city = request.URL.Query().Get("city")
 	} else if city == "" {
@@ -74,6 +68,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		adsList, err = list.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -100,6 +95,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 
 	ad, err := list.GetAdvert(uint(id), city, category)
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -124,6 +120,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 
 	ad, err := list.GetAdvertByOnlyByID(uint(id))
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -143,6 +140,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 
 	err := request.ParseMultipartForm(10 << 20)
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -168,6 +166,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 
 	adsList, err := list.CreateAdvert(data)
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -187,6 +186,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 
 	err := request.ParseMultipartForm(10 << 20)
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -212,6 +212,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 
 	ad, err := list.EditAdvert(data)
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -236,6 +237,7 @@ func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, r
 
 	err := list.DeleteAdvert(uint(id))
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -262,6 +264,7 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 
 	err := list.CloseAdvert(uint(id))
 	if err != nil {
+		advertsHandler.List.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))

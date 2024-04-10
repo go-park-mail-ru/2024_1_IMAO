@@ -35,6 +35,8 @@ func (cl *CartListWrapper) GetCartByUserID(userID uint, userList useruc.UsersInf
 		advert, err := advertsList.GetAdvertByOnlyByID(item.AdvertID)
 
 		if err != nil {
+			cl.Logger.Error("Something went wrong", err)
+
 			return cart, err
 		}
 

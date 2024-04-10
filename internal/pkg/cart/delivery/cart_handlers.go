@@ -51,6 +51,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
+		cartHandler.ListUsers.Logger.Infof("User not authorized , err=%v", err)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -64,13 +65,15 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	adsList, err = list.GetCartByUserID(uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
 
 	if err != nil {
+		cartHandler.ListUsers.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
 	}
-	log.Println("Get cart for user", user.ID)
+	cartHandler.ListUsers.Logger.Info("Get cart for user ", user.ID)
+	log.Println("Get cart for user ", user.ID)
 	responses.SendOkResponse(writer, NewCartOkResponse(adsList))
 }
 
@@ -89,6 +92,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
+		cartHandler.ListUsers.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -97,6 +101,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
+		cartHandler.ListUsers.Logger.Info("User not authorized", err)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -108,8 +113,10 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
 
 	if isAppended {
+		cartHandler.ListUsers.Logger.Info("Advert", data.AdvertID, "has been added to cart of user", user.ID)
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
 	} else {
+		cartHandler.ListUsers.Logger.Info("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
 		log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
 	}
 
@@ -131,6 +138,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
+		cartHandler.ListUsers.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -139,6 +147,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
+		cartHandler.ListUsers.Logger.Info("User not authorized", err)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -151,6 +160,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 		err = list.DeleteAdvByIDs(user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)
 
 		if err != nil {
+			cartHandler.ListUsers.Logger.Error(err, responses.StatusBadRequest)
 			log.Println(err, responses.StatusBadRequest)
 			responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
 				responses.ErrBadRequest))
@@ -159,6 +169,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 		}
 	}
 
+	cartHandler.ListUsers.Logger.Info("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
 	log.Println("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
 
 	responses.SendOkResponse(writer, NewCartChangeResponse(false))

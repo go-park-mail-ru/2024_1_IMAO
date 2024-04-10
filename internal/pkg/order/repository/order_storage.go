@@ -53,6 +53,7 @@ func (ol *OrderListWrapper) GetReturningOrderByUserID(userID uint, advertsList a
 		advert, err := advertsList.GetAdvertByOnlyByID(item.AdvertID)
 
 		if err != nil {
+			ol.Logger.Error("Something went wrong", err)
 			return order, err
 		}
 
