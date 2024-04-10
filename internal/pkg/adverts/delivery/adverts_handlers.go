@@ -141,7 +141,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
-	err := request.ParseMultipartForm(0)
+	err := request.ParseMultipartForm(10 << 20)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
@@ -185,7 +185,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
-	err := request.ParseMultipartForm(0)
+	err := request.ParseMultipartForm(10 << 20)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,

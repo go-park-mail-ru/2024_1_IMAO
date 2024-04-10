@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"mime/multipart"
@@ -514,8 +515,10 @@ func (pl *ProfileListWrapper) SetProfile(userID uint, data models.SetProfileNec)
 func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNec) (*models.Profile, error) {
 	pl.ProfileList.Mux.Lock()
 	defer pl.ProfileList.Mux.Unlock()
-
+	log.Println(pl.ProfileList.Profiles[userID])
+	log.Println(pl.ProfileList.Profiles[userID-1])
 	_, ok := pl.ProfileList.Profiles[userID]
+	log.Println(ok)
 	if !ok {
 		return nil, errProfileNotExists
 	}
@@ -524,12 +527,7 @@ func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNe
 
 	old.Name = data.Name
 	old.Surname = data.Surname
-	old.City = data.City
-	old.Phone = data.Phone
-	old.Avatar = "" // ОПАСНОСТЬ
-	old.MerchantsName = data.MerchantsName
-	old.SubersCount = data.SubersCount
-	old.SubonsCount = data.SubonsCount
+	old.Avatar = data.Avatar // ОПАСНОСТЬ
 
 	// pl.Profiles[userID] = &Profile{
 	// 	UserID:       old.UserID,
@@ -540,7 +538,6 @@ func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNe
 	// 	Phone:        data.Phone,
 	// 	Avatar:       data.Avatar,
 	// }
-
 	return pl.ProfileList.Profiles[userID], nil
 }
 

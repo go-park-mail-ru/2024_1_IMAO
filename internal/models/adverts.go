@@ -9,8 +9,6 @@ const (
 	MaxPrice = 1000
 )
 
-type Image struct{}
-
 type ReceivedAdData struct {
 	ID          uint   `json:"Id"`
 	UserID      uint   `json:"userId"`

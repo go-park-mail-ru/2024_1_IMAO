@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -199,8 +200,11 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	ctx := request.Context()
 
 	usersList := h.UsersList
+	log.Println(usersList)
+	log.Println(usersList.UsersList)
 
 	session, err := request.Cookie("session_id")
+	log.Println(session.Value)
 
 	if err != nil || !usersList.SessionExists(session.Value) {
 		h.UsersList.Logger.Info("User not authorized")
@@ -213,9 +217,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
-	var data models.EditProfileNec
-
-	err = json.NewDecoder(request.Body).Decode(&data)
+	err = request.ParseMultipartForm(2 << 20)
 	if err != nil {
 		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -223,6 +225,23 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 			responses.ErrInternalServer))
 	}
 
+	avatar := request.MultipartForm.File["avatar"]
+	path, err := utils.WriteFile(avatar[0], "avatar")
+	if err != nil {
+		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	data := models.EditProfileNec{
+		Name:    request.PostFormValue("name"),
+		Surname: request.PostFormValue("surname"),
+		Avatar:  path,
+	}
+	log.Println(h.ProfileList)
 	p, err := h.ProfileList.EditProfile(user.ID, data)
 	if err != nil {
 		h.UsersList.Logger.Error(err, responses.StatusBadRequest)

@@ -61,16 +61,11 @@ type ProfileAdvertsNec struct {
 type SetProfileNec struct {
 	Name    string `json:"name"`
 	Surname string `json:"surname"`
-	Avatar  Image  `json:"avatar"`
+	Avatar  string `json:"avatar"`
 }
 
 type EditProfileNec struct {
-	Name          string `json:"name"`
-	Surname       string `json:"surname"`
-	Avatar        Image  `json:"avatar"`
-	City          City   `json:"city"`
-	Phone         string `json:"phone"`
-	MerchantsName string `json:"merchantsName"`
-	SubersCount   int    `json:"subersCount"`
-	SubonsCount   int    `json:"subonsCount"`
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+	Avatar  string `json:"avatar"`
 }
