@@ -31,9 +31,9 @@ type ProfileListWrapper struct {
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
 	cityIdDefault := 100
-	phoneDefault := utils.RandString(16)
-	nameDefault := utils.RandString(16)
-	surnameDefault := utils.RandString(16)
+	phoneDefault := "0 000 000 00 00"
+	nameDefault := "Пользователь"
+	surnameDefault := "Фамилия"
 	avatar_url := utils.RandString(16)
 	SQLCreateProfile := `INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES ($1, $2, $3, $4, $5, $6);`
 	pl.Logger.Infof(`INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES (%s, %s, %s, %s, %s, %s);`, profile.UserID, cityIdDefault, phoneDefault, nameDefault, surnameDefault, avatar_url)
