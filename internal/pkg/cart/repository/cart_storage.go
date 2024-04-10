@@ -21,8 +21,8 @@ type CartListWrapper struct {
 	Logger   *zap.SugaredLogger
 }
 
-func (cl *CartListWrapper) GetCartByUserID(userID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) ([]*models.Advert, error) {
-	cart := []*models.Advert{}
+func (cl *CartListWrapper) GetCartByUserID(userID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) ([]*models.ReturningAdvert, error) {
+	cart := []*models.ReturningAdvert{}
 
 	for i := range cl.CartList.Items {
 		cl.CartList.Mux.Lock()
@@ -38,7 +38,7 @@ func (cl *CartListWrapper) GetCartByUserID(userID uint, userList useruc.UsersInf
 			return cart, err
 		}
 
-		cart = append(cart, &advert.Advert)
+		cart = append(cart, advert)
 	}
 
 	return cart, nil

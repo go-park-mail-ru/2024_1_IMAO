@@ -59,7 +59,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
-	var adsList []*models.Advert
+	var adsList []*models.ReturningAdvert
 
 	adsList, err = list.GetCartByUserID(uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
 

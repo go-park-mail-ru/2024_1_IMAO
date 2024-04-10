@@ -6,8 +6,8 @@ import (
 )
 
 type CartOkResponse struct {
-	Code  int              `json:"code"`
-	Items []*models.Advert `json:"items"`
+	Code  int                       `json:"code"`
+	Items []*models.ReturningAdvert `json:"items"`
 }
 
 type CartChangeResponse struct {
@@ -27,7 +27,7 @@ func NewCartChangeResponse(isAppended bool) *CartChangeResponse {
 	}
 }
 
-func NewCartOkResponse(adverts []*models.Advert) *CartOkResponse {
+func NewCartOkResponse(adverts []*models.ReturningAdvert) *CartOkResponse {
 	return &CartOkResponse{
 		Code:  responses.StatusOk,
 		Items: adverts,
