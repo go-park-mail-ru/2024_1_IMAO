@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"mime/multipart"
 	"sync"
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -124,10 +126,9 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 	profile := models.Profile{}
 	city := models.City{}
 	profilePad := models.ProfilePad{}
-	var avatar_url *string // ЗАГЛУШКА
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
 		pl.Logger.Errorf("Something went wrong while scanning profile, err=%v", err)
 
@@ -149,10 +150,15 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 		surnameToInsert = *profilePad.Surname
 	}
 
+	avatartToInsert := ""
+	if profilePad.Avatar != nil {
+		avatartToInsert = *profilePad.Avatar
+	}
+
 	profile.Phone = phoneToInsert
 	profile.Name = nameToInsert
 	profile.Surname = surnameToInsert
-	profile.Avatar = models.Image{}
+	profile.Avatar = avatartToInsert
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
@@ -204,10 +210,9 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 	profile := models.Profile{}
 	city := models.City{}
 	profilePad := models.ProfilePad{}
-	var avatar_url *string // ЗАГЛУШКА
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
 		pl.Logger.Errorf("Something went wrong while scanning profile lines, err=%v", err)
 
@@ -229,10 +234,15 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 		surnameToInsert = *profilePad.Surname
 	}
 
+	avatartToInsert := ""
+	if profilePad.Avatar != nil {
+		avatartToInsert = *profilePad.Avatar
+	}
+
 	profile.Phone = phoneToInsert
 	profile.Name = nameToInsert
 	profile.Surname = surnameToInsert
-	profile.Avatar = models.Image{}
+	profile.Avatar = avatartToInsert
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
@@ -289,10 +299,9 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 	profile := models.Profile{}
 	city := models.City{}
 	profilePad := models.ProfilePad{}
-	var avatar_url *string // ЗАГЛУШКА
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &avatar_url, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
 		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
 
@@ -314,10 +323,15 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 		surnameToInsert = *profilePad.Surname
 	}
 
+	avatartToInsert := ""
+	if profilePad.Avatar != nil {
+		avatartToInsert = *profilePad.Avatar
+	}
+
 	profile.Phone = phoneToInsert
 	profile.Name = nameToInsert
 	profile.Surname = surnameToInsert
-	profile.Avatar = models.Image{}
+	profile.Avatar = avatartToInsert
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
@@ -348,6 +362,104 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while updating profile phone , err=%v", errProfileNotExists)
+
+		return nil, errProfileNotExists
+	}
+
+	return profile, nil
+}
+
+func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, url string) (*models.Profile, error) {
+
+	SQLUpdateProfileAvatarURL := `
+	UPDATE public.profile p
+	SET avatar_url= $1
+	FROM public.city c
+	WHERE c.id = p.city_id AND p.user_id = $2
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+
+	pl.Logger.Infof(`UPDATE public.profile p
+	SET avatar_url= %s
+	FROM public.city c
+	WHERE c.id = p.city_id AND p.user_id = %s
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`, url, userID)
+
+	profileLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, url, userID)
+
+	profile := models.Profile{}
+	city := models.City{}
+	profilePad := models.ProfilePad{}
+
+	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
+
+		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
+
+		return nil, err
+	}
+
+	phoneToInsert := ""
+	if profilePad.Phone != nil {
+		phoneToInsert = *profilePad.Phone
+	}
+
+	nameToInsert := ""
+	if profilePad.Name != nil {
+		nameToInsert = *profilePad.Name
+	}
+
+	surnameToInsert := ""
+	if profilePad.Surname != nil {
+		surnameToInsert = *profilePad.Surname
+	}
+
+	avatartToInsert := ""
+	if profilePad.Avatar != nil {
+		avatartToInsert = *profilePad.Avatar
+	}
+
+	profile.Phone = phoneToInsert
+	profile.Name = nameToInsert
+	profile.Surname = surnameToInsert
+	profile.Avatar = avatartToInsert
+	profile.City = city
+
+	rand.Seed(time.Now().UnixNano())
+	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.ReactionsCount = 10
+	//profile.Approved = true
+	profile.MerchantsName = nameToInsert
+	profile.SubersCount = rand.Intn(10)
+	profile.SubonsCount = rand.Intn(10)
+
+	return &profile, nil
+}
+
+func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string, userID uint) (*models.Profile, error) {
+	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
+	// if pl.ProfileExists(ctx, id) {
+	// 	return nil, errProfileDoNotExists
+	// }
+
+	var profile *models.Profile
+
+	fullPath, err := utils.WriteFile(file, folderName)
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+
+		return nil, errProfileNotExists
+	}
+
+	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+		profileInner, err := pl.setProfileAvatarUrl(ctx, tx, userID, fullPath)
+		profile = profileInner
+
+		return err
+	})
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
 	}
@@ -394,7 +506,7 @@ func (pl *ProfileListWrapper) SetProfile(userID uint, data models.SetProfileNec)
 
 	p.Name = data.Name
 	p.Surname = data.Surname
-	p.Avatar = data.Avatar
+	p.Avatar = "" // ОПАСНОСТЬ
 
 	return p, nil
 }
@@ -414,7 +526,7 @@ func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNe
 	old.Surname = data.Surname
 	old.City = data.City
 	old.Phone = data.Phone
-	old.Avatar = data.Avatar
+	old.Avatar = "" // ОПАСНОСТЬ
 	old.MerchantsName = data.MerchantsName
 	old.SubersCount = data.SubersCount
 	old.SubonsCount = data.SubonsCount
@@ -452,7 +564,7 @@ func NewProfileList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileListW
 						Translation: "Москва",
 					},
 					Phone:          "1234567890",
-					Avatar:         models.Image{}, // Предполагается, что Image имеет конструктор по умолчанию
+					Avatar:         "", // Предполагается, что Image имеет конструктор по умолчанию
 					RegisterTime:   time.Now(),
 					Rating:         5.0,
 					ReactionsCount: 10,
@@ -471,7 +583,7 @@ func NewProfileList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileListW
 						Translation: "Калуга",
 					},
 					Phone:          "1234567890",
-					Avatar:         models.Image{}, // Предполагается, что Image имеет конструктор по умолчанию
+					Avatar:         "", // Предполагается, что Image имеет конструктор по умолчанию
 					RegisterTime:   time.Now(),
 					Rating:         4.4,
 					ReactionsCount: 10,

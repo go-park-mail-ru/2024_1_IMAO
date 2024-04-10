@@ -12,7 +12,7 @@ type Profile struct {
 	Surname        string    `json:"surname"`
 	City           City      `json:"city"`
 	Phone          string    `json:"phoneNumber"`
-	Avatar         Image     `json:"avatar"`
+	Avatar         string    `json:"avatar"`
 	RegisterTime   time.Time `json:"regTime"`
 	Rating         float64   `json:"rating"`
 	ReactionsCount float64   `json:"reactionsCount"`
@@ -26,6 +26,7 @@ type ProfilePad struct {
 	Name    *string `json:"name"`
 	Surname *string `json:"surname"`
 	Phone   *string `json:"phoneNumber"`
+	Avatar  *string `json:"avatar"`
 }
 
 type AdvertsFilter int
