@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -200,11 +199,8 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	ctx := request.Context()
 
 	usersList := h.UsersList
-	log.Println(usersList)
-	log.Println(usersList.UsersList)
 
 	session, err := request.Cookie("session_id")
-	log.Println(session.Value)
 
 	if err != nil || !usersList.SessionExists(session.Value) {
 		h.UsersList.Logger.Info("User not authorized")
@@ -226,15 +222,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	}
 
 	avatar := request.MultipartForm.File["avatar"]
-	path, err := utils.WriteFile(avatar[0], "avatar")
-	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
-
-		return
-	}
+	h.ProfileList.SetProfileAvatarUrl(ctx, avatar[0], "avatar", user.ID)
 
 	data := models.EditProfileNec{
 		Name:    request.PostFormValue("name"),
