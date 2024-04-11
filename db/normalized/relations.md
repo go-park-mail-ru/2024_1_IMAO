@@ -68,9 +68,9 @@
 
 { id } -> email, password_hash
 
-{ email } -> id, password_hash
+{ email } -> password_hash
 
-{ id, email } -> password_hash
+
 
 
 
@@ -115,19 +115,11 @@
 
  { id } -> user_id, phone, name, surname, regtime, city_id, verified, avatar_url
 
- { id, phone } -> user_id, name, surname, regtime, city_id, verified, avatar_url
+ { user_id } -> phone, name, surname, regtime, city_id, verified, avatar_url
 
- { id, user_id } -> phone, name, surname, regtime, city_id, verified, avatar_url 
+ { phone } -> user_id, name, surname, regtime, city_id, verified, avatar_url
 
- { id, user_id, phone} -> name, surname, regtime, city_id, verified, avatar_url 
-
- { user_id } -> id, phone, name, surname, regtime, city_id, verified, avatar_url 
-
- { user_id, phone } -> id, name, surname, regtime, city_id, verified, avatar_url 
-
- { phone } -> id, user_id, name, surname, regtime, city_id, verified, avatar_url
- 
-
+ { avatar_url } -> user_id, phone, name, surname, regtime, city_id, verified
 
 ### Нормальные формы
 
@@ -170,7 +162,7 @@
 | <u>id</u>    | bigint    | Синтетический ключ                                   |
 | user_id      | bigint    | Внешний ключ к пользователю, который создал заказ    |
 | advert_id    | bigint    | Внешний ключ к объявлению, на которое заказ размещен |
-| order_status    | order_status    | Cтатус заказа                        |
+| order_status | order_status    | Cтатус заказа                                  |
 | created_time | timestamp | Дата создания заказа                                 |
 | updated_time | timestamp | Дата последнего обновления заказа                    |
 | closed_time  | timestamp | Дата закрытия заказа                                 |
@@ -183,10 +175,6 @@
 ### ФЗ
 
 { id } -> user_id, advert_id,  order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
-
-{ advert_id } -> id, user_id, order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
-
-{ id, advert_id } -> user_id,  order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
 
 ### Нормальные формы
 
@@ -243,9 +231,8 @@
 
 { id } -> url, advert_id
 
-{ url } -> id, advert_id
+{ url } -> advert_id
 
-{ id, url } -> advert_id
 
 ### Нормальные формы
 
@@ -278,17 +265,9 @@
 
 { id } -> name, translation
 
-{ name } -> id, translation
+{ translation } -> name
 
-{ translation } -> id, name
-
-{ id, name } -> translation
-
-{ name, translation } -> id
-
-{ translation, id } -> name
-
-
+{ name } -> translation
 
 ### Нормальные формы
 
@@ -324,15 +303,9 @@
 
 { id } -> name, translation
 
-{ name } -> id, translation
+{ name } -> translation
 
-{ translation } -> id, name
-
-{ id, name } -> translation
-
-{ name, translation } -> id
-
-{ translation, id } -> name
+{ translation } -> name
 
 ### Нормальные формы
 
@@ -586,8 +559,6 @@
 ### ФЗ
 
 { id } -> user_id_subscriber, user_id_merchant
-
-{user_id_subscriber, user_id_merchant} -> id
 
 ### Нормальные формы
 
