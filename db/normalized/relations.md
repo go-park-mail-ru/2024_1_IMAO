@@ -645,7 +645,7 @@ erDiagram
 
         bigint id(PK)
 
-        text(256) user_id (FK)
+        text(256) user_id(FK)
 
         text(256) phone(UK)
 
