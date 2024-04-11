@@ -217,7 +217,7 @@
 
 Ограничение closed_time_is_after_created_time убеждается в том, что значение в столбце closed_time больше или равно значению в столбце created_time, что проверяет тот факт, что время закрытия должно быть после времени создания.
 
-## Image
+## Advert Image
 
 Таблица с путями до изображений на файловом сервере. В этой таблице хранятся только изображения для объявлений.
 
@@ -404,7 +404,7 @@
 
 { id } -> user_id, advert_id, review, created_time, rating
 
-{user_id, advert_id} -> id
+{advert_id} -> user_id, review, created_time, rating
 
 ### Нормальные формы
 
@@ -431,7 +431,7 @@
 Ограничение rating_interval проверяет, что значение в столбце rating находится в интервале от 1 до 5 включительно. Это означает, что оценка должна быть не меньше 1 и не больше 5, что соответствует диапазону оценок, используемому в системах рейтинга.
 
 
-## Complain
+## Complaint
 
 Таблица c жалобами. Жалобы пишут пользователи на других пользователей
 
@@ -440,14 +440,14 @@
 | <u>id</u>    | bigint    | Синтетический ключ                                                 |
 | user_id_complainer      | bigint    | Внешний ключ к пользователю, написал жалобу               |
 | user_id_complained    | bigint    | Внешний ключ к пользователю, на которого написали жалобу             |
-| complain_text       | text      | Текст жалобы                                                       |
-| complain_type | complain_type | Тип жалобы                                               |
+| complaint_text       | text      | Текст жалобы                                                       |
+| complaint_type | complaint_type | Тип жалобы                                               |
                                                   
 
 
 ### ФЗ
 
-{ id } -> user_id_complainer, user_id_complained, complain_comment, complain_type
+{ id } -> user_id_complainer, user_id_complained, complaint_comment, complaint_type
 
 ### Нормальные формы
 
@@ -461,17 +461,11 @@
 
 ### Ограничения
 
-* CONSTRAINT uniq_together_advert_id_user_id unique (user_id, advert_id)
+* CONSTRAINT max_len_complaint_text CHECK (LENGTH(complaint_text) <= 2000)
 
-Ограничение uniq_together_advert_id_user_id гарантирует уникальность комбинаций значений в столбцах user_id и advert_id. Это означает, что в таблице не может быть двух или более записей с одинаковым значением user_id и advert_id, что предотвращает ситуации, когда один пользователь несколько раз написал отзыв и поставил оценку на один и тот же товар.  
+Ограничение max_len_complaint_text, что длина текста в столбце complaint_text не превышает 2000 символов.
 
-* CONSTRAINT max_len_review CHECK (LENGTH(review) <= 256)
 
-Ограничение max_len_review, что длина текста в столбце review не превышает 256 символов.
-
-* CONSTRAINT rating_interval CHECK (rating >= 1 and rating <= 5)
-
-Ограничение rating_interval проверяет, что значение в столбце rating находится в интервале от 1 до 5 включительно. Это означает, что оценка должна быть не меньше 1 и не больше 5, что соответствует диапазону оценок, используемому в системах рейтинга.
    
 
 ## Cart
@@ -578,13 +572,13 @@ erDiagram
 
     Advert {
 
-        bigint id(PK)
+        bigint id PK
 
-        bigint user_id(FK)
+        bigint user_id FK
 
-        bigint city_id(FK)
+        bigint city_id FK
 
-        bigint category_id(FK)
+        bigint category_id FK
 
         text(256) title
 
@@ -598,8 +592,7 @@ erDiagram
 
         boolean is_used
 
-        advert_status advert_status(FK)
-
+        advert_status advert_status FK
     }
 
 
@@ -625,9 +618,9 @@ erDiagram
 
     User ||--|{ Review : leaves_review_on_product
 
-    User ||--|{ Complain : user_complains_on_user
+    User ||--|{ Complaint : user_complains_on_user
 
-    User ||--|{ Complain : user_was_complained_by_user
+    User ||--|{ Complaint : user_was_complained_by_user
 
 
     User {
@@ -645,9 +638,9 @@ erDiagram
 
         bigint id(PK)
 
-        text(256) user_id(FK)
+        text(256) user_id FK
 
-        text(256) phone(UK)
+        text(256) phone UK
 
         text(256) name
 
@@ -655,11 +648,11 @@ erDiagram
 
         timestamp regtime
 
-        bigint city_id(FK)
+        bigint city_id FK
 
         boolean verified
 
-        text(256) avatar_url(UK)
+        text(256) avatar_url UK
 
     }
 
@@ -667,13 +660,13 @@ erDiagram
 
     Order {
 
-        bigint id(PK)
+        bigint id PK
 
-        bigint user_id(FK)
+        bigint user_id FK
 
-        bigint advert_id(FK)
+        bigint advert_id FK
 
-        order_status order_status(FK)
+        order_status order_status FK
 
         timestamp created_time
 
@@ -699,11 +692,9 @@ erDiagram
 
     Favourite {
 
-        bigint id(PK)
+        bigint user_id FK
 
-        bigint user_id(FK)
-
-        bigint advert_id(FK)
+        bigint advert_id FK
 
     }
 
@@ -712,11 +703,11 @@ erDiagram
 
     Image {
 
-        bigint id(PK)
+        bigint id PK
 
         text(256) url 
 
-        bigint advert_id(FK)
+        bigint advert_id FK
 
     }
 
@@ -725,11 +716,11 @@ erDiagram
 
     Category {
 
-        bigint id(PK)
+        bigint id PK
 
-        text(256) name(UK)
+        text(256) name UK
 
-        text(256) translation(UK)
+        text(256) translation UK
 
     }
 
@@ -740,11 +731,11 @@ erDiagram
 
     City {
 
-        bigint id(PK)
+        bigint id PK
 
-        text(256) name(UK)
+        text(256) name UK
 
-        text(256) translation(UK)
+        text(256) translation UK
 
     }
 
@@ -753,29 +744,27 @@ erDiagram
 
     View {
 
-        bigint user_id(FK)
+        bigint user_id FK
 
-        bigint advert_id(FK)
+        bigint advert_id FK
 
     }
 
 
     Blacklist {
 
-        bigint id(PK)
+        bigint user_id_blocker FK
 
-        bigint user_id_blocker(FK)
-
-        bigint user_id_blocked(FK)
+        bigint user_id_blocked FK
 
     }
 
 
     Subscription {
 
-        bigint user_id_subscriber(FK)
+        bigint user_id_subscriber FK
 
-        bigint user_id_merchant(FK)
+        bigint user_id_merchant FK
 
     }
 
@@ -784,11 +773,11 @@ erDiagram
 
     Review {
 
-        bigint id(PK)
+        bigint id PK
 
-        bigint user_id(FK)
+        bigint user_id FK
 
-        bigint advert_id(FK)
+        bigint advert_id FK
 
         text(256) review
 
@@ -800,19 +789,19 @@ erDiagram
 
 
 
-    Complain }|--|| Advert : advert_was_reviewed_by_user
+    Complaint }|--|| Advert : advert_was_reviewed_by_user
 
-    Complain {
+    Complaint {
 
         bigint id(PK)
 
-        bigint user_id_complainer(FK)
+        bigint user_id_complainer FK
 
-        bigint user_id_complained(FK)
+        bigint user_id_complained FK
 
-        text(256) complain_text
+        text(256) complaint_text
 
-        complain_type complain_type
+        complaint_type complaint_type
 
     }
 
@@ -821,9 +810,9 @@ erDiagram
 
     Cart {
 
-        bigint user_id(FK)
+        bigint user_id FK
 
-        bigint advert_id(FK)
+        bigint advert_id FK
 
     }
 

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS public."blacklist"
+CREATE TABLE IF NOT EXISTS public.blacklist
 (
     user_id_blocker     BIGINT                                               NOT NULL REFERENCES public."user" (id),
     user_id_blocked     BIGINT                                               NOT NULL REFERENCES public."user" (id),

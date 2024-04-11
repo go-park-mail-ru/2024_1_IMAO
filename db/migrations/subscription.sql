@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS public."subscription"
+CREATE TABLE IF NOT EXISTS public.subscription
 (
     user_id_subscriber   BIGINT                                               NOT NULL REFERENCES public."user" (id),
     user_id_merchant     BIGINT                                               NOT NULL REFERENCES public."user" (id),
