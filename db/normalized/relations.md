@@ -16,13 +16,13 @@
 | created_time    | timestamp | Время создания объявления                              |
 | closed_time     | timestamp | Время, когда объявление стало неактивыным              |
 | is_used         | boolean   | Является ли товар подержанным                          |
-| status_id       | bigint    | Внешний ключ к статусу объявления                      |
+| advert_status       | advert_status    | Cтатус объявления                      |
 
 
 
 ### Функциональные зависимости
 
-{ id } -> user_id, city_id, category_id, title, description, price, creation_date, closed_time, is_used, status_id 
+{ id } -> user_id, city_id, category_id, title, description, price, creation_date, closed_time, is_used, advert_status 
 
 ### Нормальные формы
 
@@ -47,7 +47,7 @@
 
 * CONSTRAINT not_negative_price CHECK (price >= 0)
 
-Ограничение not_negative_price удостоверяется, что значение в столбце price не отрицательно, то есть не меньше нуля.
+Ограничение not_negative_price проверяет, что значение в столбце price не отрицательно, то есть не меньше нуля.
 
 * CONSTRAINT closed_time_is_after_created_time CHECK (closed_time >= created_time)
 
@@ -67,7 +67,9 @@
 ### ФЗ
 
 { id } -> email, password_hash
+
 { email } -> id, password_hash
+
 { id, email } -> password_hash
 
 
@@ -112,11 +114,17 @@
 ### ФЗ
 
  { id } -> user_id, phone, name, surname, regtime, city_id, verified, avatar_url
+
  { id, phone } -> user_id, name, surname, regtime, city_id, verified, avatar_url
+
  { id, user_id } -> phone, name, surname, regtime, city_id, verified, avatar_url 
+
  { id, user_id, phone} -> name, surname, regtime, city_id, verified, avatar_url 
+
  { user_id } -> id, phone, name, surname, regtime, city_id, verified, avatar_url 
+
  { user_id, phone } -> id, name, surname, regtime, city_id, verified, avatar_url 
+
  { phone } -> id, user_id, name, surname, regtime, city_id, verified, avatar_url
  
 
@@ -162,7 +170,7 @@
 | <u>id</u>    | bigint    | Синтетический ключ                                   |
 | user_id      | bigint    | Внешний ключ к пользователю, который создал заказ    |
 | advert_id    | bigint    | Внешний ключ к объявлению, на которое заказ размещен |
-| status_id    | bigint    | Внешний ключ к статусу заказа                        |
+| order_status    | order_status    | Cтатус заказа                        |
 | created_time | timestamp | Дата создания заказа                                 |
 | updated_time | timestamp | Дата последнего обновления заказа                    |
 | closed_time  | timestamp | Дата закрытия заказа                                 |
@@ -174,9 +182,11 @@
 
 ### ФЗ
 
-{ id } -> user_id, advert_id,  status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
-{ advert_id } -> id, user_id, status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
-{ id, advert_id } -> user_id,  status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
+{ id } -> user_id, advert_id,  order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
+
+{ advert_id } -> id, user_id, order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
+
+{ id, advert_id } -> user_id,  order_status, created_time, updated_time, closed_time, phone, name, surname, patronymic, email
 
 ### Нормальные формы
 
@@ -232,7 +242,9 @@
 ### ФЗ
 
 { id } -> url, advert_id
+
 { url } -> id, advert_id
+
 { id, url } -> advert_id
 
 ### Нормальные формы
@@ -259,16 +271,21 @@
 |:------------|:----------|:-------------------------------------|
 | <u>id</u>   | bigint    | Синтетический ключ                   |
 | name        | text      | Имя категории                        |
-| translation | text      | Перевод или транслитерация категории |
+| translation | text      | Транслитерация категории. Необходима для формирования url, содержащего path параметры |
 
 
 ### ФЗ
 
 { id } -> name, translation
+
 { name } -> id, translation
+
 { translation } -> id, name
+
 { id, name } -> translation
+
 { name, translation } -> id
+
 { translation, id } -> name
 
 
@@ -301,15 +318,20 @@
 |:-------------|:----------|:-------------------------------------|
 | <u>id</u>    | bigint    | Синтетический ключ                   |
 | name         | text      | Название города                      |
-| translation  | text      | Перевод или транслитерация города    |
+| translation  | text      | Транслитерация города. Необходима для формирования url, содержащего path параметры    |
 
 ### ФЗ
 
 { id } -> name, translation
+
 { name } -> id, translation
+
 { translation } -> id, name
+
 { id, name } -> translation
+
 { name, translation } -> id
+
 { translation, id } -> name
 
 ### Нормальные формы
@@ -332,52 +354,9 @@
 
 Ограничение max_len_translation, что длина текста в столбце translation не превышает 256 символов. 
 
-## Status
-
-Таблица с статусами
-
-| Название  | Тип       | Описание              |
-|:----------|:----------|:----------------------|
-| <u>id</u> | bigint    | Синтетический ключ    |
-| name      | text      | Наименование статуса  |
-
-Возможные статусы заказа:\
-В корзине\
-В обработке\
-Оплачено\
-Закрыто
-
-Возможные статусы объявления:\
-Скрыто\
-Удалено\
-Активно\
-Продано
-
-### ФЗ
-
-{ id } -> name, 
-{ name } -> id
-
-### Нормальные формы
-
-1. Все типы атрибутов атомарны => отношение находится в 1НФ.
-2. Отношение находится в 1НФ, ключ является не составным => не имеем зависимости неключевых атрибутов от
-   части ключа => отношение находится в 2НФ.
-3. Отношение находится в 2НФ и мы не имеем транзитивных ФЗ неключевых атрибутов от ключевых => отношение
-   находится в 3НФ. Или любой столбец зависит только от ключевых столбцов => отношение в 3НФ.
-4. Требование НФБК - атрибуты составного ключа не должны зависеть от неключевых атрибутов.
-   Тогда т.к. отношение находится в 3НФ и мы не имеем составного ключа => отношение находится в НФБК.  
-
-### Ограничения
-
-* CONSTRAINT max_len_name CHECK (LENGTH(name) <= 256)
-
-Ограничение max_len_name, что длина текста в столбце name не превышает 256 символов.
-
-
 ## View
 
-Сводная таблица User -> Advert, отражающая просмотры объявлений
+Сводная таблица User -> Advert, отражающая просмотры объявлений. Если в таблице есть запись с какими-то user_id и advert_id, то это означает, что соответствующий пользователь просмотрел сответствующее объявление. Отсутствие такой записи может говорить о том, что соответствующий пользователь не просматривал сответствующее объявление
 
 | Название   | Тип       | Описание                                                           |
 |:-----------|:----------|:-------------------------------------------------------------------|
@@ -387,7 +366,8 @@
 
 ### ФЗ
 
-{ id } -> user_id, advert_id,
+{ id } -> user_id, advert_id
+
 {user_id, advert_id} -> id
 
 ### Нормальные формы
@@ -420,6 +400,7 @@
 ### ФЗ
 
 { id } -> advert_id, user_id
+
 {user_id, advert_id} -> id
 
 ### Нормальные формы
@@ -440,7 +421,7 @@
 
 ## Review
 
-Сводная таблица User -> Advert, отзывы пользователя на объявления
+Таблица c отзывами. Отзывы пишут пользователи об объявлениях 
 
 | Название     | Тип       | Описание                                                           |
 |:-------------|:----------|:-------------------------------------------------------------------|
@@ -455,7 +436,51 @@
 ### ФЗ
 
 { id } -> user_id, advert_id, review, created_time, rating
+
 {user_id, advert_id} -> id
+
+### Нормальные формы
+
+1. Все типы атрибутов атомарны => отношение находится в 1НФ.
+2. Отношение находится в 1НФ, ключ является не составным => не имеем зависимости неключевых атрибутов от
+   части ключа => отношение находится в 2НФ.
+3. Отношение находится в 2НФ и мы не имеем транзитивных ФЗ неключевых атрибутов от ключевых => отношение
+   находится в 3НФ. Или любой столбец зависит только от ключевых столбцов => отношение в 3НФ.
+4. Требование НФБК - атрибуты составного ключа не должны зависеть от неключевых атрибутов.
+   Тогда т.к. отношение находится в 3НФ и мы не имеем составного ключа => отношение находится в НФБК.
+
+### Ограничения
+
+* CONSTRAINT uniq_together_advert_id_user_id unique (user_id, advert_id)
+
+Ограничение uniq_together_advert_id_user_id гарантирует уникальность комбинаций значений в столбцах user_id и advert_id. Это означает, что в таблице не может быть двух или более записей с одинаковым значением user_id и advert_id, что предотвращает ситуации, когда один пользователь несколько раз написал отзыв и поставил оценку на один и тот же товар.  
+
+* CONSTRAINT max_len_review CHECK (LENGTH(review) <= 256)
+
+Ограничение max_len_review, что длина текста в столбце review не превышает 256 символов.
+
+* CONSTRAINT rating_interval CHECK (rating >= 1 and rating <= 5)
+
+Ограничение rating_interval проверяет, что значение в столбце rating находится в интервале от 1 до 5 включительно. Это означает, что оценка должна быть не меньше 1 и не больше 5, что соответствует диапазону оценок, используемому в системах рейтинга.
+
+
+## Complain
+
+Таблица c жалобами. Жалобы пишут пользователи на других пользователей
+
+| Название     | Тип       | Описание                                                           |
+|:-------------|:----------|:-------------------------------------------------------------------|
+| <u>id</u>    | bigint    | Синтетический ключ                                                 |
+| user_id_complainer      | bigint    | Внешний ключ к пользователю, написал жалобу               |
+| user_id_complained    | bigint    | Внешний ключ к пользователю, на которого написали жалобу             |
+| complain_text       | text      | Текст жалобы                                                       |
+| complain_type | complain_type | Тип жалобы                                               |
+                                                  
+
+
+### ФЗ
+
+{ id } -> user_id_complainer, user_id_complained, complain_comment, complain_type
 
 ### Нормальные формы
 
@@ -490,12 +515,13 @@
 |:-------------|:----------|:-------------------------------------------------------------------|
 | <u>id</u>    | bigint    | Синтетический ключ                                                 |
 | user_id      | bigint    | Внешний ключ к пользователя, который добавил в корзину             |
-| advert_id    | bigint    | Внешний ключ к объявлению, которое было добоавлено в корзину       |
+| advert_id    | bigint    | Внешний ключ к объявлению, которое было добавлено в корзину       |
                                    
 
 ### ФЗ
 
-{ id } -> user_id, advert_id,
+{ id } -> user_id, advert_id
+
 {user_id, advert_id} -> id
 
 ### Нормальные формы
@@ -512,21 +538,55 @@
 
 * CONSTRAINT uniq_together_advert_id_user_id unique (user_id, advert_id)
 
-Ограничение uniq_together_advert_id_user_id гарантирует уникальность комбинаций значений в столбцах user_id и advert_id. Это означает, что в таблице не может быть двух или более записей с одинаковым значением user_id и advert_id, что предотвращает ситуации, когда один пользователь несколько раз добавил в корзину один и тот же товар.    
+Ограничение uniq_together_advert_id_user_id гарантирует уникальность комбинаций значений в столбцах user_id и advert_id. Это означает, что в таблице не может быть двух или более записей с одинаковым значением user_id и advert_id, что предотвращает ситуации, когда один пользователь несколько раз добавил в корзину один и тот же товар.  
+
+## Blacklist
+
+Сводная таблица User -> User, отражающая блокировки одних пользователей другими
+
+| Название     | Тип       | Описание                                                           |
+|:-------------|:----------|:-------------------------------------------------------------------|
+| <u>id</u>    | bigint    | Синтетический ключ                                                 |
+| user_id_blocker      | bigint    | Внешний ключ к пользователя, который заблокировал              |
+| user_id_blocked    | bigint    | Внешний ключ к пользователю, которого заблокировали       |
+                                   
+
+### ФЗ
+
+{ id } -> user_id_blocker, user_id_blocked
+
+{user_id_blocker, user_id_blocked} -> id
+
+### Нормальные формы
+
+1. Все типы атрибутов атомарны => отношение находится в 1НФ.
+2. Отношение находится в 1НФ, ключ является не составным => не имеем зависимости неключевых атрибутов от
+   части ключа => отношение находится в 2НФ.
+3. Отношение находится в 2НФ и мы не имеем транзитивных ФЗ неключевых атрибутов от ключевых => отношение
+   находится в 3НФ. Или любой столбец зависит только от ключевых столбцов => отношение в 3НФ.
+4. Требование НФБК - атрибуты составного ключа не должны зависеть от неключевых атрибутов.
+   Тогда т.к. отношение находится в 3НФ и мы не имеем составного ключа => отношение находится в НФБК.  
+
+### Ограничения
+
+* CONSTRAINT uniq_together_advert_id_user_id unique (user_id_blocker, user_id_blocked)
+
+Ограничение uniq_together_user_id_user_id гарантирует уникальность комбинаций значений в столбцах user_id_blocker и user_id_blocked. Это означает, что в таблице не может быть двух или более записей с одинаковым значением user_id_blocker и user_id_blocked, что предотвращает ситуации, когда один пользователь несколько раз заблокировал одного и того же пользователя.
 
 ## Subscription
 
-Сводная таблица User -> User, отражающая список подписок и подписчиков
+Сводная таблица User -> User, отражающая список подписок и подписчиков. Если в таблице есть запись с какими-то user_id_subscriber и user_id_merchant, то это означает, что соответствующий пользователь подписался на соотвествующего пользователя. Отсутствие такой записи может говорить о том, что соответствующий пользователь не подписан на сответствующего пользователя.
 
 | Название           | Тип       | Описание                                                |
 |:-------------------|:----------|:--------------------------------------------------------|
 | <u>id</u>          | bigint    | Синтетический ключ                                      |
-| user_id_subscriber | bigint    | Внешний ключ к пользователю, который который подписался |
+| user_id_subscriber | bigint    | Внешний ключ к пользователю, который подписался |
 | user_id_merchant   | bigint    | Внешний ключ к объявлению, на которого подписались      |  
 
 ### ФЗ
 
 { id } -> user_id_subscriber, user_id_merchant
+
 {user_id_subscriber, user_id_merchant} -> id
 
 ### Нормальные формы
@@ -560,13 +620,13 @@ erDiagram
 
     Advert {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint city_id
+        bigint city_id(FK)
 
-        bigint category_id
+        bigint category_id(FK)
 
         text(256) title
 
@@ -580,7 +640,7 @@ erDiagram
 
         boolean is_used
 
-        boolean status_id
+        boolean status_id(FK)
 
     }
 
@@ -590,6 +650,10 @@ erDiagram
     User ||--|{ Subscription : user_subscribes_on_user
 
     User ||--|{ Subscription : user_was_subscribed_by_user
+
+    User ||--|{ Blacklist : user_block_user
+
+    User ||--|{ Blacklist : user_was_blocked_by_user
 
     User ||--|{ Advert : creates_advert
 
@@ -603,10 +667,14 @@ erDiagram
 
     User ||--|{ Review : leaves_review_on_product
 
+    User ||--|{ Complain : user_complains_on_user
+
+    User ||--|{ Complain : user_was_complained_by_user
+
 
     User {
 
-        bigint id
+        bigint id(PK)
 
         text(256) email
 
@@ -617,7 +685,7 @@ erDiagram
 
     Profile {
 
-        bigint id
+        bigint id(PK)
 
         text(256) phone
 
@@ -627,7 +695,7 @@ erDiagram
 
         timestamp regtime
 
-        bigint city_id
+        bigint city_id(FK)
 
         boolean verified
 
@@ -639,13 +707,13 @@ erDiagram
 
     Order {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint advert_id
+        bigint advert_id(FK)
 
-        bigint status_id
+        bigint status_id(FK)
 
         timestamp created_time
 
@@ -671,11 +739,11 @@ erDiagram
 
     Favourite {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint advert_id
+        bigint advert_id(FK)
 
     }
 
@@ -684,11 +752,11 @@ erDiagram
 
     Image {
 
-        bigint id
+        bigint id(PK)
 
         text(256) url
 
-        bigint advert_id
+        bigint advert_id(FK)
 
     }
 
@@ -697,22 +765,11 @@ erDiagram
 
     Category {
 
-        bigint id
+        bigint id(PK)
 
         text(256) name
 
-    }
-
-
-    Status ||--|{ Order : order_has_status
-
-    Status ||--|{Advert  : advert_has_status
-
-    Status {
-
-        bigint id
-
-        text(256) name
+        text(256) translation
 
     }
 
@@ -723,32 +780,46 @@ erDiagram
 
     City {
 
-        bigint id
+        bigint id(PK)
 
         text(256) name
 
+        text(256) translation
+
     }
+
 
     View }|--|| Advert : advert_was_viewed_by_user
 
     View {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint advert_id
+        bigint advert_id(FK)
+
+    }
+
+
+    Blacklist {
+
+        bigint id(PK)
+
+        bigint user_id_blocker(FK)
+
+        bigint user_id_blocked(FK)
 
     }
 
 
     Subscription {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id_subscriber
+        bigint user_id_subscriber(FK)
 
-        bigint user_id_merchant
+        bigint user_id_merchant(FK)
 
     }
 
@@ -757,11 +828,11 @@ erDiagram
 
     Review {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint advert_id
+        bigint advert_id(FK)
 
         text(256) review
 
@@ -772,15 +843,33 @@ erDiagram
     }
 
 
+
+    Complain }|--|| Advert : advert_was_reviewed_by_user
+
+    Complain {
+
+        bigint id(PK)
+
+        bigint user_id_complainer(FK)
+
+        bigint user_id_complained(FK)
+
+        text(256) complain_text
+
+        complain_type complain_type
+
+    }
+
+
     Cart }|--|| Advert : cart_contains_advert
 
     Cart {
 
-        bigint id
+        bigint id(PK)
 
-        bigint user_id
+        bigint user_id(FK)
 
-        bigint advert_id
+        bigint advert_id(FK)
 
 
 
