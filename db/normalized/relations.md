@@ -634,7 +634,7 @@ erDiagram
 
         bigint id(PK)
 
-        text(256) email (UK)
+        text(256) email(UK)
 
         text(256) password_hash
 
@@ -647,7 +647,7 @@ erDiagram
 
         text(256) user_id (FK)
 
-        text(256) phone (UK)
+        text(256) phone(UK)
 
         text(256) name
 
@@ -659,7 +659,7 @@ erDiagram
 
         boolean verified
 
-        text(256) avatar_url (UK)
+        text(256) avatar_url(UK)
 
     }
 
