@@ -15,9 +15,9 @@ DROP TABLE IF EXISTS public."complain_type" CASCADE;
 DROP TABLE IF EXISTS public."blacklist" CASCADE;
 DROP TABLE IF EXISTS public."complain" CASCADE;
 
-DROP TYPE IF EXISTS order_status;
-DROP TYPE IF EXISTS advert_status;
-DROP TYPE IF EXISTS complain_type;
+DROP TYPE IF EXISTS order_status CASCADE;
+DROP TYPE IF EXISTS advert_status CASCADE;
+DROP TYPE IF EXISTS complain_type CASCADE;
 
 CREATE TYPE order_status AS ENUM ('В корзине', 'В обработке', 'Оплачено', 'Закрыт');
 CREATE TYPE advert_status AS ENUM ('Скрыто', 'Удалено', 'Активно', 'Продано');
@@ -173,5 +173,5 @@ CREATE TABLE IF NOT EXISTS public."complain"
     user_id_being_complaind    BIGINT                                               NOT NULL REFERENCES public."user" (id),
     complain_type               complain_type                                       NOT NULL ,
     complain_text           TEXT                                                 NOT NULL
-        CONSTRAINT max_len_name CHECK (LENGTH(complain_comment) <= 2000)  
+        CONSTRAINT max_len_name CHECK (LENGTH(complain_text) <= 2000)  
 );
