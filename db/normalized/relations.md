@@ -640,7 +640,7 @@ erDiagram
 
         boolean is_used
 
-        boolean status_id(FK)
+        advert_status advert_status(FK)
 
     }
 
@@ -676,7 +676,7 @@ erDiagram
 
         bigint id(PK)
 
-        text(256) email
+        text(256) email (UK)
 
         text(256) password_hash
 
@@ -687,7 +687,7 @@ erDiagram
 
         bigint id(PK)
 
-        text(256) phone
+        text(256) phone (UK)
 
         text(256) name
 
@@ -699,7 +699,7 @@ erDiagram
 
         boolean verified
 
-        text(256) avatar_url
+        text(256) avatar_url (UK)
 
     }
 
@@ -713,7 +713,7 @@ erDiagram
 
         bigint advert_id(FK)
 
-        bigint status_id(FK)
+        order_status order_status(FK)
 
         timestamp created_time
 
@@ -836,9 +836,9 @@ erDiagram
 
         text(256) review
 
-        text(256) created_time
+        timestamp created_time
 
-        text(256) rating
+        smallint rating
 
     }
 
