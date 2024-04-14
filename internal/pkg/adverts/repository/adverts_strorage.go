@@ -298,9 +298,9 @@ func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, categor
 
 func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {
 
-	statusID := 23
+	advertStatus := "Активно"
 	if deleted == 1 {
-		statusID = 24
+		advertStatus = "Продано"
 	}
 
 	SQLGetAdvertsForUserWhereStatusIs := `SELECT 
@@ -314,7 +314,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		a.created_time, 
 		a.closed_time, 
 		a.is_used, 
-		a.status_id,
+		a.advert_status,
 		c.name AS city_name,
 		c.translation AS city_translation,
 		cat.name AS category_name,
@@ -326,13 +326,13 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 	INNER JOIN 
 		category cat ON a.category_id = cat.id
 	WHERE 
-		a.user_id = $1 AND a.status_id = $2;
+		a.user_id = $1 AND a.advert_status = $2;
 	`
-	ads.Logger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.status_id, c.name AS city_name,
+	ads.Logger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.advert_status, c.name AS city_name,
 		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
-		INNER JOIN category cat ON a.category_id = cat.id WHERE 	a.user_id = %s AND a.status_id = %s; `, userId, statusID)
+		INNER JOIN category cat ON a.category_id = cat.id WHERE 	a.user_id = %s AND a.advert_status = %s; `, userId, advertStatus)
 
-	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, statusID)
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus)
 	if err != nil {
 		ads.Logger.Errorf("Something went wrong while executing select adverts for user where status is, err=%v", err)
 
@@ -345,7 +345,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		advert := models.Advert{}
 		city := models.City{}
 		category := models.Category{}
-		var status uint // ЗАГЛУШКА
+		var status string // ЗАГЛУШКА
 
 		if err := rows.Scan(&advert.ID, &advert.UserID, &advert.CityID, &advert.CategoryID, &advert.Title, &advert.Description, &advert.Price, &advert.CreatedTime, &advert.ClosedTime, &advert.IsUsed, &status,
 			&city.CityName, &city.Translation, &category.Name, &category.Translation); err != nil {
@@ -355,7 +355,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 			return nil, err
 		}
 		advert.Deleted = false
-		if status == 24 {
+		if status == "Продано" {
 			advert.Deleted = true
 		}
 		city.ID = advert.CityID
