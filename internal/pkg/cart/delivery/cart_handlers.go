@@ -61,7 +61,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 	var adsList []*models.ReturningAdvert
 
-	adsList, err = list.GetCartByUserID(uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
+	adsList, err = list.GetCartByUserID(ctx, uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -105,7 +105,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
-	isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
+	isAppended := list.AppendAdvByIDs(ctx, user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
 
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
