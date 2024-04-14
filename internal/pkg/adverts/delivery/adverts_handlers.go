@@ -121,12 +121,14 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 		return
 	}
 
+	ctx := request.Context()
+
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
 
 	list := advertsHandler.List
 
-	ad, err := list.GetAdvertByOnlyByID(uint(id))
+	ad, err := list.GetAdvertByOnlyByID(ctx, uint(id))
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
@@ -144,6 +146,8 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 
 		return
 	}
+
+	ctx := request.Context()
 
 	err := request.ParseMultipartForm(0)
 	if err != nil {
@@ -171,7 +175,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		IsUsed:      isUsed,
 	}
 
-	adsList, err := list.CreateAdvert(data)
+	adsList, err := list.CreateAdvert(ctx, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,

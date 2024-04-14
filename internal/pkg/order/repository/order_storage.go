@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ func (ol *OrderListWrapper) GetOrdersByUserID(userID uint, advertsList advuc.Adv
 	return cart, nil
 }
 
-func (ol *OrderListWrapper) GetReturningOrderByUserID(userID uint, advertsList advuc.AdvertsInfo) ([]*models.ReturningOrder, error) {
+func (ol *OrderListWrapper) GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList advuc.AdvertsInfo) ([]*models.ReturningOrder, error) {
 	order := []*models.ReturningOrder{}
 
 	for i := range ol.OrderList.Items {
@@ -50,7 +51,7 @@ func (ol *OrderListWrapper) GetReturningOrderByUserID(userID uint, advertsList a
 		if item.UserID != userID {
 			continue
 		}
-		advert, err := advertsList.GetAdvertByOnlyByID(item.AdvertID)
+		advert, err := advertsList.GetAdvertByOnlyByID(ctx, item.AdvertID)
 
 		if err != nil {
 			return order, err

@@ -32,22 +32,26 @@ type AdvertsListWrapper struct {
 	Logger      *zap.SugaredLogger
 }
 
-func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(advertID uint) (*models.ReturningAdvert, error) {
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
+func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
+	var advertsList *models.ReturningAdvert
 
-	if advertID > ads.AdvertsList.AdvertsCounter {
-		return nil, errWrongAdvertID
+	city := ""     // ЗАГЛУШКИ
+	category := "" // ЗАГЛУШКИ
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		advertsListInner, err := ads.getAdvert(ctx, tx, advertID, city, category)
+		advertsList = advertsListInner
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+
+		return nil, err
 	}
 
-	cityID := ads.AdvertsList.Adverts[advertID-1].CityID
-	categoryID := ads.AdvertsList.Adverts[advertID-1].CategoryID
-
-	return &models.ReturningAdvert{
-		Advert:   *ads.AdvertsList.Adverts[advertID-1],
-		City:     *ads.AdvertsList.Cities[cityID-1],
-		Category: *ads.AdvertsList.Categories[categoryID-1],
-	}, nil
+	return advertsList, nil
 }
 
 func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
@@ -423,39 +427,202 @@ func (ads *AdvertsListWrapper) GetAdvertsByUserIDFiltered(userID uint, filter fu
 	return returningAds, nil
 }
 
-func (ads *AdvertsListWrapper) CreateAdvert(data models.ReceivedAdData) (*models.ReturningAdvert, error) {
-	cityID, err := ads.GetCityID(data.City)
-	if err != nil {
+func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	SQLCreateAdvert :=
+		`WITH ins AS (
+		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
+		SELECT
+			$1,
+			city.id,
+			category.id,
+			$2,
+			$3,
+			$4,
+			$5
+		FROM
+			city
+		JOIN
+			category ON city.name = $6 AND category.translation = $7
+		RETURNING 
+			advert.id, 
+			advert.user_id,
+			advert.city_id, 
+			advert.category_id, 
+			advert.title, 
+			advert.description,
+			advert.created_time,
+			advert.closed_time, 
+			advert.price, 
+			advert.is_used
+	)
+	SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
+	FROM ins
+	LEFT JOIN public.city c ON ins.city_id = c.id
+	LEFT JOIN public.category cat ON ins.category_id = cat.id;`
+
+	ads.Logger.Infof(
+		`WITH ins AS (
+			INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
+			SELECT
+				%s,
+				city.id,
+				category.id,
+				%s,
+				%s,
+				%s,
+				%s
+			FROM
+				city
+			JOIN
+				category ON city.name = %s AND category.translation = %s
+			RETURNING 
+				advert.id, 
+				advert.user_id,
+				advert.city_id, 
+				advert.category_id, 
+				advert.title, 
+				advert.description,
+				advert.created_time,
+				advert.closed_time, 
+				advert.price, 
+				advert.is_used
+		)
+		SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
+		FROM ins
+		LEFT JOIN public.city c ON ins.city_id = c.id
+		LEFT JOIN public.category cat ON ins.category_id = cat.id;`,
+		data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+
+	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+
+	categoryModel := models.Category{}
+	cityModel := models.City{}
+	advertModel := models.Advert{}
+
+	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &categoryModel.ID, &advertModel.Title, &advertModel.Description, &advertModel.CreatedTime,
+		&advertModel.ClosedTime, &advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation, &categoryModel.Name, &categoryModel.Translation); err != nil {
+
+		ads.Logger.Errorf("Something went wrong while scanning advert, err=%v", err)
+
 		return nil, err
 	}
 
-	categoryID, err := ads.GetCategoryID(data.Category)
-	if err != nil {
-		return nil, err
-	}
-
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-
-	newAd := &models.Advert{
-		ID:          ads.GetLastAdvertID(),
-		UserID:      data.UserID,
-		CityID:      cityID,
-		CategoryID:  categoryID,
-		Title:       data.Title,
-		Description: data.Description,
-		Price:       data.Price,
-		CreatedTime: time.Now(),
-		Active:      true,
-		IsUsed:      data.IsUsed,
-	}
-
-	ads.AdvertsList.Adverts = append(ads.AdvertsList.Adverts, newAd)
+	advertModel.CityID = cityModel.ID
+	advertModel.CategoryID = categoryModel.ID
 
 	return &models.ReturningAdvert{
-		Advert:   *newAd,
-		City:     *ads.AdvertsList.Cities[cityID-1],
-		Category: *ads.AdvertsList.Categories[categoryID-1],
+		Advert:   advertModel,
+		City:     cityModel,
+		Category: categoryModel,
+	}, nil
+}
+
+func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	var advertsList *models.ReturningAdvert
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		advertsListInner, err := ads.createAdvert(ctx, tx, data)
+		advertsList = advertsListInner
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while getting advert, err=%v", err)
+
+		return nil, err
+	}
+
+	return advertsList, nil
+}
+
+func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	SQLCreateAdvert :=
+		`WITH ins AS (
+		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
+		SELECT
+			$1,
+			city.id,
+			category.id,
+			$2,
+			$3,
+			$4,
+			$5
+		FROM
+			city
+		JOIN
+			category ON city.name = $6 AND category.translation = $7
+		RETURNING 
+			advert.id, 
+			advert.user_id,
+			advert.city_id, 
+			advert.category_id, 
+			advert.title, 
+			advert.description,
+			advert.created_time,
+			advert.closed_time, 
+			advert.price, 
+			advert.is_used
+	)
+	SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
+	FROM ins
+	LEFT JOIN public.city c ON ins.city_id = c.id
+	LEFT JOIN public.category cat ON ins.category_id = cat.id;`
+
+	ads.Logger.Infof(
+		`WITH ins AS (
+			INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
+			SELECT
+				%s,
+				city.id,
+				category.id,
+				%s,
+				%s,
+				%s,
+				%s
+			FROM
+				city
+			JOIN
+				category ON city.name = %s AND category.translation = %s
+			RETURNING 
+				advert.id, 
+				advert.user_id,
+				advert.city_id, 
+				advert.category_id, 
+				advert.title, 
+				advert.description,
+				advert.created_time,
+				advert.closed_time, 
+				advert.price, 
+				advert.is_used
+		)
+		SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
+		FROM ins
+		LEFT JOIN public.city c ON ins.city_id = c.id
+		LEFT JOIN public.category cat ON ins.category_id = cat.id;`,
+		data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+
+	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+
+	categoryModel := models.Category{}
+	cityModel := models.City{}
+	advertModel := models.Advert{}
+
+	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &categoryModel.ID, &advertModel.Title, &advertModel.Description, &advertModel.CreatedTime,
+		&advertModel.ClosedTime, &advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation, &categoryModel.Name, &categoryModel.Translation); err != nil {
+
+		ads.Logger.Errorf("Something went wrong while scanning advert, err=%v", err)
+
+		return nil, err
+	}
+
+	advertModel.CityID = cityModel.ID
+	advertModel.CategoryID = categoryModel.ID
+
+	return &models.ReturningAdvert{
+		Advert:   advertModel,
+		City:     cityModel,
+		Category: categoryModel,
 	}, nil
 }
 

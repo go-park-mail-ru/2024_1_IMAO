@@ -63,7 +63,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 
 	var ordersList []*models.ReturningOrder
 
-	ordersList, err = list.GetReturningOrderByUserID(uint(user.ID), orderHandler.ListAdverts)
+	ordersList, err = list.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.ListAdverts)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
