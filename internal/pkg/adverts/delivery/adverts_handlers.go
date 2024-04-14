@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultCity = "Moskva"
+	defaultCity = "Moscow"
 )
 
 type AdvertsHandler struct {
@@ -69,7 +69,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	if category != "" {
 		adsList, err = list.GetAdvertsByCategory(category, city, uint(startID), uint(count))
 	} else if errCount == nil && errstartID == nil {
-		adsList, err = list.GetAdvertsByCity(city, uint(startID), uint(count))
+		adsList, err = list.GetAdvertsByCity(ctx, city, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
 		adsList, err = list.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}
@@ -91,14 +91,18 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 		return
 	}
 
+	ctx := request.Context()
+
 	vars := mux.Vars(request)
 	city := vars["city"]
 	category := vars["category"]
 	id, _ := strconv.Atoi(vars["id"])
 
+	log.Println("aboba", id)
+
 	list := advertsHandler.List
 
-	ad, err := list.GetAdvert(uint(id), city, category)
+	ad, err := list.GetAdvert(ctx, uint(id), city, category)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
