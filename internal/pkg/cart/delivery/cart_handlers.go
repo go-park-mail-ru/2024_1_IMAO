@@ -148,7 +148,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	for _, item := range data.AdvertIDs {
-		err = list.DeleteAdvByIDs(user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)
+		err = list.DeleteAdvByIDs(ctx, user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)
 
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)

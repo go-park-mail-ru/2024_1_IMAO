@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
@@ -134,22 +135,40 @@ func (cl *CartListWrapper) GetCartByUserID(ctx context.Context, userID uint, use
 	return cart, nil
 }
 
-func (cl *CartListWrapper) DeleteAdvByIDs(userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) error {
-	for i := range cl.CartList.Items {
-		cl.CartList.Mux.Lock()
-		item := cl.CartList.Items[i]
-		cl.CartList.Mux.Unlock()
+func (cl *CartListWrapper) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
+	SQLDeleteFromCart := `DELETE FROM public.cart
+		WHERE user_id = $1 AND advert_id = $2;`
 
-		if item.UserID != userID || item.AdvertID != advertID {
-			continue
-		}
-		cl.CartList.Mux.Lock()
-		cl.CartList.Items = append(cl.CartList.Items[:i], cl.CartList.Items[i+1:]...)
-		cl.CartList.Mux.Unlock()
-		return nil
+	cl.Logger.Infof(`DELETE FROM public.cart
+		WHERE user_id = $1 AND advert_id = $2;`, userID, advertID, userID, advertID)
+
+	var err error
+
+	_, err = tx.Exec(ctx, SQLDeleteFromCart, userID, advertID)
+
+	if err != nil {
+		cl.Logger.Errorf("Something went wrong while executing advert delete from the cart, err=%v", err)
+		return fmt.Errorf("Something went wrong while executing advert delete from the cart", err)
 	}
 
-	return errNotInCart
+	return nil
+}
+
+func (cl *CartListWrapper) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) error {
+
+	err := pgx.BeginFunc(ctx, cl.Pool, func(tx pgx.Tx) error {
+		err := cl.deleteAdvByIDs(ctx, tx, userID, advertID)
+
+		return err
+	})
+
+	if err != nil {
+		cl.Logger.Errorf("Something went wrong while getting adverts list, most likely , err=%v", err)
+
+		return err
+	}
+
+	return nil
 }
 
 func (cl *CartListWrapper) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {

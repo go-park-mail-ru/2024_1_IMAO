@@ -110,7 +110,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
 	for _, receivedOrderItem := range data.Adverts {
-		isDeleted := cartlist.DeleteAdvByIDs(uint(user.ID), receivedOrderItem.AdvertID, usersList, orderHandler.ListAdverts)
+		isDeleted := cartlist.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID, usersList, orderHandler.ListAdverts)
 
 		if isDeleted != nil {
 			log.Println("Can not create an order", receivedOrderItem.AdvertID, "for user", user.ID)
