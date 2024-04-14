@@ -67,7 +67,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	var err error
 
 	if category != "" {
-		adsList, err = list.GetAdvertsByCategory(category, city, uint(startID), uint(count))
+		adsList, err = list.GetAdvertsByCategory(ctx, category, city, uint(startID), uint(count))
 	} else if errCount == nil && errstartID == nil {
 		adsList, err = list.GetAdvertsByCity(ctx, city, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {

@@ -237,45 +237,63 @@ func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertsByCategory(category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
-	if num > ads.AdvertsList.AdvertsCounter {
-		return nil, errWrongAdvertsAmount
-	}
-
-	cityID, err := ads.GetCityID(city)
+func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price
+	FROM public.advert a
+	INNER JOIN city c ON a.city_id = c.id
+	INNER JOIN category ON a.category_id = category.id
+	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
+	LIMIT $4;
+	`
+	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price
+	FROM public.advert a
+	INNER JOIN city c ON a.city_id = c.id
+	INNER JOIN category ON a.category_id = category.id
+	WHERE a.id >= %s AND a.advert_status = 'Активно' AND c.translation = %s AND category.translation = %s
+	LIMIT %s`, startID, city, category, num)
+	rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, category, num)
 	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing select adverts query, err=%v", err)
+
 		return nil, err
 	}
+	defer rows.Close()
 
-	categoryID, err := ads.GetCategoryID(category)
-	if err != nil {
-		return nil, err
-	}
-
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-
-	var returningAds []*models.ReturningAdInList
-	var counter uint = 0
-
-	for counter != num && counter+startID-1 != ads.AdvertsList.AdvertsCounter {
-		ad := ads.AdvertsList.Adverts[startID+counter-1]
-		exists := ad.Active && !ad.Deleted
-
-		if exists && ad.CityID == cityID && ad.CategoryID == categoryID {
-			returningAds = append(returningAds, &models.ReturningAdInList{
-				ID:       ad.ID,
-				Title:    ad.Title,
-				Price:    ad.Price,
-				City:     ads.AdvertsList.Cities[ad.CityID-1].Translation,
-				Category: ads.AdvertsList.Categories[ad.CategoryID-1].Translation,
-			})
+	var adsList []*models.ReturningAdInList
+	for rows.Next() {
+		returningAdInList := models.ReturningAdInList{}
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price); err != nil {
+			return nil, err
 		}
-
-		counter++
+		adsList = append(adsList, &returningAdInList)
 	}
 
-	return returningAds, nil
+	if err := rows.Err(); err != nil {
+		ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+
+		return nil, err
+	}
+
+	return adsList, nil
+}
+
+func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	var advertsList []*models.ReturningAdInList
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		advertsListInner, err := ads.getAdvertsByCategory(ctx, tx, category, city, startID, num)
+		advertsList = advertsListInner
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+
+		return nil, err
+	}
+
+	return advertsList, nil
 }
 
 func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {

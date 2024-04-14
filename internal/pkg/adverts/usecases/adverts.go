@@ -9,7 +9,7 @@ import (
 type AdvertsInfo interface {
 	GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error)
 	GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error)
-	GetAdvertsByCategory(category, city string, startID, num uint) ([]*models.ReturningAdInList, error)
+	GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertByOnlyByID(advertID uint) (*models.ReturningAdvert, error)
 
 	CreateAdvert(data models.ReceivedAdData) (*models.ReturningAdvert, error)
