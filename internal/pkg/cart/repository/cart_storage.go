@@ -132,6 +132,10 @@ func (cl *CartListWrapper) GetCartByUserID(ctx context.Context, userID uint, use
 		return nil, err
 	}
 
+	if cart == nil {
+		cart = []*models.ReturningAdvert{}
+	}
+
 	return cart, nil
 }
 
