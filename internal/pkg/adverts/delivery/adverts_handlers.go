@@ -194,6 +194,8 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
+	ctx := request.Context()
+
 	err := request.ParseMultipartForm(0)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
@@ -222,7 +224,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		IsUsed:      isUsed,
 	}
 
-	ad, err := list.EditAdvert(data)
+	ad, err := list.EditAdvert(ctx, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,

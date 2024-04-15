@@ -537,53 +537,22 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, data models.Rec
 }
 
 func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
-	SQLCreateAdvert :=
-		`WITH ins AS (
-		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
-		SELECT
-			$1,
-			city.id,
-			category.id,
-			$2,
-			$3,
-			$4,
-			$5
-		FROM
-			city
-		JOIN
-			category ON city.name = $6 AND category.translation = $7
-		RETURNING 
-			advert.id, 
-			advert.user_id,
-			advert.city_id, 
-			advert.category_id, 
-			advert.title, 
-			advert.description,
-			advert.created_time,
-			advert.closed_time, 
-			advert.price, 
-			advert.is_used
-	)
-	SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
-	FROM ins
-	LEFT JOIN public.city c ON ins.city_id = c.id
-	LEFT JOIN public.category cat ON ins.category_id = cat.id;`
-
-	ads.Logger.Infof(
-		`WITH ins AS (
-			INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
-			SELECT
-				%s,
-				city.id,
-				category.id,
-				%s,
-				%s,
-				%s,
-				%s
-			FROM
+	SQLUpdateAdvert :=
+		`WITH upd AS (
+			UPDATE advert
+			SET 
+				city_id = city.id,
+				category_id = category.id,
+				title = $1,
+				description = $2,
+				price = $3,
+				is_used = $4
+			 FROM
 				city
 			JOIN
-				category ON city.name = %s AND category.translation = %s
+				category ON city.name = $5 AND category.translation = $6
+			WHERE 
+				advert.id = $7
 			RETURNING 
 				advert.id, 
 				advert.user_id,
@@ -592,17 +561,66 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 				advert.title, 
 				advert.description,
 				advert.created_time,
-				advert.closed_time, 
+				advert.closed_time,
 				advert.price, 
 				advert.is_used
 		)
-		SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
-		FROM ins
-		LEFT JOIN public.city c ON ins.city_id = c.id
-		LEFT JOIN public.category cat ON ins.category_id = cat.id;`,
-		data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+		SELECT 
+			upd.*, 
+			c.name AS city_name, 
+			c.translation AS city_translation, 
+			cat.name AS category_name, 
+			cat.translation AS category_translation
+		FROM 
+			upd
+		LEFT JOIN 
+			public.city c ON upd.city_id = c.id
+		LEFT JOIN 
+			public.category cat ON upd.category_id = cat.id;`
 
-	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+	ads.Logger.Infof(
+		`WITH upd AS (
+			UPDATE advert
+			SET 
+				city_id = city.id,
+				category_id = category.id,
+				title = %s,
+				description = %s,
+				price = %s,
+				is_used = %s
+			 FROM
+				city
+			JOIN
+				category ON city.name = %s AND category.translation = %s
+			WHERE 
+				advert.id = %s
+			RETURNING 
+				advert.id, 
+				advert.user_id,
+				advert.city_id, 
+				advert.category_id, 
+				advert.title, 
+				advert.description,
+				advert.created_time,
+				advert.closed_time,
+				advert.price, 
+				advert.is_used
+		)
+		SELECT 
+			upd.*, 
+			c.name AS city_name, 
+			c.translation AS city_translation, 
+			cat.name AS category_name, 
+			cat.translation AS category_translation
+		FROM 
+			upd
+		LEFT JOIN 
+			public.city c ON upd.city_id = c.id
+		LEFT JOIN 
+			public.category cat ON upd.category_id = cat.id;`,
+		data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category, data.ID)
+
+	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category, data.ID)
 
 	categoryModel := models.Category{}
 	cityModel := models.City{}
@@ -626,34 +644,23 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) EditAdvert(data models.ReceivedAdData) (*models.ReturningAdvert, error) {
-	id := data.ID
-	if id > ads.AdvertsList.AdvertsCounter || ads.AdvertsList.Adverts[id-1].Deleted {
-		return nil, errWrongAdvertID
+func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	var advertsList *models.ReturningAdvert
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		advertsListInner, err := ads.editAdvert(ctx, tx, data)
+		advertsList = advertsListInner
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while updating advert, err=%v", err)
+
+		return nil, err
 	}
 
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-
-	ads.AdvertsList.Adverts[id-1] = &models.Advert{
-		ID:          id,
-		UserID:      data.UserID,
-		Title:       data.Title,
-		Description: data.Description,
-		Price:       data.Price,
-		CityID:      ads.AdvertsList.Adverts[id-1].CityID,
-		CategoryID:  ads.AdvertsList.Adverts[id-1].CategoryID,
-		CreatedTime: ads.AdvertsList.Adverts[id-1].CreatedTime,
-		Active:      true,
-		IsUsed:      data.IsUsed,
-		Deleted:     false,
-	}
-
-	return &models.ReturningAdvert{
-		Advert:   *ads.AdvertsList.Adverts[id-1],
-		Category: *ads.AdvertsList.Categories[ads.AdvertsList.Adverts[id-1].CategoryID-1],
-		City:     *ads.AdvertsList.Cities[ads.AdvertsList.Adverts[id-1].CityID-1],
-	}, nil
+	return advertsList, nil
 }
 
 func (ads *AdvertsListWrapper) CloseAdvert(advertID uint) error {
