@@ -31,7 +31,7 @@ type ProfileListWrapper struct {
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
 	cityIdDefault := 100
-	phoneDefault := "0 000 000 00 00"
+	phoneDefault := utils.RandString(10)
 	nameDefault := "Пользователь"
 	surnameDefault := "Фамилия"
 	avatar_url := utils.RandString(16)
