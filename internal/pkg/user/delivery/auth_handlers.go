@@ -99,8 +99,6 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		Path:     "/",
 		Expires:  time.Now().Add(sessionTime),
 		HttpOnly: true,
-		SameSite: 4,
-		Secure:   true,
 	}
 	http.SetCookie(writer, cookie)
 
@@ -249,8 +247,6 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		Path:     "/",
 		Expires:  time.Now().Add(sessionTime),
 		HttpOnly: true,
-		SameSite: 4,
-		Secure:   true,
 	}
 	http.SetCookie(writer, cookie)
 
