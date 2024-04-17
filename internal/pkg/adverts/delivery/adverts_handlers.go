@@ -269,12 +269,14 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 		return
 	}
 
+	ctx := request.Context()
+
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
 
 	list := advertsHandler.List
 
-	err := list.CloseAdvert(uint(id))
+	err := list.CloseAdvert(ctx, uint(id))
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,

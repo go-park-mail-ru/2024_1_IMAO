@@ -663,16 +663,53 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, data models.Recei
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) CloseAdvert(advertID uint) error {
-	if advertID > ads.AdvertsList.AdvertsCounter || ads.AdvertsList.Adverts[advertID-1].Deleted {
-		return errWrongAdvertID
+func (ads *AdvertsListWrapper) сloseAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
+	SQLCloseAdvert := `UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = $1;`
+	ads.Logger.Infof(`UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = %s;`, advertID)
+	var err error
+
+	_, err = tx.Exec(ctx, SQLCloseAdvert, advertID)
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing close advert query, err=%v", err)
+		return fmt.Errorf("Something went wrong while executing close advert query", err)
 	}
 
-	if !ads.AdvertsList.Adverts[advertID-1].Active {
-		return errAlreadyClosed
+	return nil
+}
+
+func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) error {
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		err := ads.сloseAdvert(ctx, tx, advertID)
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while closing advert, err=%v", err)
+			return fmt.Errorf("Something went wrong while closing advert", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+
+		ads.Logger.Errorf("Error while closing advert, err=%v", err)
+		return err
 	}
 
-	ads.AdvertsList.Adverts[advertID-1].Active = false
+	return nil
+}
+
+func (ads *AdvertsListWrapper) deleteAdvert(ctx context.Context, tx pgx.Tx, user *models.User) error {
+	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
+	ads.Logger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
+	var err error
+
+	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing create user query, err=%v", err)
+		return fmt.Errorf("Something went wrong while executing create user query in func createUser", err)
+	}
 
 	return nil
 }
