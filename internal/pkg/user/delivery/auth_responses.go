@@ -6,10 +6,10 @@ import (
 )
 
 type AuthOkResponse struct {
-	Code      int         `json:"code"`
-	User      models.User `json:"user"`
-	SessionID string      `json:"sessionId"`
-	IsAuth    bool        `json:"isAuth"`
+	Code   int         `json:"code"`
+	User   models.User `json:"user"`
+	Avatar string      `json:"avatarImg"`
+	IsAuth bool        `json:"isAuth"`
 }
 
 type AuthErrResponse struct {
@@ -22,12 +22,12 @@ type ValidationErrResponse struct {
 	Status []string `json:"status"`
 }
 
-func NewAuthOkResponse(user models.User, sessionID string, isAuth bool) *AuthOkResponse {
+func NewAuthOkResponse(user models.User, avatar string, isAuth bool) *AuthOkResponse {
 	return &AuthOkResponse{
-		Code:      responses.StatusOk,
-		User:      user,
-		SessionID: sessionID,
-		IsAuth:    isAuth,
+		Code:   responses.StatusOk,
+		User:   user,
+		Avatar: avatar,
+		IsAuth: isAuth,
 	}
 }
 

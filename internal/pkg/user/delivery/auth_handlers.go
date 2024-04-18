@@ -274,6 +274,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	ctx := request.Context()
 
 	usersList := authHandler.UsersList
+	profileList := authHandler.ProfileList
 
 	session, err := request.Cookie("session_id")
 
@@ -286,10 +287,11 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	}
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	profile, _ := profileList.GetProfileByUserID(ctx, user.ID)
 
 	authHandler.UsersList.Logger.Info("User authorized")
 	log.Println("User authorized")
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, session.Value, true))
+	responses.SendOkResponse(writer, NewAuthOkResponse(*user, profile.AvatarIMG, true))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {

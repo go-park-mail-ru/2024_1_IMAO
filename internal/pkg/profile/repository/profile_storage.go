@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"mime/multipart"
+	"os"
 	"sync"
 	"time"
 
@@ -416,15 +417,49 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 	return url, nil
 }
 
+func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userID uint) error {
+	SQLGetAvatarURL := `
+	SELECT p.avatar_url
+	FROM public.profile p
+	WHERE p.user_id = $1`
+
+	pl.Logger.Infof(`
+	SELECT p.avatar_url
+	FROM public.profile p
+	WHERE p.user_id = %s`, userID)
+
+	var oldUrl interface{}
+
+	urlLine := tx.QueryRow(ctx, SQLGetAvatarURL, userID)
+	if err := urlLine.Scan(&oldUrl); err != nil {
+		pl.Logger.Errorf("Something went wrong while deleting url , err=%v", err)
+
+		return err
+	}
+
+	if oldUrl != nil {
+		os.Remove(oldUrl.(string))
+	}
+	return nil
+}
+
 func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
 	userID uint) (string, error) {
 	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
 	// if pl.ProfileExists(ctx, id) {
 	// 	return nil, errProfileDoNotExists
 	// }
+	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+		return pl.deleteAvatar(ctx, tx, userID)
+	})
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
+
+		return "", err
+	}
 
 	var url string
-
 	fullPath, err := utils.WriteFile(file, folderName)
 
 	if err != nil {
