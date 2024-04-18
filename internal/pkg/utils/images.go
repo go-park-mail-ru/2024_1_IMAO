@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"bufio"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -40,4 +42,21 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	}
 
 	return fullpath, nil
+}
+
+func DecodeImage(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", nil
+	}
+
+	reader := bufio.NewReader(file)
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", nil
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(content)
+
+	return encoded, nil
 }

@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -213,9 +214,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 
-	var data models.EditProfileNec
-
-	err = json.NewDecoder(request.Body).Decode(&data)
+	err = request.ParseMultipartForm(2 << 20)
 	if err != nil {
 		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -223,9 +222,15 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 			responses.ErrInternalServer))
 	}
 
-	p, err := h.ProfileList.EditProfile(user.ID, data)
+	avatar := request.MultipartForm.File["avatar"]
+	data := models.EditProfileNec{
+		Name:    request.PostFormValue("name"),
+		Surname: request.PostFormValue("surname"),
+	}
+
+	pl, err := h.ProfileList.SetProfileInfo(ctx, user.ID, avatar[0], data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		h.ProfileList.Logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -233,7 +238,17 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	responses.SendOkResponse(writer, NewProfileOkResponse(p))
+	pl.AvatarIMG, err = utils.DecodeImage(pl.Avatar)
+	if err != nil {
+		h.ProfileList.Logger.Error(err, responses.StatusInternalServerError)
+		log.Println(err, responses.ErrInternalServer)
+		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+
+		return
+	}
+
+	responses.SendOkResponse(writer, NewProfileOkResponse(pl))
 }
 
 func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request *http.Request) {

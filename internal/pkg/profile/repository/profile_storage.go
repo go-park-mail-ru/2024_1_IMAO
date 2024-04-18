@@ -374,29 +374,39 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 	return profile, nil
 }
 
-func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, url string) (*models.Profile, error) {
+func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
+	data models.EditProfileNec) (*models.Profile, error) {
 
 	SQLUpdateProfileAvatarURL := `
 	UPDATE public.profile p
-	SET avatar_url= $1
+	SET 
+	    avatar_url = $1,
+	    name = $2,
+	    surname = $3
 	FROM public.city c
-	WHERE c.id = p.city_id AND p.user_id = $2
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+	WHERE c.id = p.city_id AND p.user_id = $4
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
+	    c.name AS city_name, c.translation AS city_translation;`
 
 	pl.Logger.Infof(`UPDATE public.profile p
-	SET avatar_url= %s
+	SET 
+	    avatar_url = %s,
+		name = %s,
+		surname = %s
 	FROM public.city c
 	WHERE c.id = p.city_id AND p.user_id = %s
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`, url, userID)
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
+	    c.name AS city_name, c.translation AS city_translation;`, data.Avatar, data.Name, data.Surname, userID)
 
-	profileLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, url, userID)
+	profileLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, data.Avatar, data.Name, data.Surname, userID)
 
 	profile := models.Profile{}
 	city := models.City{}
 	profilePad := models.ProfilePad{}
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar,
+		&city.CityName, &city.Translation); err != nil {
 
 		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
 
@@ -440,7 +450,8 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 	return &profile, nil
 }
 
-func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string, userID uint) (*models.Profile, error) {
+func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
+	data models.EditProfileNec) (*models.Profile, error) {
 	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
 	// if pl.ProfileExists(ctx, id) {
 	// 	return nil, errProfileDoNotExists
@@ -448,7 +459,7 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 
 	var profile *models.Profile
 
-	fullPath, err := utils.WriteFile(file, folderName)
+	fullPath, err := utils.WriteFile(file, "avatars")
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
@@ -456,8 +467,10 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 		return nil, errProfileNotExists
 	}
 
+	data.Avatar = fullPath
+
 	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
-		profileInner, err := pl.setProfileAvatarUrl(ctx, tx, userID, fullPath)
+		profileInner, err := pl.setProfileInfo(ctx, tx, userID, data)
 		profile = profileInner
 
 		return err
