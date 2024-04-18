@@ -416,7 +416,8 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 	return url, nil
 }
 
-func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string, userID uint) (string, error) {
+func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
+	userID uint) (string, error) {
 	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
 	// if pl.ProfileExists(ctx, id) {
 	// 	return nil, errProfileDoNotExists
@@ -448,7 +449,8 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 	return url, nil
 }
 
-func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint, data models.EditProfileNec) (*models.Profile, error) {
+func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
+	data models.EditProfileNec) (*models.Profile, error) {
 
 	// if data.Avatar != "" {
 	// 	pl.setProfileAvatar(ctx, tx, userID, data.Avatar)
@@ -533,27 +535,15 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	// }
 
 	var profile *models.Profile
-
-	url, err := pl.SetProfileAvatarUrl(ctx, file, data.Avatar, userID)
-
-	if err != nil {
-		pl.Logger.Errorf("Something went wrong while setting profile url , err=%v", err)
-
-		return nil, errProfileNotExists
-	}
+	var err error
 
 	if file != nil {
-		fullPath, err := utils.WriteFile(file, "avatars")
-
+		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, file, "avatars", userID)
 		if err != nil {
-			pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+			pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
 
-			return nil, err
+			return nil, errProfileNotExists
 		}
-
-		data.Avatar = fullPath
-	} else {
-		data.Avatar = ""
 	}
 
 	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
@@ -562,8 +552,6 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 
 		return err
 	})
-
-	profile.Avatar = url
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
