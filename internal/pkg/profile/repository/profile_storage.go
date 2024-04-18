@@ -389,31 +389,70 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 	return profile, nil
 }
 
-func (pl *ProfileListWrapper) setProfileAvatar(ctx context.Context, tx pgx.Tx, userID uint, avatar string) {
+func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, avatar string) (string, error) {
 	SQLUpdateProfileAvatarURL := `
-		UPDATE public.profile p
-		SET 
-			avatar_url = $1,
-		FROM public.city c
-		WHERE c.id = p.city_id AND p.user_id = $2;`
+	UPDATE public.profile p
+	SET avatar_url = $1
+	WHERE p.user_id = $2
+	RETURNING avatar_url;`
 
-	pl.Logger.Infof(`UPDATE public.profile p
-		SET 
-			avatar_url = %s,
-		FROM public.city c
-		WHERE c.id = p.city_id AND p.user_id = %s
-		RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
-			c.name AS city_name, c.translation AS city_translation;`, avatar, userID)
+	pl.Logger.Infof(`
+	UPDATE public.profile p
+	SET avatar_url = %s
+	WHERE p.user_id = %s
+	RETURNING avatar_url;`, avatar, userID)
 
-	_ = tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, avatar, userID)
+	var url string
+
+	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, avatar, userID)
+
+	if err := urlLine.Scan(&url); err != nil {
+
+		pl.Logger.Errorf("Something went wrong while scanning url line , err=%v", err)
+
+		return "", err
+	}
+
+	return url, nil
 }
 
-func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
-	data models.EditProfileNec) (*models.Profile, error) {
+func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string, userID uint) (string, error) {
+	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
+	// if pl.ProfileExists(ctx, id) {
+	// 	return nil, errProfileDoNotExists
+	// }
 
-	if data.Avatar != "" {
-		pl.setProfileAvatar(ctx, tx, userID, data.Avatar)
+	var url string
+
+	fullPath, err := utils.WriteFile(file, folderName)
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+
+		return "", errProfileNotExists
 	}
+
+	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+		urlInner, err := pl.setProfileAvatarUrl(ctx, tx, userID, fullPath)
+		url = urlInner
+
+		return err
+	})
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
+
+		return "", err
+	}
+
+	return url, nil
+}
+
+func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint, data models.EditProfileNec) (*models.Profile, error) {
+
+	// if data.Avatar != "" {
+	// 	pl.setProfileAvatar(ctx, tx, userID, data.Avatar)
+	// }
 
 	SQLUpdateProfileInfo := `
 		UPDATE public.profile p
@@ -494,13 +533,22 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	// }
 
 	var profile *models.Profile
+
+	url, err := pl.SetProfileAvatarUrl(ctx, file, data.Avatar, userID)
+
+	if err != nil {
+		pl.Logger.Errorf("Something went wrong while setting profile url , err=%v", err)
+
+		return nil, errProfileNotExists
+	}
+
 	if file != nil {
 		fullPath, err := utils.WriteFile(file, "avatars")
 
 		if err != nil {
 			pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
 
-			return nil, errProfileNotExists
+			return nil, err
 		}
 
 		data.Avatar = fullPath
@@ -508,12 +556,14 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 		data.Avatar = ""
 	}
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.setProfileInfo(ctx, tx, userID, data)
 		profile = profileInner
 
 		return err
 	})
+
+	profile.Avatar = url
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
