@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -228,17 +227,13 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		Surname: request.PostFormValue("surname"),
 	}
 
-	pl, err := h.ProfileList.SetProfileInfo(ctx, user.ID, avatar[0], data)
-	if err != nil {
-		h.ProfileList.Logger.Error(err, responses.StatusBadRequest)
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
-
-		return
+	var pl *models.Profile
+	if len(avatar) != 0 {
+		pl, err = h.ProfileList.SetProfileInfo(ctx, user.ID, avatar[0], data)
+	} else {
+		pl, err = h.ProfileList.SetProfileInfo(ctx, user.ID, nil, data)
 	}
 
-	pl.AvatarIMG, err = utils.DecodeImage(pl.Avatar)
 	if err != nil {
 		h.ProfileList.Logger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.ErrInternalServer)

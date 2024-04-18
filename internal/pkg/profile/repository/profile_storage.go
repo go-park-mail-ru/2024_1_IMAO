@@ -193,6 +193,11 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 		return nil, errProfileNotExists
 	}
 
+	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+	if err != nil {
+		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+	}
+
 	return profile, nil
 }
 
@@ -280,6 +285,11 @@ func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, d
 		pl.Logger.Errorf("Something went wrong while updating profile city, err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
+	}
+
+	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+	if err != nil {
+		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil
@@ -371,34 +381,60 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 		return nil, errProfileNotExists
 	}
 
+	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+	if err != nil {
+		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+	}
+
 	return profile, nil
+}
+
+func (pl *ProfileListWrapper) setProfileAvatar(ctx context.Context, tx pgx.Tx, userID uint, avatar string) {
+	SQLUpdateProfileAvatarURL := `
+		UPDATE public.profile p
+		SET 
+			avatar_url = $1,
+		FROM public.city c
+		WHERE c.id = p.city_id AND p.user_id = $2;`
+
+	pl.Logger.Infof(`UPDATE public.profile p
+		SET 
+			avatar_url = %s,
+		FROM public.city c
+		WHERE c.id = p.city_id AND p.user_id = %s
+		RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
+			c.name AS city_name, c.translation AS city_translation;`, avatar, userID)
+
+	_ = tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, avatar, userID)
 }
 
 func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
 	data models.EditProfileNec) (*models.Profile, error) {
 
-	SQLUpdateProfileAvatarURL := `
-	UPDATE public.profile p
-	SET 
-	    avatar_url = $1,
-	    name = $2,
-	    surname = $3
-	FROM public.city c
-	WHERE c.id = p.city_id AND p.user_id = $4
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
-	    c.name AS city_name, c.translation AS city_translation;`
+	if data.Avatar != "" {
+		pl.setProfileAvatar(ctx, tx, userID, data.Avatar)
+	}
+
+	SQLUpdateProfileInfo := `
+		UPDATE public.profile p
+		SET 
+			name = $1,
+			surname = $2
+		FROM public.city c
+		WHERE c.id = p.city_id AND p.user_id = $3
+		RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
+			c.name AS city_name, c.translation AS city_translation;`
 
 	pl.Logger.Infof(`UPDATE public.profile p
-	SET 
-	    avatar_url = %s,
-		name = %s,
-		surname = %s
-	FROM public.city c
-	WHERE c.id = p.city_id AND p.user_id = %s
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
-	    c.name AS city_name, c.translation AS city_translation;`, data.Avatar, data.Name, data.Surname, userID)
+		SET 
+			name = %s,
+			surname = %s
+		FROM public.city c
+		WHERE c.id = p.city_id AND p.user_id = %s
+		RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
+			c.name AS city_name, c.translation AS city_translation;`, data.Name, data.Surname, userID)
 
-	profileLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, data.Avatar, data.Name, data.Surname, userID)
+	profileLine := tx.QueryRow(ctx, SQLUpdateProfileInfo, data.Name, data.Surname, userID)
 
 	profile := models.Profile{}
 	city := models.City{}
@@ -458,18 +494,21 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	// }
 
 	var profile *models.Profile
+	if file != nil {
+		fullPath, err := utils.WriteFile(file, "avatars")
 
-	fullPath, err := utils.WriteFile(file, "avatars")
+		if err != nil {
+			pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
 
-	if err != nil {
-		pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+			return nil, errProfileNotExists
+		}
 
-		return nil, errProfileNotExists
+		data.Avatar = fullPath
+	} else {
+		data.Avatar = ""
 	}
 
-	data.Avatar = fullPath
-
-	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.setProfileInfo(ctx, tx, userID, data)
 		profile = profileInner
 
@@ -480,6 +519,11 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
+	}
+
+	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+	if err != nil {
+		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil
