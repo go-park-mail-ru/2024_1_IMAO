@@ -6,21 +6,23 @@ import (
 )
 
 type Profile struct {
-	ID             uint      `json:"id"`
-	UserID         uint      `json:"user_id"`
-	Name           string    `json:"name"`
-	Surname        string    `json:"surname"`
-	City           City      `json:"city"`
-	Phone          string    `json:"phoneNumber"`
-	Avatar         string    `json:"avatar"`
-	RegisterTime   time.Time `json:"regTime"`
-	Rating         float64   `json:"rating"`
-	ReactionsCount float64   `json:"reactionsCount"`
-	Approved       bool      `json:"approved"`
-	MerchantsName  string    `json:"merchantsName"`
-	SubersCount    int       `json:"subersCount"`
-	SubonsCount    int       `json:"subonsCount"`
-	AvatarIMG      string    `json:"avatarImg"`
+	ID              uint      `json:"id"`
+	UserID          uint      `json:"user_id"`
+	Name            string    `json:"name"`
+	Surname         string    `json:"surname"`
+	City            City      `json:"city"`
+	Phone           string    `json:"phoneNumber"`
+	Avatar          string    `json:"avatar"`
+	RegisterTime    time.Time `json:"regTime"`
+	Rating          float64   `json:"rating"`
+	ReactionsCount  float64   `json:"reactionsCount"`
+	Approved        bool      `json:"approved"`
+	MerchantsName   string    `json:"merchantsName"`
+	SubersCount     int       `json:"subersCount"`
+	SubonsCount     int       `json:"subonsCount"`
+	AvatarIMG       string    `json:"avatarImg"`
+	ActiveAddsCount int       `json:"activeAddsCount"`
+	SoldAddsCount   int       `json:"soldAddsCount"`
 }
 
 type ProfilePad struct {

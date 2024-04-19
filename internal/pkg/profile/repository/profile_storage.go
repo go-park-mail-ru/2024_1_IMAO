@@ -31,17 +31,17 @@ type ProfileListWrapper struct {
 }
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
-	cityIdDefault := 100
-	phoneDefault := utils.RandString(10)
-	nameDefault := "Пользователь"
-	surnameDefault := "Фамилия"
-	avatar_url := utils.RandString(16)
-	SQLCreateProfile := `INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES ($1, $2, $3, $4, $5, $6);`
-	pl.Logger.Infof(`INSERT INTO public.profile(user_id, city_id, phone, name, surname, avatar_url) VALUES (%s, %s, %s, %s, %s, %s);`, profile.UserID, cityIdDefault, phoneDefault, nameDefault, surnameDefault, avatar_url)
+	//cityIdDefault := 100
+	//phoneDefault := utils.RandString(10)
+	//nameDefault := "Пользователь"
+	//surnameDefault := "Фамилия"
+	//avatar_url := utils.RandString(16)
+	SQLCreateProfile := `INSERT INTO public.profile(user_id) VALUES ($1);`
+	pl.Logger.Infof(`INSERT INTO public.profile(user_id) VALUES (%s);`, profile.UserID)
 
 	var err error
 
-	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID, cityIdDefault, phoneDefault, nameDefault, surnameDefault, avatar_url)
+	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID)
 
 	if err != nil {
 		pl.Logger.Errorf("Something went wrong while executing create profile query, err=%v", err)
@@ -97,7 +97,12 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 			p.verified, 
 			p.avatar_url,
 			c.name AS city_name,
-			c.translation AS city_translation
+			c.translation AS city_translation,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_subscriber = $1 ) AS subscriber_count,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1 ) AS subscription_count,
+			(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
+			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
+			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count
 		FROM 
 			public.profile p
 		INNER JOIN 
@@ -118,7 +123,12 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 		p.verified, 
 		p.avatar_url,
 		c.name AS city_name,
-		c.translation AS city_translation
+		c.translation AS city_translation,
+		(SELECT COUNT(*) FROM subscription WHERE user_id_subscriber = $1 ) AS subscriber_count,
+		(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1 ) AS subscription_count,
+		(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
+		(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
+		(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count
 	FROM 
 		public.profile p
 	INNER JOIN 
@@ -134,7 +144,8 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 	profilePad := models.ProfilePad{}
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation, &profile.SubersCount,
+		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount); err != nil {
 
 		pl.Logger.Errorf("Something went wrong while scanning profile, err=%v", err)
 
@@ -169,11 +180,11 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 
 	rand.Seed(time.Now().UnixNano())
 	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
-	profile.ReactionsCount = 10
+	//profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
-	profile.SubersCount = rand.Intn(10)
-	profile.SubonsCount = rand.Intn(10)
+	//profile.SubersCount = rand.Intn(10)
+	//profile.SubonsCount = rand.Intn(10)
 
 	return &profile, nil
 }

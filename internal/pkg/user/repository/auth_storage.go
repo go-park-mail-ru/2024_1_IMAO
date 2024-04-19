@@ -132,6 +132,7 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 
 	if err != nil {
 
+		active.Logger.Errorf("Error while creating user, err=%v", err)
 		return nil, err
 	}
 

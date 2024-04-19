@@ -2,10 +2,12 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -59,4 +61,35 @@ func DecodeImage(filename string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(content)
 
 	return encoded, nil
+}
+
+func SendFile(filename, URL string) (io.ReadCloser, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("avatar", filename)
+	if err != nil {
+		return nil, err
+	}
+	io.Copy(part, file)
+	writer.Close()
+
+	request, err := http.NewRequest("POST", URL, &body)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	return response.Body, nil
 }
