@@ -57,6 +57,62 @@ func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID
 	return advertsList, nil
 }
 
+func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.Tx, advertID uint) ([]string, error) {
+	SQLAdvertImagesURLs := `
+	SELECT url
+	FROM public.advert_image
+	WHERE advert_id = $1;`
+
+	ads.Logger.Infof(`
+	SELECT url
+	FROM public.advert_image
+	WHERE advert_id = %s;`, advertID)
+
+	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	var urlArray []string
+
+	for rows.Next() {
+		var returningUrl string
+
+		if err := rows.Scan(&returningUrl); err != nil {
+			ads.Logger.Errorf("Something went wrong while scanning rows of advert images for advert %v, err=%v", advertID, err)
+
+			return nil, err
+		}
+
+		urlArray = append(urlArray, returningUrl)
+	}
+
+	return urlArray, nil
+}
+
+func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID uint) ([]string, error) {
+
+	var urlArray []string
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		urlArrayInner, err := ads.getAdvertImagesURLs(ctx, tx, advertID)
+		urlArray = urlArrayInner
+
+		return err
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong getting image urls for advertID=%v , err=%v", advertID, err)
+
+		return nil, err
+	}
+
+	return urlArray, nil
+}
+
 func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
 	SQLAdvertById := `
 		SELECT 
@@ -144,6 +200,22 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
+	}
+
+	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while getting advert images urls , err=%v", err)
+
+		return nil, err
+	}
+
+	for i := 0; i < len(advertsList.Photos); i++ {
+
+		image, err := utils.DecodeImage(advertsList.Photos[i])
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
+		if err != nil {
+			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+		}
 	}
 
 	return advertsList, nil
