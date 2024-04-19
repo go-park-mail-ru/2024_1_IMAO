@@ -351,7 +351,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 		return
 	}
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, session.Value, true))
+	responses.SendOkResponse(writer, NewAuthOkResponse(*user, "", true))
 
 	authHandler.UsersList.Logger.Info("User", user.Email, "successfully changed his authorization data.")
 	log.Println("User", user.Email, "successfully changed his authorization data.")

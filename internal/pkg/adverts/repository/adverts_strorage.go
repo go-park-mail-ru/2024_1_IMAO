@@ -663,7 +663,8 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multipart.FileHeader,
+	data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -679,17 +680,14 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multip
 		return nil, err
 	}
 
-	if files != nil {
-		advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", advertsList.Advert.ID)
-		if err != nil {
-			ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", advertsList.Advert.ID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
 
-			return nil, err
-		}
+		return nil, err
 	}
 
 	for i := 0; i < len(advertsList.Photos); i++ {
-
 		image, err := utils.DecodeImage(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
@@ -826,7 +824,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 		}
 
 		err = pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
-			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, fullPath) //////
+			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, fullPath)
 			url = urlInner
 
 			return err
@@ -968,13 +966,11 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 		return nil, err
 	}
 
-	if files != nil {
-		advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", data.ID)
-		if err != nil {
-			ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", data.ID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
 
-			return nil, err
-		}
+		return nil, err
 	}
 
 	for i := 0; i < len(advertsList.Photos); i++ {
@@ -989,7 +985,7 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) сloseAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
+func (ads *AdvertsListWrapper) closeAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
 	SQLCloseAdvert := `UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = $1;`
 	ads.Logger.Infof(`UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = %s;`, advertID)
 	var err error
@@ -1007,7 +1003,7 @@ func (ads *AdvertsListWrapper) сloseAdvert(ctx context.Context, tx pgx.Tx, adve
 func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) error {
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
-		err := ads.сloseAdvert(ctx, tx, advertID)
+		err := ads.closeAdvert(ctx, tx, advertID)
 		if err != nil {
 			ads.Logger.Errorf("Something went wrong while closing advert, err=%v", err)
 			return fmt.Errorf("Something went wrong while closing advert", err)

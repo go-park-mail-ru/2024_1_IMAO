@@ -149,7 +149,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 
 	ctx := request.Context()
 
-	err := request.ParseMultipartForm(0)
+	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
@@ -177,11 +177,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	}
 
 	var advert *models.ReturningAdvert
-	if len(photos) != 0 {
-		advert, err = list.CreateAdvert(ctx, photos, data)
-	} else {
-		advert, err = list.CreateAdvert(ctx, nil, data)
-	}
+	advert, err = list.CreateAdvert(ctx, photos, data)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -203,7 +199,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 
 	ctx := request.Context()
 
-	err := request.ParseMultipartForm(0)
+	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
@@ -233,11 +229,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	}
 
 	var advert *models.ReturningAdvert
-	if len(photos) != 0 {
-		advert, err = list.EditAdvert(ctx, photos, data)
-	} else {
-		advert, err = list.EditAdvert(ctx, nil, data)
-	}
+	advert, err = list.EditAdvert(ctx, photos, data)
 
 	//ad, err := list.EditAdvert(ctx, data)
 	if err != nil {
