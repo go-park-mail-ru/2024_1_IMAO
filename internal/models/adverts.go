@@ -51,6 +51,10 @@ type ReturningAdvert struct {
 	PhotosIMG []string `json:"photosIMG"`
 }
 
+type PhotoPad struct {
+	Photo *string `json:"photo"`
+}
+
 type AdvertsList struct {
 	Adverts           []*Advert
 	Categories        []*Category
@@ -67,6 +71,8 @@ type ReturningAdInList struct {
 	Price    uint   `json:"price"`
 	City     string `json:"city"`
 	Category string `json:"category"`
+	Photo    string `json:"photo"`
+	PhotoIMG string `json:"photoIMG"`
 }
 
 type ReturningAdvertList struct {

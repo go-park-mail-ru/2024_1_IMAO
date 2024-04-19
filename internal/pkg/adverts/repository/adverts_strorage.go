@@ -258,14 +258,16 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 // }
 
 func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
-	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price
+	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
 	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
 	LIMIT $3;
 	`
-	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price
+	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -282,9 +284,26 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 	var adsList []*models.ReturningAdInList
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
-		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price); err != nil {
+
+		photoPad := models.PhotoPad{}
+
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
 			return nil, err
 		}
+
+		photoURLToInsert := ""
+		if photoPad.Photo != nil {
+			photoURLToInsert = *photoPad.Photo
+		}
+
+		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
+
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+
+			return nil, err
+		}
+
 		adsList = append(adsList, &returningAdInList)
 	}
 
@@ -317,14 +336,16 @@ func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string
 }
 
 func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
-	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price
+	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
 	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
 	LIMIT $4;
 	`
-	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price
+	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -341,9 +362,26 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 	var adsList []*models.ReturningAdInList
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
-		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price); err != nil {
+
+		photoPad := models.PhotoPad{}
+
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
 			return nil, err
 		}
+
+		photoURLToInsert := ""
+		if photoPad.Photo != nil {
+			photoURLToInsert = *photoPad.Photo
+		}
+
+		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
+
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+
+			return nil, err
+		}
+
 		adsList = append(adsList, &returningAdInList)
 	}
 
@@ -397,7 +435,8 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		c.name AS city_name,
 		c.translation AS city_translation,
 		cat.name AS category_name,
-		cat.translation AS category_translation
+		cat.translation AS category_translation,
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM 
 		public.advert a
 	INNER JOIN 
@@ -408,7 +447,9 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		a.user_id = $1 AND a.advert_status = $2;
 	`
 	ads.Logger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.advert_status, c.name AS city_name,
-		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
+		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation,
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+		FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category cat ON a.category_id = cat.id WHERE 	a.user_id = %s AND a.advert_status = %s; `, userId, advertStatus)
 
 	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus)
@@ -426,23 +467,51 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		category := models.Category{}
 		var status string // ЗАГЛУШКА
 
+		photoPad := models.PhotoPad{}
+
 		if err := rows.Scan(&advert.ID, &advert.UserID, &advert.CityID, &advert.CategoryID, &advert.Title, &advert.Description, &advert.Price, &advert.CreatedTime, &advert.ClosedTime, &advert.IsUsed, &status,
-			&city.CityName, &city.Translation, &category.Name, &category.Translation); err != nil {
+			&city.CityName, &city.Translation, &category.Name, &category.Translation, &photoPad.Photo); err != nil {
 
 			ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
 
 			return nil, err
 		}
+
+		photoURLToInsert := ""
+		if photoPad.Photo != nil {
+			photoURLToInsert = *photoPad.Photo
+		}
+
+		var photoArray []string
+
+		photoArray = append(photoArray, photoURLToInsert)
+
+		photoIMG, err := utils.DecodeImage(photoURLToInsert)
+
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+
+			return nil, err
+		}
+
+		var photoIMGArray []string
+
+		photoIMGArray = append(photoIMGArray, photoIMG)
+
 		advert.Deleted = false
+
 		if status == "Продано" {
 			advert.Deleted = true
 		}
+
 		city.ID = advert.CityID
 		category.ID = advert.CategoryID
 		returningAdvert := models.ReturningAdvert{
-			Advert:   advert,
-			City:     city,
-			Category: category,
+			Advert:    advert,
+			City:      city,
+			Category:  category,
+			Photos:    photoArray,
+			PhotosIMG: photoIMGArray,
 		}
 
 		returningAdvertList.AdvertItems = append(returningAdvertList.AdvertItems, &returningAdvert)
@@ -470,6 +539,8 @@ func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Contex
 				Price:    num.Advert.Price,
 				City:     num.City.Translation,
 				Category: num.Category.Translation,
+				Photo:    num.Photos[0],
+				PhotoIMG: num.PhotosIMG[0],
 			}
 			advertsList = append(advertsList, &returningAdInList)
 		}
