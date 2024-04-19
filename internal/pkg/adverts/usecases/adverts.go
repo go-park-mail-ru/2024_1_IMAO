@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 )
@@ -12,7 +13,7 @@ type AdvertsInfo interface {
 	GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
 
-	CreateAdvert(ctx context.Context, data models.ReceivedAdData) (*models.ReturningAdvert, error)
+	CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
 
 	GetCityID(city string) (uint, error)
 	GetCategoryID(city string) (uint, error)

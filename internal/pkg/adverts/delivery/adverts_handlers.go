@@ -165,6 +165,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
 	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
 
+	photos := request.MultipartForm.File["photos"]
 	data := models.ReceivedAdData{
 		UserID:      uint(userID),
 		City:        request.PostFormValue("city"),
@@ -175,7 +176,13 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		IsUsed:      isUsed,
 	}
 
-	adsList, err := list.CreateAdvert(ctx, data)
+	var advert *models.ReturningAdvert
+	if len(photos) != 0 {
+		advert, err = list.CreateAdvert(ctx, photos, data)
+	} else {
+		advert, err = list.CreateAdvert(ctx, nil, data)
+	}
+
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
@@ -184,7 +191,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
 }
 
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
@@ -213,6 +220,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	id, _ := strconv.Atoi(request.PostFormValue("id"))
 	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
 
+	photos := request.MultipartForm.File["photos"]
 	data := models.ReceivedAdData{
 		ID:          uint(id),
 		UserID:      uint(userID),
@@ -224,7 +232,14 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		IsUsed:      isUsed,
 	}
 
-	ad, err := list.EditAdvert(ctx, data)
+	var advert *models.ReturningAdvert
+	if len(photos) != 0 {
+		advert, err = list.EditAdvert(ctx, photos, data)
+	} else {
+		advert, err = list.EditAdvert(ctx, nil, data)
+	}
+
+	//ad, err := list.EditAdvert(ctx, data)
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
@@ -233,7 +248,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
 }
 
 func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, request *http.Request) {

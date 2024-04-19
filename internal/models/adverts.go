@@ -44,9 +44,11 @@ type Advert struct {
 }
 
 type ReturningAdvert struct {
-	Advert   Advert   `json:"advert"`
-	City     City     `json:"city"`
-	Category Category `json:"category"`
+	Advert    Advert   `json:"advert"`
+	City      City     `json:"city"`
+	Category  Category `json:"category"`
+	Photos    []string `json:"photos"`
+	PhotosIMG []string `json:"photosIMG"`
 }
 
 type AdvertsList struct {

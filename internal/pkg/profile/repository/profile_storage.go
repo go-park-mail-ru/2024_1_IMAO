@@ -586,9 +586,9 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	if file != nil {
 		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, file, "avatars", userID)
 		if err != nil {
-			pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
+			pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
 
-			return nil, errProfileNotExists
+			return nil, err
 		}
 	}
 

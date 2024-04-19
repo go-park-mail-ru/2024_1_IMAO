@@ -6,10 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"mime/multipart"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mdigger/translit"
@@ -517,7 +520,7 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -533,7 +536,169 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, data models.Rec
 		return nil, err
 	}
 
+	if files != nil {
+		advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", advertsList.Advert.ID)
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+
+			return nil, err
+		}
+	}
+
+	for i := 0; i < len(advertsList.Photos); i++ {
+
+		image, err := utils.DecodeImage(advertsList.Photos[i])
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
+		if err != nil {
+			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+		}
+	}
+
 	return advertsList, nil
+}
+
+func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, imageUrl string) (string, error) {
+	SQLUpdateProfileAvatarURL := `
+	INSERT INTO advert_image (url, advert_id)
+	VALUES 
+    ($1, $2)
+	RETURNING url;`
+
+	ads.Logger.Infof(`
+	INSERT INTO advert_image (url, advert_id)
+	VALUES 
+    %1, %2)
+	RETURNING url;`, imageUrl, advertID)
+
+	var returningUrl string
+
+	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, imageUrl, advertID)
+
+	if err := urlLine.Scan(&returningUrl); err != nil {
+
+		ads.Logger.Errorf("Something went wrong while scanning advert image , err=%v", err)
+
+		return "", err
+	}
+
+	return returningUrl, nil
+}
+
+func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx context.Context, tx pgx.Tx, advertID uint) error {
+	SQLAdvertImagesURLs := `
+	SELECT url
+	FROM public.advert_image
+	WHERE advert_id = $1;`
+
+	ads.Logger.Infof(`
+	SELECT url
+	FROM public.advert_image
+	WHERE advert_id = %s;`, advertID)
+
+	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
+
+		return err
+	}
+	defer rows.Close()
+
+	var oldUrl interface{}
+
+	for rows.Next() {
+		if err := rows.Scan(&oldUrl); err != nil {
+			ads.Logger.Errorf("Something went wrong while scanning rows for deleting advert images for advert %v, err=%v", advertID, err)
+
+			return err
+		}
+
+		if oldUrl != nil {
+			err := os.Remove(oldUrl.(string))
+			if err != nil {
+				ads.Logger.Errorf("Something went wrong while deleting image %v, err=%v", oldUrl.(string), err)
+
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromDatabase(ctx context.Context, tx pgx.Tx, advertID uint) error {
+	//cityIdDefault := 100
+	//phoneDefault := utils.RandString(10)
+	//nameDefault := "Пользователь"
+	//surnameDefault := "Фамилия"
+	//avatar_url := utils.RandString(16)
+	SQLCreateProfile := `DELETE FROM public.advert_image WHERE advert_id = $1;`
+	ads.Logger.Infof(`DELETE FROM public.advert_image WHERE advert_id = %s;`, advertID)
+
+	var err error
+
+	_, err = tx.Exec(ctx, SQLCreateProfile, advertID)
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while executing delete advert_image query, err=%v", err)
+
+		return fmt.Errorf("Something went wrong while executing delete advert_image profile query", err)
+	}
+
+	return nil
+}
+
+func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, folderName string, advertID uint) ([]string, error) {
+
+	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		return ads.deleteAllImagesForAdvertFromLocalStorage(ctx, tx, advertID)
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong deleting AllImagesForAdvertFromLocalStorage , err=%v", err)
+
+		return nil, err
+	}
+
+	err = pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		return ads.deleteAllImagesForAdvertFromDatabase(ctx, tx, advertID)
+	})
+
+	if err != nil {
+		ads.Logger.Errorf("Something went wrong while deleting AllImagesForAdvertFromDatabase , err=%v", err)
+
+		return nil, err
+	}
+
+	var urlArray []string
+
+	for i := 0; i < len(files); i++ {
+		var url string
+
+		fullPath, err := utils.WriteFile(files[i], folderName)
+
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+
+			return nil, err
+		}
+
+		err = pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, fullPath) //////
+			url = urlInner
+
+			return err
+		})
+
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
+
+			return nil, err
+		}
+
+		urlArray = append(urlArray, url)
+	}
+
+	return urlArray, nil
 }
 
 func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
@@ -644,7 +809,7 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -658,6 +823,24 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, data models.Recei
 		ads.Logger.Errorf("Something went wrong while updating advert, err=%v", err)
 
 		return nil, err
+	}
+
+	if files != nil {
+		advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", data.ID)
+		if err != nil {
+			ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+
+			return nil, err
+		}
+	}
+
+	for i := 0; i < len(advertsList.Photos); i++ {
+
+		image, err := utils.DecodeImage(advertsList.Photos[i])
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
+		if err != nil {
+			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+		}
 	}
 
 	return advertsList, nil
