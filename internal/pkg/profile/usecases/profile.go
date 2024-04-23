@@ -13,7 +13,7 @@ type ProfileInfo interface {
 
 	SetProfileCity(ctx context.Context, userID uint, data models.SetProfileCityNec)
 	SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec)
-	SetProfileRating(userID uint, data models.SetProfileRatingNec)
+	//SetProfileRating(userID uint, data models.SetProfileRatingNec)
 	SetProfile(userID uint, data models.SetProfileNec)
 	SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
 		data models.EditProfileNec) (*models.Profile, error)

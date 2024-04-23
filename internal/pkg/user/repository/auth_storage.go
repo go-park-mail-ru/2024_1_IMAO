@@ -28,14 +28,23 @@ type UsersListWrapper struct {
 }
 
 func (active *UsersListWrapper) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=$1 );`
-	active.Logger.Infof(`SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=%s`, email)
+	childLogger.Infof(`SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=%s`, email)
 	userLine := tx.QueryRow(ctx, SQLUserExists, email)
 
 	var exists bool
 
 	if err := userLine.Scan(&exists); err != nil {
-		active.Logger.Errorf("Error while scanning user exists, err=%v", err)
+		childLogger.Errorf("Error while scanning user exists, err=%v", err)
 		return false, err
 	}
 
@@ -43,6 +52,15 @@ func (active *UsersListWrapper) userExists(ctx context.Context, tx pgx.Tx, email
 }
 
 func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bool {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var exists bool
 
 	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
@@ -53,18 +71,27 @@ func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bo
 	})
 
 	if err != nil {
-		active.Logger.Errorf("Error while executing user exists query, err=%v", err)
+		childLogger.Errorf("Error while executing user exists query, err=%v", err)
 	}
 
 	return exists
 }
 
 func (active *UsersListWrapper) GetLastID(ctx context.Context) uint {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var lastID uint
 	_ = pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			active.Logger.Errorf("Something went wrong while getting user id from seq, err=%v", err)
+			childLogger.Errorf("Something went wrong while getting user id from seq, err=%v", err)
 			return fmt.Errorf("Something went wrong while getting user id from seq in func GetLastID", err)
 		}
 		lastID = uint(id)
@@ -90,14 +117,23 @@ func (active *UsersListWrapper) getIDByEmail(email string) (uint, error) {
 }
 
 func (active *UsersListWrapper) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
-	active.Logger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
+	childLogger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
 
 	if err != nil {
-		active.Logger.Errorf("Something went wrong while executing create user query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing create user query, err=%v", err)
 		return fmt.Errorf("Something went wrong while executing create user query in func createUser", err)
 	}
 
@@ -105,6 +141,15 @@ func (active *UsersListWrapper) createUser(ctx context.Context, tx pgx.Tx, user 
 }
 
 func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	if active.UserExists(ctx, email) {
 		return nil, errUserExists
 	}
@@ -117,12 +162,12 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
 		err := active.createUser(ctx, tx, &user)
 		if err != nil {
-			active.Logger.Errorf("Something went wrong while creating user, err=%v", err)
+			childLogger.Errorf("Something went wrong while creating user, err=%v", err)
 			return fmt.Errorf("Something went wrong while creating user", err)
 		}
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			active.Logger.Errorf("Something went wrong getting user id from seq, err=%v", err)
+			childLogger.Errorf("Something went wrong getting user id from seq, err=%v", err)
 			return fmt.Errorf("Something went wrong getting user id from seq", err)
 		}
 		user.ID = uint(id)
@@ -131,8 +176,8 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 	})
 
 	if err != nil {
+		childLogger.Errorf("Error while creating user, err=%v", err)
 
-		active.Logger.Errorf("Error while creating user, err=%v", err)
 		return nil, err
 	}
 
@@ -142,14 +187,23 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 }
 
 func (active *UsersListWrapper) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUserExists := `UPDATE public."user"	SET email=$1 WHERE id=$2 RETURNING id, email;`
-	active.Logger.Infof(`UPDATE public."user"	SET email=%s WHERE id=%s RETURNING id, email;`, email, id)
+	childLogger.Infof(`UPDATE public."user"	SET email=%s WHERE id=%s RETURNING id, email;`, email, id)
 	userLine := tx.QueryRow(ctx, SQLUserExists, email, id)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email); err != nil {
-		active.Logger.Errorf("Error while scanning edit user email, err=%v", err)
+		childLogger.Errorf("Error while scanning edit user email, err=%v", err)
 
 		return nil, err
 	}
@@ -158,6 +212,15 @@ func (active *UsersListWrapper) editUserEmail(ctx context.Context, tx pgx.Tx, id
 }
 
 func (active *UsersListWrapper) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var user *models.User
 
 	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
@@ -168,7 +231,7 @@ func (active *UsersListWrapper) EditUserEmail(ctx context.Context, id uint, emai
 	})
 
 	if err != nil {
-		active.Logger.Errorf("Something went wrong while editing user profile , err=%v", errUserNotExists)
+		childLogger.Errorf("Something went wrong while editing user profile , err=%v", errUserNotExists)
 
 		return nil, errUserNotExists
 	}
@@ -193,14 +256,24 @@ func (active *UsersListWrapper) EditUser(id uint, email, passwordHash string) (*
 }
 
 func (active *UsersListWrapper) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUserByEmail := `SELECT id, email, password_hash	FROM public."user" where email = $1 `
-	active.Logger.Infof(`SELECT id, email, password_hash	FROM public."user" where email = %s`, email)
+	childLogger.Infof(`SELECT id, email, password_hash	FROM public."user" where email = %s`, email)
 	userLine := tx.QueryRow(ctx, SQLUserByEmail, email)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		active.Logger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
+
 		return nil, err
 	}
 
@@ -211,6 +284,15 @@ func (active *UsersListWrapper) getUserByEmail(ctx context.Context, tx pgx.Tx, e
 func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user *models.User
 
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByEmail(ctx, tx, email)
 		user = userInner
@@ -219,7 +301,7 @@ func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string
 	})
 
 	if err != nil {
-		active.Logger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
 		return nil, errUserNotExists
 	}
 
@@ -227,14 +309,23 @@ func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string
 }
 
 func (active *UsersListWrapper) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUserById := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
-	active.Logger.Infof(`SELECT id, email, password_hash	FROM public."user" where id = %s`, id)
+	childLogger.Infof(`SELECT id, email, password_hash	FROM public."user" where id = %s`, id)
 	userLine := tx.QueryRow(ctx, SQLUserById, id)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		active.Logger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
 		return nil, err
 	}
 
@@ -245,6 +336,15 @@ func (active *UsersListWrapper) getUserByID(ctx context.Context, tx pgx.Tx, id u
 func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
 	var user *models.User
 
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByID(ctx, tx, userID)
 		user = userInner
@@ -253,7 +353,7 @@ func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*
 	})
 
 	if err != nil {
-		active.Logger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
 		return nil, errUserNotExists
 	}
 
@@ -262,6 +362,15 @@ func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*
 
 // НЕ ПРОТЕСТИРОВАНО
 func (active *UsersListWrapper) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	active.UsersList.Mux.Lock()
 	defer active.UsersList.Mux.Unlock()
 
@@ -277,7 +386,7 @@ func (active *UsersListWrapper) GetUserBySession(ctx context.Context, sessionID 
 	})
 
 	if err != nil {
-		active.Logger.Errorf("Something went wrong while getting user by session from seq, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting user by session from seq, err=%v", err)
 		return nil, errUserNotExists
 	}
 
@@ -307,9 +416,19 @@ func (active *UsersListWrapper) AddSession(id uint) string {
 	return sessionID
 }
 
-func (active *UsersListWrapper) RemoveSession(sessionID string) error {
+func (active *UsersListWrapper) RemoveSession(ctx context.Context, sessionID string) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := active.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	if !active.SessionExists(sessionID) {
-		active.Logger.Errorf("Something went wrong while removing session STILL MAP, err=%v", errSessionNotExists)
+		childLogger.Errorf("Something went wrong while removing session STILL MAP, err=%v", errSessionNotExists)
+
 		return errSessionNotExists
 	}
 

@@ -1,10 +1,14 @@
 package delivery
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	profrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
@@ -45,13 +49,20 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := authHandler.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := authHandler.UsersList
 
 	session, cookieErr := request.Cookie("session_id")
 
 	if cookieErr == nil && usersList.SessionExists(session.Value) {
-		authHandler.UsersList.Logger.Info(responses.ErrAuthorized, responses.StatusBadRequest)
+		childLogger.Info(responses.ErrAuthorized, responses.StatusBadRequest)
 		log.Println(responses.ErrAuthorized, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized))
@@ -63,7 +74,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	err := json.NewDecoder(request.Body).Decode(&user)
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -74,7 +85,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	expectedUser, err := usersList.GetUserByEmail(ctx, email)
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongCredentials))
@@ -83,7 +94,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	}
 
 	if !utils.CheckPassword(password, expectedUser.PasswordHash) {
-		authHandler.UsersList.Logger.Info("Passwords do not match", responses.StatusBadRequest)
+		childLogger.Info("Passwords do not match", responses.StatusBadRequest)
 		log.Println("Passwords do not match", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongCredentials))
@@ -99,12 +110,14 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		Path:     "/",
 		Expires:  time.Now().Add(sessionTime),
 		HttpOnly: true,
+		SameSite: 4,
+		Secure:   true,
 	}
 	http.SetCookie(writer, cookie)
 
 	userData := NewAuthOkResponse(*expectedUser, sessionID, true)
 	responses.SendOkResponse(writer, userData)
-	authHandler.UsersList.Logger.Info("User", user.Email, "have been authorized with session ID:", sessionID)
+	childLogger.Info("User", user.Email, "have been authorized with session ID:", sessionID)
 	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
 
 }
@@ -129,10 +142,18 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	}
 
 	usersList := authHandler.UsersList
+	requestUUID := uuid.New().String()
+
+	ctx := request.Context()
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := authHandler.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	session, err := request.Cookie("session_id")
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusUnauthorized)
+		childLogger.Error(err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -140,9 +161,9 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 		return
 	}
 
-	err = usersList.RemoveSession(session.Value)
+	err = usersList.RemoveSession(ctx, session.Value)
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusUnauthorized)
+		childLogger.Error(err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -156,7 +177,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	userData := NewAuthOkResponse(models.User{}, "", false)
 	responses.SendOkResponse(writer, userData)
 
-	authHandler.UsersList.Logger.Info("User have been logged out")
+	childLogger.Info("User have been logged out")
 	log.Println("User have been logged out")
 }
 
@@ -180,13 +201,21 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := authHandler.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	usersList := authHandler.UsersList
 	profileList := authHandler.ProfileList
 
 	session, cookieErr := request.Cookie("session_id")
 
 	if cookieErr == nil && usersList.SessionExists(session.Value) {
-		authHandler.UsersList.Logger.Info("User already authorized", responses.StatusBadRequest)
+		childLogger.Info("User already authorized", responses.StatusBadRequest)
 		log.Println("User already authorized", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrAuthorized))
@@ -198,7 +227,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	err := json.NewDecoder(request.Body).Decode(&newUser)
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -209,7 +238,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	passwordRepeat := newUser.PasswordRepeat
 
 	if usersList.UserExists(ctx, email) {
-		authHandler.UsersList.Logger.Info("User already exists", responses.StatusBadRequest)
+		childLogger.Info("User already exists", responses.StatusBadRequest)
 		log.Println("User already exists", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrUserAlreadyExists))
@@ -219,7 +248,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	errors := utils.Validate(email, password)
 	if errors != nil {
-		authHandler.UsersList.Logger.Error("Bad user data", responses.StatusBadRequest)
+		childLogger.Error("Bad user data", responses.StatusBadRequest)
 		log.Println("Bad user data", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewValidationErrResponse(responses.StatusBadRequest,
 			errors))
@@ -228,7 +257,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 
 	if password != passwordRepeat {
-		authHandler.UsersList.Logger.Info("Passwords do not match")
+		childLogger.Info("Passwords do not match")
 		log.Println("Passwords do not match")
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			responses.ErrDifferentPasswords))
@@ -247,12 +276,14 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		Path:     "/",
 		Expires:  time.Now().Add(sessionTime),
 		HttpOnly: true,
+		SameSite: 4,
+		Secure:   true,
 	}
 	http.SetCookie(writer, cookie)
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, sessionID, true))
 
-	authHandler.UsersList.Logger.Info("User", user.Email, "have been authorized with session ID:", sessionID)
+	childLogger.Info("User", user.Email, "have been authorized with session ID:", sessionID)
 	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
 }
 
@@ -272,6 +303,13 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := authHandler.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := authHandler.UsersList
 	profileList := authHandler.ProfileList
@@ -279,7 +317,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		authHandler.UsersList.Logger.Error("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, NewAuthOkResponse(models.User{}, "", false))
 
@@ -289,7 +327,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	user, _ := usersList.GetUserBySession(ctx, session.Value)
 	profile, _ := profileList.GetProfileByUserID(ctx, user.ID)
 
-	authHandler.UsersList.Logger.Info("User authorized")
+	childLogger.Info("User authorized")
 	log.Println("User authorized")
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, profile.AvatarIMG, true))
 }
@@ -302,13 +340,20 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := authHandler.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := authHandler.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusUnauthorized)
+		childLogger.Error(err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -322,7 +367,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	err = json.NewDecoder(request.Body).Decode(&newUser)
 	if err != nil {
-		authHandler.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -332,7 +377,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	errors := utils.ValidateEmail(email)
 	if errors != nil {
-		authHandler.UsersList.Logger.Error("Email is not valid", responses.StatusBadRequest)
+		childLogger.Error("Email is not valid", responses.StatusBadRequest)
 		log.Println("Email is not valid", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			"Email is not valid"))
@@ -343,7 +388,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	user, err = usersList.EditUserEmail(ctx, user.ID, email)
 
 	if err != nil {
-		authHandler.UsersList.Logger.Error("This email is already in use", responses.StatusBadRequest)
+		childLogger.Error("This email is already in use", responses.StatusBadRequest)
 		log.Println("This email is already in use", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
 			"This email is already in use"))
@@ -353,6 +398,6 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, "", true))
 
-	authHandler.UsersList.Logger.Info("User", user.Email, "successfully changed his authorization data.")
+	childLogger.Info("User", user.Email, "successfully changed his authorization data.")
 	log.Println("User", user.Email, "successfully changed his authorization data.")
 }

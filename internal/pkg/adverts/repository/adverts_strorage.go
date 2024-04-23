@@ -36,6 +36,15 @@ type AdvertsListWrapper struct {
 }
 
 func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList *models.ReturningAdvert
 
 	city := ""     // ЗАГЛУШКИ
@@ -49,7 +58,7 @@ func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
@@ -58,19 +67,28 @@ func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID
 }
 
 func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.Tx, advertID uint) ([]string, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLAdvertImagesURLs := `
 	SELECT url
 	FROM public.advert_image
 	WHERE advert_id = $1;`
 
-	ads.Logger.Infof(`
+	childLogger.Infof(`
 	SELECT url
 	FROM public.advert_image
 	WHERE advert_id = %s;`, advertID)
 
 	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
 
 		return nil, err
 	}
@@ -82,7 +100,7 @@ func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.T
 		var returningUrl string
 
 		if err := rows.Scan(&returningUrl); err != nil {
-			ads.Logger.Errorf("Something went wrong while scanning rows of advert images for advert %v, err=%v", advertID, err)
+			childLogger.Errorf("Something went wrong while scanning rows of advert images for advert %v, err=%v", advertID, err)
 
 			return nil, err
 		}
@@ -94,6 +112,14 @@ func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.T
 }
 
 func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID uint) ([]string, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	var urlArray []string
 
@@ -105,7 +131,7 @@ func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong getting image urls for advertID=%v , err=%v", advertID, err)
+		childLogger.Errorf("Something went wrong getting image urls for advertID=%v , err=%v", advertID, err)
 
 		return nil, err
 	}
@@ -114,6 +140,15 @@ func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID
 }
 
 func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLAdvertById := `
 		SELECT 
 		a.id, 
@@ -138,7 +173,7 @@ func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertI
 		public.category cat ON a.category_id = cat.id
 		WHERE a.id = $1;`
 
-	ads.Logger.Infof(`
+	childLogger.Infof(`
 		SELECT 
 		a.id, 
 		a.user_id,
@@ -171,7 +206,7 @@ func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertI
 		&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
 		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed); err != nil {
 
-		ads.Logger.Errorf("Something went wrong while scanning advert, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning advert, err=%v", err)
 
 		return nil, err
 	}
@@ -187,6 +222,15 @@ func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertI
 }
 
 func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -197,14 +241,14 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
 
 	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting advert images urls , err=%v", err)
+		childLogger.Errorf("Something went wrong while getting advert images urls , err=%v", err)
 
 		return nil, err
 	}
@@ -214,7 +258,7 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 		image, err := utils.DecodeImage(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+			childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
 		}
 	}
 
@@ -258,6 +302,15 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 // }
 
 func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
 	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
@@ -266,7 +319,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
 	LIMIT $3;
 	`
-	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
+	childLogger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
 	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
@@ -275,7 +328,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 	LIMIT %s`, startID, city, num)
 	rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, num)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing select adverts query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing select adverts query, err=%v", err)
 
 		return nil, err
 	}
@@ -299,7 +352,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
 
 			return nil, err
 		}
@@ -308,7 +361,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 	}
 
 	if err := rows.Err(); err != nil {
-		ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
 
 		return nil, err
 	}
@@ -317,6 +370,15 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 }
 
 func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList []*models.ReturningAdInList
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -327,7 +389,7 @@ func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
@@ -336,6 +398,15 @@ func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string
 }
 
 func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
 	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
@@ -344,7 +415,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
 	LIMIT $4;
 	`
-	ads.Logger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
+	childLogger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
 	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
@@ -353,7 +424,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 	LIMIT %s`, startID, city, category, num)
 	rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, category, num)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing select adverts query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing select adverts query, err=%v", err)
 
 		return nil, err
 	}
@@ -377,7 +448,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
 
 			return nil, err
 		}
@@ -386,7 +457,7 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 	}
 
 	if err := rows.Err(); err != nil {
-		ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
 
 		return nil, err
 	}
@@ -395,6 +466,15 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 }
 
 func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList []*models.ReturningAdInList
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -405,7 +485,7 @@ func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, categor
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
@@ -414,6 +494,14 @@ func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, categor
 }
 
 func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	advertStatus := "Активно"
 	if deleted == 1 {
@@ -446,7 +534,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 	WHERE 
 		a.user_id = $1 AND a.advert_status = $2;
 	`
-	ads.Logger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.advert_status, c.name AS city_name,
+	childLogger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.advert_status, c.name AS city_name,
 		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation,
 		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 		FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
@@ -454,7 +542,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 
 	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing select adverts for user where status is, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing select adverts for user where status is, err=%v", err)
 
 		return nil, err
 	}
@@ -472,7 +560,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		if err := rows.Scan(&advert.ID, &advert.UserID, &advert.CityID, &advert.CategoryID, &advert.Title, &advert.Description, &advert.Price, &advert.CreatedTime, &advert.ClosedTime, &advert.IsUsed, &status,
 			&city.CityName, &city.Translation, &category.Name, &category.Translation, &photoPad.Photo); err != nil {
 
-			ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+			childLogger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
 
 			return nil, err
 		}
@@ -489,7 +577,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 		photoIMG, err := utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while decoding image, err=%v", err)
+			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
 
 			return nil, err
 		}
@@ -518,7 +606,7 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 	}
 
 	if err := rows.Err(); err != nil {
-		ads.Logger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning adverts rows, err=%v", err)
 
 		return nil, err
 	}
@@ -527,6 +615,14 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 }
 
 func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	var advertsList []*models.ReturningAdInList
 
@@ -549,7 +645,7 @@ func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Contex
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
@@ -574,6 +670,15 @@ func (ads *AdvertsListWrapper) GetAdvertsByUserIDFiltered(userID uint, filter fu
 }
 
 func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCreateAdvert :=
 		`WITH ins AS (
 		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
@@ -606,7 +711,7 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 	LEFT JOIN public.city c ON ins.city_id = c.id
 	LEFT JOIN public.category cat ON ins.category_id = cat.id;`
 
-	ads.Logger.Infof(
+	childLogger.Infof(
 		`WITH ins AS (
 			INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
 			SELECT
@@ -648,7 +753,7 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &categoryModel.ID, &advertModel.Title, &advertModel.Description, &advertModel.CreatedTime,
 		&advertModel.ClosedTime, &advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation, &categoryModel.Name, &categoryModel.Translation); err != nil {
 
-		ads.Logger.Errorf("Something went wrong while scanning advert, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning advert, err=%v", err)
 
 		return nil, err
 	}
@@ -665,6 +770,15 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 
 func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multipart.FileHeader,
 	data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -675,14 +789,14 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multip
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while getting advert, err=%v", err)
+		childLogger.Errorf("Something went wrong while getting advert, err=%v", err)
 
 		return nil, err
 	}
 
 	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", advertsList.Advert.ID)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+		childLogger.Errorf("Something went wrong while updating advert image url , err=%v", err)
 
 		return nil, err
 	}
@@ -691,7 +805,7 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multip
 		image, err := utils.DecodeImage(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+			childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
 		}
 	}
 
@@ -699,13 +813,22 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multip
 }
 
 func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, imageUrl string) (string, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUpdateProfileAvatarURL := `
 	INSERT INTO advert_image (url, advert_id)
 	VALUES 
     ($1, $2)
 	RETURNING url;`
 
-	ads.Logger.Infof(`
+	childLogger.Infof(`
 	INSERT INTO advert_image (url, advert_id)
 	VALUES 
     %1, %2)
@@ -717,7 +840,7 @@ func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, ad
 
 	if err := urlLine.Scan(&returningUrl); err != nil {
 
-		ads.Logger.Errorf("Something went wrong while scanning advert image , err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning advert image , err=%v", err)
 
 		return "", err
 	}
@@ -726,19 +849,28 @@ func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, ad
 }
 
 func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx context.Context, tx pgx.Tx, advertID uint) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLAdvertImagesURLs := `
 	SELECT url
 	FROM public.advert_image
 	WHERE advert_id = $1;`
 
-	ads.Logger.Infof(`
+	childLogger.Infof(`
 	SELECT url
 	FROM public.advert_image
 	WHERE advert_id = %s;`, advertID)
 
 	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing select adverts urls, err=%v", err)
 
 		return err
 	}
@@ -748,7 +880,7 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx cont
 
 	for rows.Next() {
 		if err := rows.Scan(&oldUrl); err != nil {
-			ads.Logger.Errorf("Something went wrong while scanning rows for deleting advert images for advert %v, err=%v", advertID, err)
+			childLogger.Errorf("Something went wrong while scanning rows for deleting advert images for advert %v, err=%v", advertID, err)
 
 			return err
 		}
@@ -756,7 +888,7 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx cont
 		if oldUrl != nil {
 			err := os.Remove(oldUrl.(string))
 			if err != nil {
-				ads.Logger.Errorf("Something went wrong while deleting image %v, err=%v", oldUrl.(string), err)
+				childLogger.Errorf("Something went wrong while deleting image %v, err=%v", oldUrl.(string), err)
 
 				return err
 			}
@@ -767,20 +899,24 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx cont
 }
 
 func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromDatabase(ctx context.Context, tx pgx.Tx, advertID uint) error {
-	//cityIdDefault := 100
-	//phoneDefault := utils.RandString(10)
-	//nameDefault := "Пользователь"
-	//surnameDefault := "Фамилия"
-	//avatar_url := utils.RandString(16)
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCreateProfile := `DELETE FROM public.advert_image WHERE advert_id = $1;`
-	ads.Logger.Infof(`DELETE FROM public.advert_image WHERE advert_id = %s;`, advertID)
+	childLogger.Infof(`DELETE FROM public.advert_image WHERE advert_id = %s;`, advertID)
 
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateProfile, advertID)
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing delete advert_image query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing delete advert_image query, err=%v", err)
 
 		return fmt.Errorf("Something went wrong while executing delete advert_image profile query", err)
 	}
@@ -789,13 +925,21 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromDatabase(ctx context.
 }
 
 func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, folderName string, advertID uint) ([]string, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
 		return ads.deleteAllImagesForAdvertFromLocalStorage(ctx, tx, advertID)
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong deleting AllImagesForAdvertFromLocalStorage , err=%v", err)
+		childLogger.Errorf("Something went wrong deleting AllImagesForAdvertFromLocalStorage , err=%v", err)
 
 		return nil, err
 	}
@@ -805,7 +949,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while deleting AllImagesForAdvertFromDatabase , err=%v", err)
+		childLogger.Errorf("Something went wrong while deleting AllImagesForAdvertFromDatabase , err=%v", err)
 
 		return nil, err
 	}
@@ -818,7 +962,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 		fullPath, err := utils.WriteFile(files[i], folderName)
 
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+			childLogger.Errorf("Something went wrong while writing file of the image , err=%v", err)
 
 			return nil, err
 		}
@@ -831,7 +975,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 		})
 
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
+			childLogger.Errorf("Something went wrong while updating profile url , err=%v", err)
 
 			return nil, err
 		}
@@ -843,6 +987,15 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 }
 
 func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUpdateAdvert :=
 		`WITH upd AS (
 			UPDATE advert
@@ -884,7 +1037,7 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 		LEFT JOIN 
 			public.category cat ON upd.category_id = cat.id;`
 
-	ads.Logger.Infof(
+	childLogger.Infof(
 		`WITH upd AS (
 			UPDATE advert
 			SET 
@@ -935,7 +1088,7 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &categoryModel.ID, &advertModel.Title, &advertModel.Description, &advertModel.CreatedTime,
 		&advertModel.ClosedTime, &advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation, &categoryModel.Name, &categoryModel.Translation); err != nil {
 
-		ads.Logger.Errorf("Something went wrong while scanning advert, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning advert, err=%v", err)
 
 		return nil, err
 	}
@@ -951,6 +1104,15 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 }
 
 func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var advertsList *models.ReturningAdvert
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
@@ -961,14 +1123,14 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 	})
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while updating advert, err=%v", err)
+		childLogger.Errorf("Something went wrong while updating advert, err=%v", err)
 
 		return nil, err
 	}
 
 	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", data.ID)
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while updating advert image url , err=%v", err)
+		childLogger.Errorf("Something went wrong while updating advert image url , err=%v", err)
 
 		return nil, err
 	}
@@ -978,7 +1140,7 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 		image, err := utils.DecodeImage(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			ads.Logger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
+			childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err)
 		}
 	}
 
@@ -986,14 +1148,23 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 }
 
 func (ads *AdvertsListWrapper) closeAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCloseAdvert := `UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = $1;`
-	ads.Logger.Infof(`UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = %s;`, advertID)
+	childLogger.Infof(`UPDATE public.advert	SET  advert_status='Скрыто'	WHERE id = %s;`, advertID)
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCloseAdvert, advertID)
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing close advert query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing close advert query, err=%v", err)
 		return fmt.Errorf("Something went wrong while executing close advert query", err)
 	}
 
@@ -1001,11 +1172,19 @@ func (ads *AdvertsListWrapper) closeAdvert(ctx context.Context, tx pgx.Tx, adver
 }
 
 func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
 		err := ads.closeAdvert(ctx, tx, advertID)
 		if err != nil {
-			ads.Logger.Errorf("Something went wrong while closing advert, err=%v", err)
+			childLogger.Errorf("Something went wrong while closing advert, err=%v", err)
 			return fmt.Errorf("Something went wrong while closing advert", err)
 		}
 
@@ -1014,7 +1193,7 @@ func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) e
 
 	if err != nil {
 
-		ads.Logger.Errorf("Error while closing advert, err=%v", err)
+		childLogger.Errorf("Error while closing advert, err=%v", err)
 		return err
 	}
 
@@ -1022,14 +1201,23 @@ func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) e
 }
 
 func (ads *AdvertsListWrapper) deleteAdvert(ctx context.Context, tx pgx.Tx, user *models.User) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := ads.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
-	ads.Logger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
+	childLogger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
 
 	if err != nil {
-		ads.Logger.Errorf("Something went wrong while executing create user query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing create user query, err=%v", err)
 		return fmt.Errorf("Something went wrong while executing create user query in func createUser", err)
 	}
 

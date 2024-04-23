@@ -31,20 +31,24 @@ type ProfileListWrapper struct {
 }
 
 func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
-	//cityIdDefault := 100
-	//phoneDefault := utils.RandString(10)
-	//nameDefault := "Пользователь"
-	//surnameDefault := "Фамилия"
-	//avatar_url := utils.RandString(16)
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLCreateProfile := `INSERT INTO public.profile(user_id) VALUES ($1);`
-	pl.Logger.Infof(`INSERT INTO public.profile(user_id) VALUES (%s);`, profile.UserID)
+	childLogger.Infof(`INSERT INTO public.profile(user_id) VALUES (%s);`, profile.UserID)
 
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID)
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while executing create profile query, err=%v", err)
+		childLogger.Errorf("Something went wrong while executing create profile query, err=%v", err)
 
 		return fmt.Errorf("Something went wrong while executing create profile query", err)
 	}
@@ -53,7 +57,14 @@ func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, prof
 }
 
 func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *models.Profile {
-	// 	НАВЕРНОЕ, СЮДА НУЖНО ДОПИСАТЬ ПРОВЕРКУ НА ТО, ЧТО ЮЗЕР С ТАКИМ ID ДЕЙСТВИТЕЛЬНО СУЩЕСТВУЕТ
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	profile := models.Profile{
 		UserID: userID,
@@ -62,12 +73,12 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
 		err := pl.createProfile(ctx, tx, &profile)
 		if err != nil {
-			pl.Logger.Errorf("Something went wrong while creating profile, err=%v", err)
+			childLogger.Errorf("Something went wrong while creating profile, err=%v", err)
 			return fmt.Errorf("Something went wrong while creating profile", err)
 		}
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqProfile)
 		if err != nil {
-			pl.Logger.Errorf("Something went wrong getting user id from seq, err=%v", err)
+			childLogger.Errorf("Something went wrong getting user id from seq, err=%v", err)
 
 			return fmt.Errorf("Something went wrong getting user id from seq", err)
 		}
@@ -85,6 +96,15 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 }
 
 func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx, id uint) (*models.Profile, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUserById := `
 		SELECT 
 			p.id, 
@@ -111,7 +131,7 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 			p.city_id = c.id
 		WHERE 
 			p.user_id = $1`
-	pl.Logger.Infof(`
+	childLogger.Infof(`
 	SELECT 
 		p.id, 
 		p.user_id, 
@@ -147,7 +167,7 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation, &profile.SubersCount,
 		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount); err != nil {
 
-		pl.Logger.Errorf("Something went wrong while scanning profile, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning profile, err=%v", err)
 
 		return nil, err
 	}
@@ -190,6 +210,15 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 }
 
 func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	var profile *models.Profile
 
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
@@ -200,20 +229,28 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while getting profile by UserID , err=%v", errProfileNotExists)
+		childLogger.Errorf("Something went wrong while getting profile by UserID , err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+		childLogger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil
 }
 
 func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, userID uint, data models.City) (*models.Profile, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	SQLUpdateProfileCity := `UPDATE public.profile p
 	SET city_id = $1
@@ -221,7 +258,7 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 	WHERE c.id = $1 AND p.user_id = $2
 	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
 
-	pl.Logger.Infof(`UPDATE public.profile p
+	childLogger.Infof(`UPDATE public.profile p
 	SET city_id = %s
 	FROM public.city c
 	WHERE c.id = %s AND p.user_id = %s
@@ -236,7 +273,7 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
-		pl.Logger.Errorf("Something went wrong while scanning profile lines, err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning profile lines, err=%v", err)
 
 		return nil, err
 	}
@@ -279,10 +316,14 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 }
 
 func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, data models.City) (*models.Profile, error) {
-	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
-	// if pl.ProfileExists(ctx, id) {
-	// 	return nil, errProfileDoNotExists
-	// }
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	var profile *models.Profile
 
@@ -294,20 +335,28 @@ func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, d
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while updating profile city, err=%v", errProfileNotExists)
+		childLogger.Errorf("Something went wrong while updating profile city, err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+		childLogger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil
 }
 
 func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	SQLUpdateProfilePhone := `UPDATE public.profile p
 	SET phone = $1
@@ -315,7 +364,7 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 	WHERE c.id = p.city_id AND p.user_id = $2
 	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
 
-	pl.Logger.Infof(`UPDATE public.profile p
+	childLogger.Infof(`UPDATE public.profile p
 	SET phone = %s
 	FROM public.city c
 	WHERE c.id = p.city_id AND p.user_id = %s
@@ -330,7 +379,7 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
-		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
 
 		return nil, err
 	}
@@ -373,10 +422,14 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 }
 
 func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
-	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
-	// if pl.ProfileExists(ctx, id) {
-	// 	return nil, errProfileDoNotExists
-	// }
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	var profile *models.Profile
 
@@ -388,27 +441,36 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while updating profile phone , err=%v", errProfileNotExists)
+		childLogger.Errorf("Something went wrong while updating profile phone , err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+		childLogger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil
 }
 
 func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, avatar string) (string, error) {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLUpdateProfileAvatarURL := `
 	UPDATE public.profile p
 	SET avatar_url = $1
 	WHERE p.user_id = $2
 	RETURNING avatar_url;`
 
-	pl.Logger.Infof(`
+	childLogger.Infof(`
 	UPDATE public.profile p
 	SET avatar_url = %s
 	WHERE p.user_id = %s
@@ -420,7 +482,7 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 
 	if err := urlLine.Scan(&url); err != nil {
 
-		pl.Logger.Errorf("Something went wrong while scanning url line , err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning url line , err=%v", err)
 
 		return "", err
 	}
@@ -429,12 +491,21 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 }
 
 func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userID uint) error {
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	SQLGetAvatarURL := `
 	SELECT p.avatar_url
 	FROM public.profile p
 	WHERE p.user_id = $1`
 
-	pl.Logger.Infof(`
+	childLogger.Infof(`
 	SELECT p.avatar_url
 	FROM public.profile p
 	WHERE p.user_id = %s`, userID)
@@ -443,7 +514,7 @@ func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userI
 
 	urlLine := tx.QueryRow(ctx, SQLGetAvatarURL, userID)
 	if err := urlLine.Scan(&oldUrl); err != nil {
-		pl.Logger.Errorf("Something went wrong while deleting url , err=%v", err)
+		childLogger.Errorf("Something went wrong while deleting url , err=%v", err)
 
 		return err
 	}
@@ -456,16 +527,21 @@ func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userI
 
 func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
 	userID uint) (string, error) {
-	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
-	// if pl.ProfileExists(ctx, id) {
-	// 	return nil, errProfileDoNotExists
-	// }
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
 		return pl.deleteAvatar(ctx, tx, userID)
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
+		childLogger.Errorf("Something went wrong while updating profile url , err=%v", err)
 
 		return "", err
 	}
@@ -474,7 +550,7 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 	fullPath, err := utils.WriteFile(file, folderName)
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while writing file of the image , err=%v", err)
+		childLogger.Errorf("Something went wrong while writing file of the image , err=%v", err)
 
 		return "", errProfileNotExists
 	}
@@ -487,7 +563,7 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
+		childLogger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
 
 		return "", err
 	}
@@ -498,9 +574,14 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
 	data models.EditProfileNec) (*models.Profile, error) {
 
-	// if data.Avatar != "" {
-	// 	pl.setProfileAvatar(ctx, tx, userID, data.Avatar)
-	// }
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	SQLUpdateProfileInfo := `
 		UPDATE public.profile p
@@ -512,7 +593,7 @@ func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, use
 		RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, 
 			c.name AS city_name, c.translation AS city_translation;`
 
-	pl.Logger.Infof(`UPDATE public.profile p
+	childLogger.Infof(`UPDATE public.profile p
 		SET 
 			name = %s,
 			surname = %s
@@ -531,7 +612,7 @@ func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, use
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar,
 		&city.CityName, &city.Translation); err != nil {
 
-		pl.Logger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
+		childLogger.Errorf("Something went wrong while scanning profile lines , err=%v", err)
 
 		return nil, err
 	}
@@ -575,10 +656,15 @@ func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, use
 
 func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
 	data models.EditProfileNec) (*models.Profile, error) {
-	// ЭТО НУЖНО РЕАЛИЗОВАТЬ (НО ЭТО НЕ ТОЧНО)
-	// if pl.ProfileExists(ctx, id) {
-	// 	return nil, errProfileDoNotExists
-	// }
+
+	requestUUID, ok := ctx.Value("requestUUID").(string)
+	if !ok {
+		requestUUID = "unknow"
+	}
+
+	childLogger := pl.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	var profile *models.Profile
 	var err error
@@ -586,7 +672,7 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	if file != nil {
 		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, file, "avatars", userID)
 		if err != nil {
-			pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", err)
+			childLogger.Errorf("Something went wrong while updating profile url , err=%v", err)
 
 			return nil, err
 		}
@@ -600,14 +686,14 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	})
 
 	if err != nil {
-		pl.Logger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
+		childLogger.Errorf("Something went wrong while updating profile url , err=%v", errProfileNotExists)
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		pl.Logger.Errorf("Error occurred while decoding avatar image, err = %v", err)
+		childLogger.Errorf("Error occurred while decoding avatar image, err = %v", err)
 	}
 
 	return profile, nil

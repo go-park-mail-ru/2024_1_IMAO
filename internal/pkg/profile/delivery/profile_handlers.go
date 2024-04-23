@@ -1,12 +1,15 @@
 package delivery
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
@@ -31,6 +34,13 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	vars := mux.Vars(request)
 
@@ -38,7 +48,7 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 
 	p, err := h.ProfileList.GetProfileByUserID(ctx, uint(id))
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -57,13 +67,20 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -77,7 +94,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -85,7 +102,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	p, err := h.ProfileList.SetProfileCity(ctx, user.ID, data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -96,51 +113,51 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
 }
 
-func (h *ProfileHandler) SetProfileRating(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+// func (h *ProfileHandler) SetProfileRating(writer http.ResponseWriter, request *http.Request) {
+// 	if request.Method != http.MethodPost {
+// 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
-		return
-	}
+// 		return
+// 	}
 
-	vars := mux.Vars(request)
-	userID, _ := strconv.Atoi(vars["id"])
+// 	vars := mux.Vars(request)
+// 	userID, _ := strconv.Atoi(vars["id"])
 
-	usersList := h.UsersList
+// 	usersList := h.UsersList
 
-	session, err := request.Cookie("session_id")
+// 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
-		log.Println("User not authorized")
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
+// 	if err != nil || !usersList.SessionExists(session.Value) {
+// 		h.UsersList.Logger.Info("User not authorized")
+// 		log.Println("User not authorized")
+// 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
+// 			responses.ErrUnauthorized))
 
-		return
-	}
+// 		return
+// 	}
 
-	var data models.SetProfileRatingNec
+// 	var data models.SetProfileRatingNec
 
-	err = json.NewDecoder(request.Body).Decode(&data)
-	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
-		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
-			responses.ErrInternalServer))
-	}
+// 	err = json.NewDecoder(request.Body).Decode(&data)
+// 	if err != nil {
+// 		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+// 		log.Println(err, responses.StatusInternalServerError)
+// 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+// 			responses.ErrInternalServer))
+// 	}
 
-	p, err := h.ProfileList.SetProfileRating(uint(userID), data)
-	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+// 	p, err := h.ProfileList.SetProfileRating(uint(userID), data)
+// 	if err != nil {
+// 		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+// 		log.Println(err, responses.StatusBadRequest)
+// 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
+// 			responses.ErrBadRequest))
 
-		return
-	}
+// 		return
+// 	}
 
-	responses.SendOkResponse(writer, NewProfileOkResponse(p))
-}
+// 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
+// }
 
 func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
@@ -150,13 +167,20 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -170,7 +194,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -178,7 +202,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	p, err := h.ProfileList.SetProfilePhone(ctx, user.ID, data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -197,13 +221,20 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -215,7 +246,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	err = request.ParseMultipartForm(2 << 20)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -254,13 +285,20 @@ func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request 
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -272,7 +310,7 @@ func (h *ProfileHandler) SetProfileApproved(writer http.ResponseWriter, request 
 
 	p, err := h.ProfileList.SetProfileApproved(user.ID)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -291,13 +329,20 @@ func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Re
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -311,7 +356,7 @@ func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Re
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -319,7 +364,7 @@ func (h *ProfileHandler) SetProfile(writer http.ResponseWriter, request *http.Re
 
 	p, err := h.ProfileList.SetProfile(user.ID, data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -338,13 +383,20 @@ func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request 
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -358,7 +410,7 @@ func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request 
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -366,7 +418,7 @@ func (h *ProfileHandler) SetProfilePassword(writer http.ResponseWriter, request 
 
 	p, err := h.ProfileList.SetProfile(user.ID, data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -385,13 +437,20 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := h.UsersList.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	usersList := h.UsersList
 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !usersList.SessionExists(session.Value) {
-		h.UsersList.Logger.Info("User not authorized")
+		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -405,7 +464,7 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusInternalServerError)
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -413,7 +472,7 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 
 	p, err := h.ProfileList.SetProfile(user.ID, data)
 	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -424,47 +483,47 @@ func (h *ProfileHandler) SetProfileEmail(writer http.ResponseWriter, request *ht
 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
 }
 
-func (h *ProfileHandler) ProfileAdverts(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+// func (h *ProfileHandler) ProfileAdverts(writer http.ResponseWriter, request *http.Request) {
+// 	if request.Method != http.MethodGet {
+// 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
-		return
-	}
+// 		return
+// 	}
 
-	vars := mux.Vars(request)
-	id, _ := strconv.Atoi(vars["id"])
+// 	vars := mux.Vars(request)
+// 	id, _ := strconv.Atoi(vars["id"])
 
-	filter, _ := strconv.Atoi(request.URL.Query().Get("filter"))
+// 	filter, _ := strconv.Atoi(request.URL.Query().Get("filter"))
 
-	var ads []*models.ReturningAdvert
-	var err error
+// 	var ads []*models.ReturningAdvert
+// 	var err error
 
-	switch models.AdvertsFilter(filter) {
-	case models.FilterAll:
-		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
-			func(ad *models.Advert) bool {
-				return true
-			})
-	case models.FilterActive:
-		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
-			func(ad *models.Advert) bool {
-				return ad.Active
-			})
-	default:
-		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
-			func(ad *models.Advert) bool {
-				return !ad.Active
-			})
-	}
+// 	switch models.AdvertsFilter(filter) {
+// 	case models.FilterAll:
+// 		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+// 			func(ad *models.Advert) bool {
+// 				return true
+// 			})
+// 	case models.FilterActive:
+// 		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+// 			func(ad *models.Advert) bool {
+// 				return ad.Active
+// 			})
+// 	default:
+// 		ads, err = h.AdvertsList.GetAdvertsByUserIDFiltered(uint(id),
+// 			func(ad *models.Advert) bool {
+// 				return !ad.Active
+// 			})
+// 	}
 
-	if err != nil {
-		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+// 	if err != nil {
+// 		h.UsersList.Logger.Error(err, responses.StatusBadRequest)
+// 		log.Println(err, responses.StatusBadRequest)
+// 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
+// 			responses.ErrBadRequest))
 
-		return
-	}
+// 		return
+// 	}
 
-	responses.SendOkResponse(writer, advdel.NewAdvertsOkResponse(ads))
-}
+// 	responses.SendOkResponse(writer, advdel.NewAdvertsOkResponse(ads))
+// }

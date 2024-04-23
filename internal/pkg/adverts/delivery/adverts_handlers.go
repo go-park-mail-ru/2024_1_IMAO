@@ -1,12 +1,15 @@
 package delivery
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
@@ -40,6 +43,13 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	vars := mux.Vars(request)
 	city := vars["city"]
@@ -74,6 +84,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		adsList, err = list.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -92,18 +103,24 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	vars := mux.Vars(request)
 	city := vars["city"]
 	category := vars["category"]
 	id, _ := strconv.Atoi(vars["id"])
 
-	log.Println("aboba", id)
-
 	list := advertsHandler.List
 
 	ad, err := list.GetAdvert(ctx, uint(id), city, category)
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -122,6 +139,13 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
@@ -130,6 +154,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 
 	ad, err := list.GetAdvertByOnlyByID(ctx, uint(id))
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -148,9 +173,17 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -180,6 +213,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	advert, err = list.CreateAdvert(ctx, photos, data)
 
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -198,9 +232,17 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
+		childLogger.Error(err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -231,8 +273,8 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	var advert *models.ReturningAdvert
 	advert, err = list.EditAdvert(ctx, photos, data)
 
-	//ad, err := list.EditAdvert(ctx, data)
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -250,6 +292,15 @@ func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, r
 		return
 	}
 
+	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
+
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
 
@@ -257,6 +308,7 @@ func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, r
 
 	err := list.DeleteAdvert(uint(id))
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -277,6 +329,13 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 	}
 
 	ctx := request.Context()
+	requestUUID := uuid.New().String()
+
+	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
+
+	childLogger := advertsHandler.List.Logger.With(
+		zap.String("requestUUID", requestUUID),
+	)
 
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
@@ -285,6 +344,7 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 
 	err := list.CloseAdvert(ctx, uint(id))
 	if err != nil {
+		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))

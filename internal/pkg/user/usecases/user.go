@@ -17,5 +17,5 @@ type UsersInfo interface {
 
 	SessionExists(sessionID string) bool
 	AddSession(email uint) string
-	RemoveSession(sessionID string) error
+	RemoveSession(ctx context.Context, sessionID string) error
 }
