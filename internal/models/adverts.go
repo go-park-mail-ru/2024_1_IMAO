@@ -52,7 +52,7 @@ type ReturningAdvert struct {
 }
 
 type PhotoPad struct {
-	Photo *string `json:"photo"`
+	Photo []*string `json:"photo"`
 }
 
 type AdvertsList struct {
@@ -66,13 +66,13 @@ type AdvertsList struct {
 }
 
 type ReturningAdInList struct {
-	ID       uint   `json:"id"`
-	Title    string `json:"title"`
-	Price    uint   `json:"price"`
-	City     string `json:"city"`
-	Category string `json:"category"`
-	Photo    string `json:"photo"`
-	PhotoIMG string `json:"photoIMG"`
+	ID        uint     `json:"id"`
+	Title     string   `json:"title"`
+	Price     uint     `json:"price"`
+	City      string   `json:"city"`
+	Category  string   `json:"category"`
+	Photos    []string `json:"photos"`
+	PhotosIMG []string `json:"photosIMG"`
 }
 
 type ReturningAdvertList struct {

@@ -277,7 +277,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	)
 
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -285,7 +285,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	LIMIT $3;
 	`
 	childLogger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -309,12 +309,20 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 			return nil, err
 		}
 
-		photoURLToInsert := ""
 		if photoPad.Photo != nil {
-			photoURLToInsert = *photoPad.Photo
+			for _, ptr := range photoPad.Photo {
+				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
+			}
 		}
 
-		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
+		for i := 0; i < len(returningAdInList.Photos); i++ {
+
+			image, err := utils.DecodeImage(returningAdInList.Photos[i])
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
+			if err != nil {
+				childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err)
+			}
+		}
 
 		if err != nil {
 			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
@@ -373,7 +381,7 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 	)
 
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -381,7 +389,7 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 	LIMIT $4;
 	`
 	childLogger.Infof(`SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -405,12 +413,20 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 			return nil, err
 		}
 
-		photoURLToInsert := ""
 		if photoPad.Photo != nil {
-			photoURLToInsert = *photoPad.Photo
+			for _, ptr := range photoPad.Photo {
+				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
+			}
 		}
 
-		returningAdInList.PhotoIMG, err = utils.DecodeImage(photoURLToInsert)
+		for i := 0; i < len(returningAdInList.Photos); i++ {
+
+			image, err := utils.DecodeImage(returningAdInList.Photos[i])
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
+			if err != nil {
+				childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err)
+			}
+		}
 
 		if err != nil {
 			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
@@ -489,7 +505,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 		c.translation AS city_translation,
 		cat.name AS category_name,
 		cat.translation AS category_translation,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+		(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM 
 		public.advert a
 	INNER JOIN 
@@ -501,7 +517,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 	`
 	childLogger.Infof(`SELECT a.id,	a.user_id, 	a.city_id, 	a.category_id, 	a.title, a.description, a.price, a.created_time, a.closed_time,	a.is_used, 	a.advert_status, c.name AS city_name,
 		c.translation AS city_translation,	cat.name AS category_name,	cat.translation AS category_translation,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+		(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category cat ON a.category_id = cat.id WHERE 	a.user_id = %s AND a.advert_status = %s; `, userId, advertStatus)
 
@@ -530,26 +546,29 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 			return nil, err
 		}
 
-		photoURLToInsert := ""
+		var photoArray []string
 		if photoPad.Photo != nil {
-			photoURLToInsert = *photoPad.Photo
+			for _, ptr := range photoPad.Photo {
+				photoArray = append(photoArray, *ptr)
+			}
 		}
 
-		var photoArray []string
+		var photoIMGArray []string
 
-		photoArray = append(photoArray, photoURLToInsert)
+		for i := 0; i < len(photoArray); i++ {
 
-		photoIMG, err := utils.DecodeImage(photoURLToInsert)
+			image, err := utils.DecodeImage(photoArray[i])
+			photoIMGArray = append(photoIMGArray, image)
+			if err != nil {
+				childLogger.Errorf("Error occurred while decoding advert_image %v, err = %v", photoArray[i], err)
+			}
+		}
 
 		if err != nil {
 			childLogger.Errorf("Something went wrong while decoding image, err=%v", err)
 
 			return nil, err
 		}
-
-		var photoIMGArray []string
-
-		photoIMGArray = append(photoIMGArray, photoIMG)
 
 		advert.Deleted = false
 
@@ -595,13 +614,13 @@ func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, us
 		advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted)
 		for _, num := range advertsListInner.AdvertItems {
 			returningAdInList := models.ReturningAdInList{
-				ID:       num.Advert.ID,
-				Title:    num.Advert.Title,
-				Price:    num.Advert.Price,
-				City:     num.City.Translation,
-				Category: num.Category.Translation,
-				Photo:    num.Photos[0],
-				PhotoIMG: num.PhotosIMG[0],
+				ID:        num.Advert.ID,
+				Title:     num.Advert.Title,
+				Price:     num.Advert.Price,
+				City:      num.City.Translation,
+				Category:  num.Category.Translation,
+				Photos:    num.Photos,
+				PhotosIMG: num.PhotosIMG,
 			}
 			advertsList = append(advertsList, &returningAdInList)
 		}
