@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	profrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
+	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
+	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -23,8 +23,22 @@ const (
 )
 
 type AuthHandler struct {
-	UsersList   *authrepo.UsersListWrapper
-	ProfileList *profrepo.ProfileListWrapper
+	storage        userusecases.UsersStorageInterface
+	profileStorage profusecases.ProfileStorageInterface
+	addrOrigin     string
+	schema         string
+	logger         *zap.SugaredLogger
+}
+
+func NewAuthHandler(storage userusecases.UsersStorageInterface, profileStorage profusecases.ProfileStorageInterface,
+	addrOrigin string, schema string, logger *zap.SugaredLogger) *AuthHandler {
+	return &AuthHandler{
+		storage:        storage,
+		profileStorage: profileStorage,
+		addrOrigin:     addrOrigin,
+		schema:         schema,
+		logger:         logger,
+	}
 }
 
 // Login godoc
@@ -53,15 +67,15 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
-	childLogger := authHandler.UsersList.Logger.With(
+	childLogger := authHandler.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	usersList := authHandler.UsersList
+	storage := authHandler.storage
 
 	session, cookieErr := request.Cookie("session_id")
 
-	if cookieErr == nil && usersList.SessionExists(session.Value) {
+	if cookieErr == nil && storage.SessionExists(session.Value) {
 		childLogger.Info(responses.ErrAuthorized, responses.StatusBadRequest)
 		log.Println(responses.ErrAuthorized, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
@@ -83,7 +97,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	email := user.Email
 	password := user.Password
 
-	expectedUser, err := usersList.GetUserByEmail(ctx, email)
+	expectedUser, err := storage.GetUserByEmail(ctx, email)
 	if err != nil {
 		childLogger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -102,7 +116,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	sessionID := usersList.AddSession(expectedUser.ID)
+	sessionID := storage.AddSession(expectedUser.ID)
 
 	cookie := &http.Cookie{
 		Name:     "session_id",
@@ -141,13 +155,13 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 		return
 	}
 
-	usersList := authHandler.UsersList
+	storage := authHandler.storage
 	requestUUID := uuid.New().String()
 
 	ctx := request.Context()
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
-	childLogger := authHandler.UsersList.Logger.With(
+	childLogger := authHandler.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -161,7 +175,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 		return
 	}
 
-	err = usersList.RemoveSession(ctx, session.Value)
+	err = storage.RemoveSession(ctx, session.Value)
 	if err != nil {
 		childLogger.Error(err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
@@ -205,16 +219,16 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
-	childLogger := authHandler.UsersList.Logger.With(
+	childLogger := authHandler.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	usersList := authHandler.UsersList
-	profileList := authHandler.ProfileList
+	storage := authHandler.storage
+	profileStorage := authHandler.profileStorage
 
 	session, cookieErr := request.Cookie("session_id")
 
-	if cookieErr == nil && usersList.SessionExists(session.Value) {
+	if cookieErr == nil && storage.SessionExists(session.Value) {
 		childLogger.Info("User already authorized", responses.StatusBadRequest)
 		log.Println("User already authorized", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
@@ -237,7 +251,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	password := newUser.Password
 	passwordRepeat := newUser.PasswordRepeat
 
-	if usersList.UserExists(ctx, email) {
+	if storage.UserExists(ctx, email) {
 		childLogger.Info("User already exists", responses.StatusBadRequest)
 		log.Println("User already exists", responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
@@ -265,11 +279,11 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 		return
 	}
 
-	user, _ := usersList.CreateUser(ctx, email, utils.HashPassword(password))
-	profileList.CreateProfile(ctx, user.ID)
+	user, _ := storage.CreateUser(ctx, email, utils.HashPassword(password))
 
-	sessionID := usersList.AddSession(user.ID)
+	profileStorage.CreateProfile(ctx, user.ID)
 
+	sessionID := storage.AddSession(user.ID)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -307,16 +321,16 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
-	childLogger := authHandler.UsersList.Logger.With(
+	childLogger := authHandler.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	usersList := authHandler.UsersList
-	profileList := authHandler.ProfileList
+	storage := authHandler.storage
+	profileStorage := authHandler.profileStorage
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !storage.SessionExists(session.Value) {
 		childLogger.Info("User not authorized")
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, NewAuthOkResponse(models.User{}, "", false))
@@ -324,8 +338,8 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
-	profile, _ := profileList.GetProfileByUserID(ctx, user.ID)
+	user, _ := storage.GetUserBySession(ctx, session.Value)
+	profile, _ := profileStorage.GetProfileByUserID(ctx, user.ID)
 
 	childLogger.Info("User authorized")
 	log.Println("User authorized")
@@ -344,11 +358,11 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
-	childLogger := authHandler.UsersList.Logger.With(
+	childLogger := authHandler.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	usersList := authHandler.UsersList
+	storage := authHandler.storage
 
 	session, err := request.Cookie("session_id")
 
@@ -361,7 +375,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := storage.GetUserBySession(ctx, session.Value)
 
 	var newUser models.UnauthorizedUser
 
@@ -385,7 +399,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 		return
 	}
 
-	user, err = usersList.EditUserEmail(ctx, user.ID, email)
+	user, err = storage.EditUserEmail(ctx, user.ID, email)
 
 	if err != nil {
 		childLogger.Error("This email is already in use", responses.StatusBadRequest)

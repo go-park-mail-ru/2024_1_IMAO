@@ -16,13 +16,20 @@ var (
 // errNotInCart = errors.New("there is no advert in the cart")
 )
 
-type OrderListWrapper struct {
+type OrderStorage struct {
+	pool      *pgxpool.Pool
+	logger    *zap.SugaredLogger
 	OrderList *models.OrderList
-	Pool      *pgxpool.Pool
-	Logger    *zap.SugaredLogger
 }
 
-func (ol *OrderListWrapper) GetOrdersByUserID(userID uint, advertsList advuc.AdvertsInfo) ([]*models.OrderItem, error) {
+func NewOrderStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *OrderStorage {
+	return &OrderStorage{
+		pool:   pool,
+		logger: logger,
+	}
+}
+
+func (ol *OrderStorage) GetOrdersByUserID(userID uint, advertsList advuc.AdvertsStorageInterface) ([]*models.OrderItem, error) {
 	cart := []*models.OrderItem{}
 
 	for i := range ol.OrderList.Items {
@@ -40,7 +47,7 @@ func (ol *OrderListWrapper) GetOrdersByUserID(userID uint, advertsList advuc.Adv
 	return cart, nil
 }
 
-func (ol *OrderListWrapper) GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList advuc.AdvertsInfo) ([]*models.ReturningOrder, error) {
+func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningOrder, error) {
 	order := []*models.ReturningOrder{}
 
 	for i := range ol.OrderList.Items {
@@ -84,7 +91,7 @@ func (ol *OrderListWrapper) GetReturningOrderByUserID(ctx context.Context, userI
 // 	return errNotInCart
 // }
 
-func (ol *OrderListWrapper) CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem, advertsList advuc.AdvertsInfo) error {
+func (ol *OrderStorage) CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem, advertsList advuc.AdvertsStorageInterface) error {
 
 	newOrderItem := models.OrderItem{
 		ID:            0,
@@ -106,13 +113,9 @@ func (ol *OrderListWrapper) CreateOrderByID(userID uint, orderItem *models.Recei
 	return nil
 }
 
-func NewOrderList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *OrderListWrapper {
-	return &OrderListWrapper{
-		OrderList: &models.OrderList{
-			Items: make([]*models.OrderItem, 0),
-			Mux:   sync.RWMutex{},
-		},
-		Pool:   pool,
-		Logger: logger,
+func NewOrderList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *models.OrderList {
+	return &models.OrderList{
+		Items: make([]*models.OrderItem, 0),
+		Mux:   sync.RWMutex{},
 	}
 }

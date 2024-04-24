@@ -21,19 +21,27 @@ var (
 	NameSeqUser         = pgx.Identifier{"public", "user_id_seq"} //nolint:gochecknoglobals
 )
 
-type UsersListWrapper struct {
-	UsersList *models.UsersList
-	Pool      *pgxpool.Pool
-	Logger    *zap.SugaredLogger
+type UserStorage struct {
+	pool        *pgxpool.Pool
+	logger      *zap.SugaredLogger
+	sessionList *models.SessionList
 }
 
-func (active *UsersListWrapper) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+func NewUserStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *UserStorage {
+	return &UserStorage{
+		pool:        pool,
+		logger:      logger,
+		sessionList: NewSessionList(),
+	}
+}
+
+func (active *UserStorage) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -51,19 +59,19 @@ func (active *UsersListWrapper) userExists(ctx context.Context, tx pgx.Tx, email
 	return exists, nil
 }
 
-func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bool {
+func (active *UserStorage) UserExists(ctx context.Context, email string) bool {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var exists bool
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userExists, err := active.userExists(ctx, tx, email)
 		exists = userExists
 
@@ -77,18 +85,18 @@ func (active *UsersListWrapper) UserExists(ctx context.Context, email string) bo
 	return exists
 }
 
-func (active *UsersListWrapper) GetLastID(ctx context.Context) uint {
+func (active *UserStorage) GetLastID(ctx context.Context) uint {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var lastID uint
-	_ = pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	_ = pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
 			childLogger.Errorf("Something went wrong while getting user id from seq, err=%v", err)
@@ -102,27 +110,13 @@ func (active *UsersListWrapper) GetLastID(ctx context.Context) uint {
 	return lastID
 }
 
-// ВОЗМОЖНО НУЖНО СРОЧНО ПЕРЕПИСАТЬ, ПОТОМУ ЧТО ИЗ-ЗА ЭТОГО ЛОЖИТСЯ ПОХОД В БАЗУ
-func (active *UsersListWrapper) getIDByEmail(email string) (uint, error) {
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
-
-	for _, val := range active.UsersList.Users {
-		if val.Email == email {
-			return val.ID, nil
-		}
-	}
-
-	return 0, errUserNotExists
-}
-
-func (active *UsersListWrapper) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
+func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -140,13 +134,13 @@ func (active *UsersListWrapper) createUser(ctx context.Context, tx pgx.Tx, user 
 	return nil
 }
 
-func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -159,7 +153,7 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 		PasswordHash: passwordHash,
 	}
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		err := active.createUser(ctx, tx, &user)
 		if err != nil {
 			childLogger.Errorf("Something went wrong while creating user, err=%v", err)
@@ -186,13 +180,13 @@ func (active *UsersListWrapper) CreateUser(ctx context.Context, email, passwordH
 
 }
 
-func (active *UsersListWrapper) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
+func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -211,19 +205,19 @@ func (active *UsersListWrapper) editUserEmail(ctx context.Context, tx pgx.Tx, id
 	return &user, nil
 }
 
-func (active *UsersListWrapper) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
+func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var user *models.User
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.editUserEmail(ctx, tx, id, email)
 		user = userInner
 
@@ -239,29 +233,13 @@ func (active *UsersListWrapper) EditUserEmail(ctx context.Context, id uint, emai
 	return user, nil
 }
 
-func (active *UsersListWrapper) EditUser(id uint, email, passwordHash string) (*models.User, error) {
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
-
-	usr, ok := active.UsersList.Users[id]
-
-	if !ok {
-		return nil, errUserNotExists
-	}
-
-	usr.PasswordHash = passwordHash
-	usr.Email = email
-
-	return usr, nil
-}
-
-func (active *UsersListWrapper) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+func (active *UserStorage) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -281,7 +259,7 @@ func (active *UsersListWrapper) getUserByEmail(ctx context.Context, tx pgx.Tx, e
 }
 
 // НЕ ПРОТЕСТИРОВАНО
-func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user *models.User
 
 	requestUUID, ok := ctx.Value("requestUUID").(string)
@@ -289,11 +267,11 @@ func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByEmail(ctx, tx, email)
 		user = userInner
 
@@ -308,13 +286,13 @@ func (active *UsersListWrapper) GetUserByEmail(ctx context.Context, email string
 	return user, nil
 }
 
-func (active *UsersListWrapper) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
+func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -333,7 +311,7 @@ func (active *UsersListWrapper) getUserByID(ctx context.Context, tx pgx.Tx, id u
 }
 
 // НЕ ПРОТЕСТИРОВАНО
-func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
+func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
 	var user *models.User
 
 	requestUUID, ok := ctx.Value("requestUUID").(string)
@@ -341,11 +319,11 @@ func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByID(ctx, tx, userID)
 		user = userInner
 
@@ -361,24 +339,24 @@ func (active *UsersListWrapper) GetUserByID(ctx context.Context, userID uint) (*
 }
 
 // НЕ ПРОТЕСТИРОВАНО
-func (active *UsersListWrapper) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
+func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
+	active.sessionList.Mux.Lock()
+	defer active.sessionList.Mux.Unlock()
 
-	userID := active.UsersList.Sessions[sessionID]
+	userID := active.sessionList.Sessions[sessionID]
 
 	var user *models.User
 
-	err := pgx.BeginFunc(ctx, active.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByID(ctx, tx, userID)
 		user = userInner
 
@@ -393,36 +371,30 @@ func (active *UsersListWrapper) GetUserBySession(ctx context.Context, sessionID 
 	return user, nil
 }
 
-func (active *UsersListWrapper) SessionExists(sessionID string) bool {
-	_, exists := active.UsersList.Sessions[sessionID]
+func (active *UserStorage) SessionExists(sessionID string) bool {
+	_, exists := active.sessionList.Sessions[sessionID]
 
 	return exists
 }
 
-func (active *UsersListWrapper) AddSession(id uint) string {
+func (active *UserStorage) AddSession(id uint) string {
 	sessionID := utils.RandString(models.SessionIDLen)
 
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
+	active.sessionList.Mux.Lock()
+	defer active.sessionList.Mux.Unlock()
 
-	active.UsersList.Users[id] = &models.User{
-		ID: id,
-	}
-
-	user := active.UsersList.Users[id]
-
-	active.UsersList.Sessions[sessionID] = user.ID
+	active.sessionList.Sessions[sessionID] = id
 
 	return sessionID
 }
 
-func (active *UsersListWrapper) RemoveSession(ctx context.Context, sessionID string) error {
+func (active *UserStorage) RemoveSession(ctx context.Context, sessionID string) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := active.Logger.With(
+	childLogger := active.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -432,28 +404,17 @@ func (active *UsersListWrapper) RemoveSession(ctx context.Context, sessionID str
 		return errSessionNotExists
 	}
 
-	active.UsersList.Mux.Lock()
-	defer active.UsersList.Mux.Unlock()
+	active.sessionList.Mux.Lock()
+	defer active.sessionList.Mux.Unlock()
 
-	delete(active.UsersList.Sessions, sessionID)
+	delete(active.sessionList.Sessions, sessionID)
 
 	return nil
 }
 
-func NewActiveUser(pool *pgxpool.Pool, logger *zap.SugaredLogger) *UsersListWrapper {
-	return &UsersListWrapper{
-		UsersList: &models.UsersList{
-			Sessions: make(map[string]uint, 1),
-			Users: map[uint]*models.User{
-				1: {
-					ID:           1,
-					Email:        "example@mail.ru",
-					PasswordHash: utils.HashPassword("123456"),
-				},
-			},
-			UsersCount: 1,
-			Mux:        sync.RWMutex{}},
-		Pool:   pool,
-		Logger: logger,
+func NewSessionList() *models.SessionList {
+	return &models.SessionList{
+		Sessions: make(map[string]uint, 1),
+		Mux:      sync.RWMutex{},
 	}
 }

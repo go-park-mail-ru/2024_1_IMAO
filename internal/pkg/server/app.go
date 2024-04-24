@@ -11,13 +11,20 @@ import (
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
 
+	advertrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
+	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
+	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
+	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
+	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
+	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
+
 	"github.com/gorilla/handlers"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
 	Timeout            = time.Second * 3
-	Address            = "127.0.0.1:8080" //"109.120.183.3:8080"
+	Address            = ":8080" //"109.120.183.3:8080"
 	outputLogPath      = "stdout logs.json"
 	errorOutputLogPath = "stderr err_logs.json"
 )
@@ -38,7 +45,16 @@ func (srv *Server) Run() error {
 		return err //nolint:wrapcheck
 	}
 
-	router := myrouter.NewRouter(connPool, logger)
+	defer logger.Sync()
+
+	advertStorage := advertrepo.NewAdvertStorage(connPool, logger)
+	cartStorage := cartrepo.NewCartStorage(connPool, logger)
+	cityStorage := cityrepo.NewCityStorage(connPool, logger)
+	orderStorage := orderrepo.NewOrderStorage(connPool, logger)
+	profileStorage := profilerepo.NewProfileStorage(connPool, logger)
+	userStorage := authrepo.NewUserStorage(connPool, logger)
+
+	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage, profileStorage, userStorage)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

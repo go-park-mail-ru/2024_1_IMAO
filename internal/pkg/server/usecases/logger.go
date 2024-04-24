@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func NewLogger(outputPaths []string, errorOutputPaths []string, options ...zap.Option) (*zap.SugaredLogger, error) {
@@ -9,6 +10,19 @@ func NewLogger(outputPaths []string, errorOutputPaths []string, options ...zap.O
 	config.DisableStacktrace = false
 	config.OutputPaths = outputPaths
 	config.ErrorOutputPaths = errorOutputPaths
+	config.EncoderConfig = zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
 
 	logger, err := config.Build(options...)
 	if err != nil {

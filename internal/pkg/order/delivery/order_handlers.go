@@ -6,20 +6,38 @@ import (
 	"net/http"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
-	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
-	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
+	"go.uber.org/zap"
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authresp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+
+	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
+	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
+	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
+	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 )
 
 type OrderHandler struct {
-	ListOrder   *orderrepo.OrderListWrapper
-	ListCart    *cartrepo.CartListWrapper
-	ListAdverts *advrepo.AdvertsListWrapper
-	ListUsers   *authrepo.UsersListWrapper
+	storage       orderusecases.OrderStorageInterface
+	cartStorage   cartusecases.CartStorageInterface
+	advertStorage advertusecases.AdvertsStorageInterface
+	userStorage   userusecases.UsersStorageInterface
+	addrOrigin    string
+	schema        string
+	logger        *zap.SugaredLogger
+}
+
+func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage cartusecases.CartStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
+	addrOrigin string, schema string, logger *zap.SugaredLogger) *OrderHandler {
+	return &OrderHandler{
+		storage:       storage,
+		cartStorage:   cartStorage,
+		advertStorage: advertStorage,
+		userStorage:   userStorage,
+		addrOrigin:    addrOrigin,
+		schema:        schema,
+		logger:        logger,
+	}
 }
 
 // const (
@@ -47,23 +65,23 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 
 	ctx := request.Context()
 
-	list := orderHandler.ListOrder
-	usersList := orderHandler.ListUsers
+	storage := orderHandler.storage
+	userStorage := orderHandler.userStorage
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !userStorage.SessionExists(session.Value) {
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
 	var ordersList []*models.ReturningOrder
 
-	ordersList, err = list.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.ListAdverts)
+	ordersList, err = storage.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.advertStorage)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -85,9 +103,9 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	ctx := request.Context()
 
-	list := orderHandler.ListOrder
-	cartlist := orderHandler.ListCart
-	usersList := orderHandler.ListUsers
+	storage := orderHandler.storage
+	cartStorage := orderHandler.cartStorage
+	userStorage := orderHandler.userStorage
 
 	var data models.ReceivedOrderItems
 
@@ -100,17 +118,17 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !userStorage.SessionExists(session.Value) {
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
 	for _, receivedOrderItem := range data.Adverts {
-		isDeleted := cartlist.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID, usersList, orderHandler.ListAdverts)
+		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID, userStorage, orderHandler.advertStorage)
 
 		if isDeleted != nil {
 			log.Println("Can not create an order", receivedOrderItem.AdvertID, "for user", user.ID)
@@ -119,7 +137,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			return
 		}
 
-		list.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.ListAdverts)
+		storage.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.advertStorage)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
 

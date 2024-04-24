@@ -4,13 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
-	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
-	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
-	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
-	profrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
@@ -18,54 +12,38 @@ import (
 	orderdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/delivery"
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+
+	advusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
+	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
+	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
+	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
+	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
+	authusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
+
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger) *mux.Router {
+const plug = ""
+
+func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advusecases.AdvertsStorageInterface,
+	cartStorage cartusecases.CartStorageInterface, cityStorage cityusecases.CityStorageInterface, orderStorage orderusecases.OrderStorageInterface,
+	profileStorage profusecases.ProfileStorageInterface, userStorage authusecases.UsersStorageInterface) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
 
-	advertsList := advrepo.NewAdvertsList(pool, logger)
-	advrepo.FillAdvertsList(advertsList)
-	profileList := profrepo.NewProfileList(pool, logger)
-	usersList := authrepo.NewActiveUser(pool, logger)
-	cityList := cityrepo.NewCityList(pool, logger)
+	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
 
-	advertsHandler := &advdel.AdvertsHandler{
-		List: advertsList,
-	}
+	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage, plug, plug, logger)
 
-	profileHandler := &profdel.ProfileHandler{
-		ProfileList: profileList,
-		AdvertsList: advertsList,
-		UsersList:   usersList,
-	}
+	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug, logger)
 
-	authHandler := &authdel.AuthHandler{
-		UsersList:   usersList,
-		ProfileList: profileList,
-	}
+	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage, plug, plug, logger)
 
-	cartList := cartrepo.NewCartList(pool, logger)
-	cartHandler := &cartdel.CartHandler{
-		ListCart:    cartList,
-		ListAdverts: advertsList,
-		ListUsers:   usersList,
-	}
+	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage, plug, plug, logger)
 
-	orderList := orderrepo.NewOrderList(pool, logger)
-	orderHandler := &orderdel.OrderHandler{
-		ListOrder:   orderList,
-		ListCart:    cartList,
-		ListAdverts: advertsList,
-		ListUsers:   usersList,
-	}
-
-	cityHandler := &citydel.CityHandler{
-		CityList: cityList,
-	}
+	cityHandler := citydel.NewCityHandler(cityStorage, plug, plug, logger)
 
 	log.Println("Server is running")
 
@@ -76,7 +54,7 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger) *mux.Router {
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}/{id:[0-9]+}", advertsHandler.GetAdvert)
 	router.HandleFunc("/api/adverts/{id:[0-9]+}", advertsHandler.GetAdvertByID)
-	router.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
+	//router.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
 	router.HandleFunc("/api/adverts/close/{id:[0-9]+}", advertsHandler.CloseAdvert)
 
 	router.HandleFunc("/api/auth/login", authHandler.Login)
@@ -87,9 +65,9 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger) *mux.Router {
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
 	//router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
-	router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
+	//router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
 	router.HandleFunc("/api/profile/edit", profileHandler.EditProfile)
-	router.HandleFunc("/api/profile/set", profileHandler.SetProfile)
+	//router.HandleFunc("/api/profile/set", profileHandler.SetProfile)
 	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
 	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 

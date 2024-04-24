@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
@@ -18,13 +17,19 @@ var (
 	errNotInCart = errors.New("there is no advert in the cart")
 )
 
-type CartListWrapper struct {
-	CartList *models.CartList
-	Pool     *pgxpool.Pool
-	Logger   *zap.SugaredLogger
+type CartStorage struct {
+	pool   *pgxpool.Pool
+	logger *zap.SugaredLogger
 }
 
-func (cl *CartListWrapper) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
+func NewCartStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CartStorage {
+	return &CartStorage{
+		pool:   pool,
+		logger: logger,
+	}
+}
+
+func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
 	SQLAdvertByUserId := `
 			SELECT 
 			a.id, 
@@ -51,7 +56,7 @@ func (cl *CartListWrapper) getCartByUserID(ctx context.Context, tx pgx.Tx, userI
 			public.cart cart ON a.id = cart.advert_id
 		WHERE cart.user_id = $1;`
 
-	cl.Logger.Infof(`
+	cl.logger.Infof(`
 		SELECT 
 			a.id, 
 			a.user_id,
@@ -79,7 +84,7 @@ func (cl *CartListWrapper) getCartByUserID(ctx context.Context, tx pgx.Tx, userI
 
 	rows, err := tx.Query(ctx, SQLAdvertByUserId, userID)
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while executing select adverts from the cart, err=%v", err)
+		cl.logger.Errorf("Something went wrong while executing select adverts from the cart, err=%v", err)
 
 		return nil, err
 	}
@@ -96,7 +101,7 @@ func (cl *CartListWrapper) getCartByUserID(ctx context.Context, tx pgx.Tx, userI
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
 			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed); err != nil {
 
-			cl.Logger.Errorf("Something went wrong while scanning adverts from the cart, err=%v", err)
+			cl.logger.Errorf("Something went wrong while scanning adverts from the cart, err=%v", err)
 
 			return nil, err
 		}
@@ -116,10 +121,10 @@ func (cl *CartListWrapper) getCartByUserID(ctx context.Context, tx pgx.Tx, userI
 	return adsList, nil
 }
 
-func (cl *CartListWrapper) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) ([]*models.ReturningAdvert, error) {
+func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
 	cart := []*models.ReturningAdvert{}
 
-	err := pgx.BeginFunc(ctx, cl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
 		cartInner, err := cl.getCartByUserID(ctx, tx, userID)
 		cart = cartInner
 
@@ -127,7 +132,7 @@ func (cl *CartListWrapper) GetCartByUserID(ctx context.Context, userID uint, use
 	})
 
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
+		cl.logger.Errorf("Something went wrong while getting adverts list, err=%v", err)
 
 		return nil, err
 	}
@@ -139,11 +144,11 @@ func (cl *CartListWrapper) GetCartByUserID(ctx context.Context, userID uint, use
 	return cart, nil
 }
 
-func (cl *CartListWrapper) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
+func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
 	SQLDeleteFromCart := `DELETE FROM public.cart
 		WHERE user_id = $1 AND advert_id = $2;`
 
-	cl.Logger.Infof(`DELETE FROM public.cart
+	cl.logger.Infof(`DELETE FROM public.cart
 		WHERE user_id = $1 AND advert_id = $2;`, userID, advertID, userID, advertID)
 
 	var err error
@@ -151,23 +156,23 @@ func (cl *CartListWrapper) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID
 	_, err = tx.Exec(ctx, SQLDeleteFromCart, userID, advertID)
 
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while executing advert delete from the cart, err=%v", err)
+		cl.logger.Errorf("Something went wrong while executing advert delete from the cart, err=%v", err)
 		return fmt.Errorf("Something went wrong while executing advert delete from the cart", err)
 	}
 
 	return nil
 }
 
-func (cl *CartListWrapper) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) error {
+func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error {
 
-	err := pgx.BeginFunc(ctx, cl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
 		err := cl.deleteAdvByIDs(ctx, tx, userID, advertID)
 
 		return err
 	})
 
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while getting adverts list, most likely , err=%v", err)
+		cl.logger.Errorf("Something went wrong while getting adverts list, most likely , err=%v", err)
 
 		return err
 	}
@@ -175,7 +180,7 @@ func (cl *CartListWrapper) DeleteAdvByIDs(ctx context.Context, userID uint, adve
 	return nil
 }
 
-func (cl *CartListWrapper) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
+func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
 	SQLAddToCart := `WITH deletion AS (
 		DELETE FROM public.cart
 		WHERE user_id = $1 AND advert_id = $2
@@ -187,7 +192,7 @@ func (cl *CartListWrapper) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID
 		SELECT 1 FROM deletion
 	) RETURNING true;
 	`
-	cl.Logger.Infof(`WITH deletion AS (
+	cl.logger.Infof(`WITH deletion AS (
 		DELETE FROM public.cart
 		WHERE user_id = %s AND advert_id = %s
 		RETURNING user_id, advert_id
@@ -204,17 +209,17 @@ func (cl *CartListWrapper) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID
 	added := false
 
 	if err := userLine.Scan(&added); err != nil {
-		//cl.Logger.Errorf("Error while scanning advert added, err=%v", err)
-		//return false, err
+		cl.logger.Errorf("Error while scanning advert added, err=%v", err)
+		return false, err
 	}
 
 	return added, nil
 }
 
-func (cl *CartListWrapper) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) bool {
+func (cl *CartStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool {
 	var added bool
 
-	err := pgx.BeginFunc(ctx, cl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
 		addedInner, err := cl.appendAdvByIDs(ctx, tx, userID, advertID)
 		added = addedInner
 
@@ -222,19 +227,8 @@ func (cl *CartListWrapper) AppendAdvByIDs(ctx context.Context, userID uint, adve
 	})
 
 	if err != nil {
-		cl.Logger.Errorf("Error while executing addvert add to cart, err=%v", err)
+		cl.logger.Errorf("Error while executing addvert add to cart, err=%v", err)
 	}
 
 	return added
-}
-
-func NewCartList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CartListWrapper {
-	return &CartListWrapper{
-		CartList: &models.CartList{
-			Items: make([]*models.CartItem, 0),
-			Mux:   sync.RWMutex{},
-		},
-		Pool:   pool,
-		Logger: logger,
-	}
 }

@@ -2,20 +2,15 @@ package storage
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"mime/multipart"
 	"os"
-	"sync"
-	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/mdigger/translit"
 	"go.uber.org/zap"
 )
 
@@ -29,19 +24,25 @@ var (
 	errAlreadyClosed      = errors.New("advert already closed")
 )
 
-type AdvertsListWrapper struct {
-	AdvertsList *models.AdvertsList
-	Pool        *pgxpool.Pool
-	Logger      *zap.SugaredLogger
+type AdvertStorage struct {
+	pool   *pgxpool.Pool
+	logger *zap.SugaredLogger
 }
 
-func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
+func NewAdvertStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *AdvertStorage {
+	return &AdvertStorage{
+		pool:   pool,
+		logger: logger,
+	}
+}
+
+func (ads *AdvertStorage) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -50,7 +51,7 @@ func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID
 	city := ""     // ЗАГЛУШКИ
 	category := "" // ЗАГЛУШКИ
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.getAdvert(ctx, tx, advertID, city, category)
 		advertsList = advertsListInner
 
@@ -66,13 +67,13 @@ func (ads *AdvertsListWrapper) GetAdvertByOnlyByID(ctx context.Context, advertID
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.Tx, advertID uint) ([]string, error) {
+func (ads *AdvertStorage) getAdvertImagesURLs(ctx context.Context, tx pgx.Tx, advertID uint) ([]string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -111,19 +112,19 @@ func (ads *AdvertsListWrapper) getAdvertImagesURLs(ctx context.Context, tx pgx.T
 	return urlArray, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID uint) ([]string, error) {
+func (ads *AdvertStorage) GetAdvertImagesURLs(ctx context.Context, advertID uint) ([]string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var urlArray []string
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		urlArrayInner, err := ads.getAdvertImagesURLs(ctx, tx, advertID)
 		urlArray = urlArrayInner
 
@@ -139,13 +140,13 @@ func (ads *AdvertsListWrapper) GetAdvertImagesURLs(ctx context.Context, advertID
 	return urlArray, nil
 }
 
-func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -221,19 +222,19 @@ func (ads *AdvertsListWrapper) getAdvert(ctx context.Context, tx pgx.Tx, advertI
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList *models.ReturningAdvert
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.getAdvert(ctx, tx, advertID, city, category)
 		advertsList = advertsListInner
 
@@ -265,49 +266,13 @@ func (ads *AdvertsListWrapper) GetAdvert(ctx context.Context, advertID uint, cit
 	return advertsList, nil
 }
 
-// func (ads *AdvertsListWrapper) GetAdvertsByCity(city string, startID, num uint) ([]*models.ReturningAdInList, error) {
-// 	if num > ads.AdvertsList.AdvertsCounter {
-// 		return nil, errWrongAdvertsAmount
-// 	}
-
-// 	cityID, err := ads.GetCityID(city)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	ads.AdvertsList.Mux.Lock()
-// 	defer ads.AdvertsList.Mux.Unlock()
-
-// 	var returningAds []*models.ReturningAdInList
-// 	var counter uint = 0
-
-// 	for counter != num && counter+startID-1 != ads.AdvertsList.AdvertsCounter {
-// 		ad := ads.AdvertsList.Adverts[startID+counter-1]
-// 		exists := ad.Active && !ad.Deleted
-
-// 		if exists && ad.CityID == cityID {
-// 			returningAds = append(returningAds, &models.ReturningAdInList{
-// 				ID:       ad.ID,
-// 				Title:    ad.Title,
-// 				Price:    ad.Price,
-// 				City:     ads.AdvertsList.Cities[ad.CityID-1].Translation,
-// 				Category: ads.AdvertsList.Categories[ad.CategoryID-1].Translation,
-// 			})
-// 		}
-
-// 		counter++
-// 	}
-
-// 	return returningAds, nil
-// }
-
-func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -369,19 +334,19 @@ func (ads *AdvertsListWrapper) getAdvertsByCity(ctx context.Context, tx pgx.Tx, 
 	return adsList, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList []*models.ReturningAdInList
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.getAdvertsByCity(ctx, tx, city, startID, num)
 		advertsList = advertsListInner
 
@@ -397,13 +362,13 @@ func (ads *AdvertsListWrapper) GetAdvertsByCity(ctx context.Context, city string
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -465,19 +430,19 @@ func (ads *AdvertsListWrapper) getAdvertsByCategory(ctx context.Context, tx pgx.
 	return adsList, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList []*models.ReturningAdInList
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.getAdvertsByCategory(ctx, tx, category, city, startID, num)
 		advertsList = advertsListInner
 
@@ -493,13 +458,13 @@ func (ads *AdvertsListWrapper) GetAdvertsByCategory(ctx context.Context, categor
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {
+func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted uint) (*models.ReturningAdvertList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -614,19 +579,19 @@ func (ads *AdvertsListWrapper) getAdvertsForUserWhereStatusIs(ctx context.Contex
 	return &returningAdvertList, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList []*models.ReturningAdInList
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted)
 		for _, num := range advertsListInner.AdvertItems {
 			returningAdInList := models.ReturningAdInList{
@@ -653,29 +618,13 @@ func (ads *AdvertsListWrapper) GetAdvertsForUserWhereStatusIs(ctx context.Contex
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) GetAdvertsByUserIDFiltered(userID uint, filter func(*models.Advert) bool) ([]*models.ReturningAdvert, error) {
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-	var returningAds []*models.ReturningAdvert
-	for _, ad := range ads.AdvertsList.Adverts {
-		if ad.UserID == userID && filter(ad) {
-			returningAds = append(returningAds, &models.ReturningAdvert{
-				Advert:   *ad,
-				City:     *ads.AdvertsList.Cities[ad.CityID-1],
-				Category: *ads.AdvertsList.Categories[ad.CategoryID-1],
-			})
-		}
-	}
-	return returningAds, nil
-}
-
-func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -768,20 +717,20 @@ func (ads *AdvertsListWrapper) createAdvert(ctx context.Context, tx pgx.Tx, data
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multipart.FileHeader,
+func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.FileHeader,
 	data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList *models.ReturningAdvert
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.createAdvert(ctx, tx, data)
 		advertsList = advertsListInner
 
@@ -812,13 +761,13 @@ func (ads *AdvertsListWrapper) CreateAdvert(ctx context.Context, files []*multip
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, imageUrl string) (string, error) {
+func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, imageUrl string) (string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -848,13 +797,13 @@ func (ads *AdvertsListWrapper) setAdvertImage(ctx context.Context, tx pgx.Tx, ad
 	return returningUrl, nil
 }
 
-func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx context.Context, tx pgx.Tx, advertID uint) error {
+func (ads *AdvertStorage) deleteAllImagesForAdvertFromLocalStorage(ctx context.Context, tx pgx.Tx, advertID uint) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -898,13 +847,13 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromLocalStorage(ctx cont
 	return nil
 }
 
-func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromDatabase(ctx context.Context, tx pgx.Tx, advertID uint) error {
+func (ads *AdvertStorage) deleteAllImagesForAdvertFromDatabase(ctx context.Context, tx pgx.Tx, advertID uint) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -924,17 +873,17 @@ func (ads *AdvertsListWrapper) deleteAllImagesForAdvertFromDatabase(ctx context.
 	return nil
 }
 
-func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, folderName string, advertID uint) ([]string, error) {
+func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, folderName string, advertID uint) ([]string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		return ads.deleteAllImagesForAdvertFromLocalStorage(ctx, tx, advertID)
 	})
 
@@ -944,7 +893,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 		return nil, err
 	}
 
-	err = pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		return ads.deleteAllImagesForAdvertFromDatabase(ctx, tx, advertID)
 	})
 
@@ -967,7 +916,7 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 			return nil, err
 		}
 
-		err = pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+		err = pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, fullPath)
 			url = urlInner
 
@@ -986,13 +935,13 @@ func (ads *AdvertsListWrapper) SetAdvertImages(ctx context.Context, files []*mul
 	return urlArray, nil
 }
 
-func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -1103,19 +1052,19 @@ func (ads *AdvertsListWrapper) editAdvert(ctx context.Context, tx pgx.Tx, data m
 	}, nil
 }
 
-func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var advertsList *models.ReturningAdvert
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		advertsListInner, err := ads.editAdvert(ctx, tx, data)
 		advertsList = advertsListInner
 
@@ -1147,13 +1096,13 @@ func (ads *AdvertsListWrapper) EditAdvert(ctx context.Context, files []*multipar
 	return advertsList, nil
 }
 
-func (ads *AdvertsListWrapper) closeAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
+func (ads *AdvertStorage) closeAdvert(ctx context.Context, tx pgx.Tx, advertID uint) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -1171,17 +1120,17 @@ func (ads *AdvertsListWrapper) closeAdvert(ctx context.Context, tx pgx.Tx, adver
 	return nil
 }
 
-func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) error {
+func (ads *AdvertStorage) CloseAdvert(ctx context.Context, advertID uint) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	err := pgx.BeginFunc(ctx, ads.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		err := ads.closeAdvert(ctx, tx, advertID)
 		if err != nil {
 			childLogger.Errorf("Something went wrong while closing advert, err=%v", err)
@@ -1200,13 +1149,13 @@ func (ads *AdvertsListWrapper) CloseAdvert(ctx context.Context, advertID uint) e
 	return nil
 }
 
-func (ads *AdvertsListWrapper) deleteAdvert(ctx context.Context, tx pgx.Tx, user *models.User) error {
+func (ads *AdvertStorage) deleteAdvert(ctx context.Context, tx pgx.Tx, user *models.User) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := ads.Logger.With(
+	childLogger := ads.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -1224,109 +1173,15 @@ func (ads *AdvertsListWrapper) deleteAdvert(ctx context.Context, tx pgx.Tx, user
 	return nil
 }
 
-func (ads *AdvertsListWrapper) DeleteAdvert(advertID uint) error {
-	if advertID > ads.AdvertsList.AdvertsCounter || ads.AdvertsList.Adverts[advertID-1].Deleted {
-		return errWrongAdvertID
-	}
+// func (ads *AdvertStorage) DeleteAdvert(advertID uint) error {
+// 	if advertID > ads.AdvertsList.AdvertsCounter || ads.AdvertsList.Adverts[advertID-1].Deleted {
+// 		return errWrongAdvertID
+// 	}
 
-	ads.AdvertsList.Adverts[advertID-1].Deleted = true
+// 	ads.AdvertsList.Adverts[advertID-1].Deleted = true
 
-	return nil
-}
-
-func (ads *AdvertsListWrapper) GetCityID(city string) (uint, error) {
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-
-	for _, val := range ads.AdvertsList.Cities {
-		if val.CityName == city || val.Translation == city {
-			return val.ID, nil
-		}
-	}
-
-	return 0, errWrongCityName
-}
-
-func (ads *AdvertsListWrapper) GetCategoryID(category string) (uint, error) {
-	ads.AdvertsList.Mux.Lock()
-	defer ads.AdvertsList.Mux.Unlock()
-
-	for _, val := range ads.AdvertsList.Categories {
-		if val.Name == category || val.Translation == category {
-			return val.ID, nil
-		}
-	}
-
-	return 0, errWrongCategoryName
-}
-
-func (ads *AdvertsListWrapper) GetLastAdvertID() uint {
-	ads.AdvertsList.AdvertsCounter++
-
-	return ads.AdvertsList.AdvertsCounter
-}
-
-func (ads *AdvertsListWrapper) GetLastLocationID() uint {
-	ads.AdvertsList.CitiesCounter++
-
-	return ads.AdvertsList.CitiesCounter
-}
-
-func (ads *AdvertsListWrapper) GetLastCategoryID() uint {
-	ads.AdvertsList.CategoriesCounter++
-
-	return ads.AdvertsList.CategoriesCounter
-}
-
-func NewAdvertsList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *AdvertsListWrapper {
-	return &AdvertsListWrapper{
-		AdvertsList: &models.AdvertsList{
-			AdvertsCounter:    0,
-			CitiesCounter:     0,
-			CategoriesCounter: 0,
-			Adverts:           make([]*models.Advert, 0),
-			Cities:            make([]*models.City, 0),
-			Categories:        make([]*models.Category, 0),
-			Mux:               sync.RWMutex{},
-		},
-		Pool:   pool,
-		Logger: logger,
-	}
-}
-
-func FillAdvertsList(ads *AdvertsListWrapper) {
-	locationID := ads.GetLastLocationID()
-	ads.AdvertsList.Cities = append(ads.AdvertsList.Cities, &models.City{
-		ID:          locationID,
-		CityName:    "Москва",
-		Translation: "Moscow",
-	})
-
-	categoryID := ads.GetLastCategoryID()
-	ads.AdvertsList.Categories = append(ads.AdvertsList.Categories, &models.Category{
-		ID:          categoryID,
-		Name:        "Тест",
-		Translation: translit.Ru("Тест"),
-	})
-
-	for i := 1; i <= 100; i++ {
-		price, _ := rand.Int(rand.Reader, big.NewInt(int64(models.MaxPrice)))
-		advertID := ads.GetLastAdvertID()
-		ads.AdvertsList.Adverts = append(ads.AdvertsList.Adverts, &models.Advert{
-			ID:          advertID,
-			UserID:      1,
-			Title:       fmt.Sprintf("Объявление № %d", advertID),
-			Description: fmt.Sprintf("Текст в объявлениии № %d", advertID),
-			Price:       uint(price.Uint64()) * advertID,
-			CityID:      1,
-			CategoryID:  1,
-			CreatedTime: time.Now(),
-			Active:      true,
-			IsUsed:      true,
-			Deleted:     false,
-		})
-	}
-}
+// 	return nil
+// }
 
 func AddAdvert(ads *models.AdvertsList, advert *models.Advert) {
 

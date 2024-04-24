@@ -20,10 +20,7 @@ type User struct {
 	PasswordHash string `json:"-"`
 }
 
-type UsersList struct {
-	// Ключ - id сессии, значение - id пользователя
-	Sessions   map[string]uint
-	Users      map[uint]*User
-	UsersCount uint
-	Mux        sync.RWMutex
+type SessionList struct {
+	Sessions map[string]uint
+	Mux      sync.RWMutex
 }

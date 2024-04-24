@@ -6,18 +6,35 @@ import (
 	"net/http"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	advrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
-	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
+	"go.uber.org/zap"
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authresp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+
+	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
+	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
+	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 )
 
 type CartHandler struct {
-	ListCart    *cartrepo.CartListWrapper
-	ListAdverts *advrepo.AdvertsListWrapper
-	ListUsers   *authrepo.UsersListWrapper
+	storage       cartusecases.CartStorageInterface
+	advertStorage advertusecases.AdvertsStorageInterface
+	userStorage   userusecases.UsersStorageInterface
+	addrOrigin    string
+	schema        string
+	logger        *zap.SugaredLogger
+}
+
+func NewCartHandler(storage cartusecases.CartStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
+	addrOrigin string, schema string, logger *zap.SugaredLogger) *CartHandler {
+	return &CartHandler{
+		storage:       storage,
+		advertStorage: advertStorage,
+		userStorage:   userStorage,
+		addrOrigin:    addrOrigin,
+		schema:        schema,
+		logger:        logger,
+	}
 }
 
 // const (
@@ -45,23 +62,23 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 	ctx := request.Context()
 
-	list := cartHandler.ListCart
-	usersList := cartHandler.ListUsers
+	storage := cartHandler.storage
+	userStorage := cartHandler.userStorage
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !userStorage.SessionExists(session.Value) {
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
 	var adsList []*models.ReturningAdvert
 
-	adsList, err = list.GetCartByUserID(ctx, uint(user.ID), cartHandler.ListUsers, cartHandler.ListAdverts)
+	adsList, err = storage.GetCartByUserID(ctx, uint(user.ID), cartHandler.userStorage, cartHandler.advertStorage)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -83,8 +100,8 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	ctx := request.Context()
 
-	list := cartHandler.ListCart
-	usersList := cartHandler.ListUsers
+	storage := cartHandler.storage
+	userStorage := cartHandler.userStorage
 	var data models.ReceivedCartItem
 
 	err := json.NewDecoder(request.Body).Decode(&data)
@@ -96,16 +113,16 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !userStorage.SessionExists(session.Value) {
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
-	isAppended := list.AppendAdvByIDs(ctx, user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
+	isAppended := storage.AppendAdvByIDs(ctx, user.ID, data.AdvertID, cartHandler.userStorage, cartHandler.advertStorage)
 
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
@@ -125,8 +142,8 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 	ctx := request.Context()
 
-	list := cartHandler.ListCart
-	usersList := cartHandler.ListUsers
+	storage := cartHandler.storage
+	userStorage := cartHandler.userStorage
 	var data models.ReceivedCartItems
 
 	err := json.NewDecoder(request.Body).Decode(&data)
@@ -138,17 +155,17 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !usersList.SessionExists(session.Value) {
+	if err != nil || !userStorage.SessionExists(session.Value) {
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := usersList.GetUserBySession(ctx, session.Value)
+	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
 	for _, item := range data.AdvertIDs {
-		err = list.DeleteAdvByIDs(ctx, user.ID, item, cartHandler.ListUsers, cartHandler.ListAdverts)
+		err = storage.DeleteAdvByIDs(ctx, user.ID, item, cartHandler.userStorage, cartHandler.advertStorage)
 
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)

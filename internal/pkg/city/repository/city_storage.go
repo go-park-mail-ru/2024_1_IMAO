@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"sync"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -16,18 +15,24 @@ var (
 	NameSeqProfile      = pgx.Identifier{"public", "city_id_seq"} //nolint:gochecknoglobals
 )
 
-type CityListWrapper struct {
-	CityList *models.CityList
-	Pool     *pgxpool.Pool
-	Logger   *zap.SugaredLogger
+type CityStorage struct {
+	pool   *pgxpool.Pool
+	logger *zap.SugaredLogger
 }
 
-func (cl *CityListWrapper) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
+func NewCityStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CityStorage {
+	return &CityStorage{
+		pool:   pool,
+		logger: logger,
+	}
+}
+
+func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
 	SQLCityList := `SELECT id, name, translation FROM public.city;`
-	cl.Logger.Infof(`SELECT id, name, translation FROM public.city;`)
+	cl.logger.Infof(`SELECT id, name, translation FROM public.city;`)
 	rows, err := tx.Query(ctx, SQLCityList)
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while executing select city query, err=%v", err)
+		cl.logger.Errorf("Something went wrong while executing select city query, err=%v", err)
 
 		return nil, err
 	}
@@ -43,7 +48,7 @@ func (cl *CityListWrapper) getCityList(ctx context.Context, tx pgx.Tx) (*models.
 	}
 
 	if err := rows.Err(); err != nil {
-		cl.Logger.Errorf("Something went wrong while scanning city rows, err=%v", err)
+		cl.logger.Errorf("Something went wrong while scanning city rows, err=%v", err)
 
 		return nil, err
 	}
@@ -51,10 +56,10 @@ func (cl *CityListWrapper) getCityList(ctx context.Context, tx pgx.Tx) (*models.
 	return &cityList, nil
 }
 
-func (cl *CityListWrapper) GetCityList(ctx context.Context) (*models.CityList, error) {
+func (cl *CityStorage) GetCityList(ctx context.Context) (*models.CityList, error) {
 	var cityList *models.CityList
 
-	err := pgx.BeginFunc(ctx, cl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
 		cityListInner, err := cl.getCityList(ctx, tx)
 		cityList = cityListInner
 
@@ -62,21 +67,10 @@ func (cl *CityListWrapper) GetCityList(ctx context.Context) (*models.CityList, e
 	})
 
 	if err != nil {
-		cl.Logger.Errorf("Something went wrong while getting city list, err=%v", err)
+		cl.logger.Errorf("Something went wrong while getting city list, err=%v", err)
 
 		return nil, err
 	}
 
 	return cityList, nil
-}
-
-func NewCityList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CityListWrapper {
-	return &CityListWrapper{
-		CityList: &models.CityList{
-			CityItems: make([]*models.City, 0),
-			Mux:       sync.RWMutex{},
-		},
-		Pool:   pool,
-		Logger: logger,
-	}
 }

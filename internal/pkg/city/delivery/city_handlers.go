@@ -5,12 +5,25 @@ import (
 	"net/http"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
-	cityrep "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
+	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	"go.uber.org/zap"
 )
 
 type CityHandler struct {
-	CityList *cityrep.CityListWrapper
+	storage    cityusecases.CityStorageInterface
+	addrOrigin string
+	schema     string
+	logger     *zap.SugaredLogger
+}
+
+func NewCityHandler(storage cityusecases.CityStorageInterface, addrOrigin string, schema string, logger *zap.SugaredLogger) *CityHandler {
+	return &CityHandler{
+		storage:    storage,
+		addrOrigin: addrOrigin,
+		schema:     schema,
+		logger:     logger,
+	}
 }
 
 func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Request) {
@@ -22,9 +35,9 @@ func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Requ
 
 	ctx := request.Context()
 
-	city, err := h.CityList.GetCityList(ctx)
+	city, err := h.storage.GetCityList(ctx)
 	if err != nil {
-		h.CityList.Logger.Error(err, responses.StatusBadRequest)
+		h.logger.Error(err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))

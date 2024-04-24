@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
@@ -24,19 +23,25 @@ var (
 	NameSeqProfile      = pgx.Identifier{"public", "profile_id_seq"} //nolint:gochecknoglobals
 )
 
-type ProfileListWrapper struct {
-	ProfileList *models.ProfileList
-	Pool        *pgxpool.Pool
-	Logger      *zap.SugaredLogger
+type ProfileStorage struct {
+	pool   *pgxpool.Pool
+	logger *zap.SugaredLogger
 }
 
-func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
+func NewProfileStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileStorage {
+	return &ProfileStorage{
+		pool:   pool,
+		logger: logger,
+	}
+}
+
+func (pl *ProfileStorage) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -56,13 +61,13 @@ func (pl *ProfileListWrapper) createProfile(ctx context.Context, tx pgx.Tx, prof
 	return nil
 }
 
-func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *models.Profile {
+func (pl *ProfileStorage) CreateProfile(ctx context.Context, userID uint) *models.Profile {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -70,7 +75,7 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 		UserID: userID,
 	}
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		err := pl.createProfile(ctx, tx, &profile)
 		if err != nil {
 			childLogger.Errorf("Something went wrong while creating profile, err=%v", err)
@@ -95,13 +100,13 @@ func (pl *ProfileListWrapper) CreateProfile(ctx context.Context, userID uint) *m
 	return &profile
 }
 
-func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx, id uint) (*models.Profile, error) {
+func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id uint) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -209,19 +214,19 @@ func (pl *ProfileListWrapper) getProfileByUserID(ctx context.Context, tx pgx.Tx,
 	return &profile, nil
 }
 
-func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
+func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var profile *models.Profile
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.getProfileByUserID(ctx, tx, userID)
 		profile = profileInner
 
@@ -242,13 +247,13 @@ func (pl *ProfileListWrapper) GetProfileByUserID(ctx context.Context, userID uin
 	return profile, nil
 }
 
-func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, userID uint, data models.City) (*models.Profile, error) {
+func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID uint, data models.City) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -315,19 +320,19 @@ func (pl *ProfileListWrapper) setProfileCity(ctx context.Context, tx pgx.Tx, use
 	return &profile, nil
 }
 
-func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, data models.City) (*models.Profile, error) {
+func (pl *ProfileStorage) SetProfileCity(ctx context.Context, userID uint, data models.City) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var profile *models.Profile
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.setProfileCity(ctx, tx, userID, data)
 		profile = profileInner
 
@@ -348,13 +353,13 @@ func (pl *ProfileListWrapper) SetProfileCity(ctx context.Context, userID uint, d
 	return profile, nil
 }
 
-func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
+func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -421,19 +426,19 @@ func (pl *ProfileListWrapper) setProfilePhone(ctx context.Context, tx pgx.Tx, us
 	return &profile, nil
 }
 
-func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
+func (pl *ProfileStorage) SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
 	var profile *models.Profile
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.setProfilePhone(ctx, tx, userID, data)
 		profile = profileInner
 
@@ -454,13 +459,13 @@ func (pl *ProfileListWrapper) SetProfilePhone(ctx context.Context, userID uint, 
 	return profile, nil
 }
 
-func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, avatar string) (string, error) {
+func (pl *ProfileStorage) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, avatar string) (string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -490,13 +495,13 @@ func (pl *ProfileListWrapper) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx
 	return url, nil
 }
 
-func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userID uint) error {
+func (pl *ProfileStorage) deleteAvatar(ctx context.Context, tx pgx.Tx, userID uint) error {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -525,18 +530,18 @@ func (pl *ProfileListWrapper) deleteAvatar(ctx context.Context, tx pgx.Tx, userI
 	return nil
 }
 
-func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
+func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
 	userID uint) (string, error) {
 	requestUUID, ok := ctx.Value("requestUUID").(string)
 	if !ok {
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
-	err := pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		return pl.deleteAvatar(ctx, tx, userID)
 	})
 
@@ -555,7 +560,7 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 		return "", errProfileNotExists
 	}
 
-	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		urlInner, err := pl.setProfileAvatarUrl(ctx, tx, userID, fullPath)
 		url = urlInner
 
@@ -571,7 +576,7 @@ func (pl *ProfileListWrapper) SetProfileAvatarUrl(ctx context.Context, file *mul
 	return url, nil
 }
 
-func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
+func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
 	data models.EditProfileNec) (*models.Profile, error) {
 
 	requestUUID, ok := ctx.Value("requestUUID").(string)
@@ -579,7 +584,7 @@ func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, use
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -654,7 +659,7 @@ func (pl *ProfileListWrapper) setProfileInfo(ctx context.Context, tx pgx.Tx, use
 	return &profile, nil
 }
 
-func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
+func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
 	data models.EditProfileNec) (*models.Profile, error) {
 
 	requestUUID, ok := ctx.Value("requestUUID").(string)
@@ -662,7 +667,7 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 		requestUUID = "unknow"
 	}
 
-	childLogger := pl.Logger.With(
+	childLogger := pl.logger.With(
 		zap.String("requestUUID", requestUUID),
 	)
 
@@ -678,7 +683,7 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 		}
 	}
 
-	err = pgx.BeginFunc(ctx, pl.Pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		profileInner, err := pl.setProfileInfo(ctx, tx, userID, data)
 		profile = profileInner
 
@@ -697,137 +702,4 @@ func (pl *ProfileListWrapper) SetProfileInfo(ctx context.Context, userID uint, f
 	}
 
 	return profile, nil
-}
-
-func (pl *ProfileListWrapper) SetProfileRating(userID uint, data models.SetProfileRatingNec) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
-
-	p, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
-		return nil, errProfileNotExists
-	}
-
-	p.Rating = (p.Rating*p.ReactionsCount + data.Reaction) / (p.ReactionsCount + 1)
-
-	return p, nil
-}
-
-func (pl *ProfileListWrapper) SetProfileApproved(userID uint) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
-
-	p, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
-		return nil, errProfileNotExists
-	}
-
-	p.Approved = true
-
-	return p, nil
-}
-
-func (pl *ProfileListWrapper) SetProfile(userID uint, data models.SetProfileNec) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
-
-	p, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
-		return nil, errProfileNotExists
-	}
-
-	p.Name = data.Name
-	p.Surname = data.Surname
-	p.Avatar = "" // ОПАСНОСТЬ
-
-	return p, nil
-}
-
-func (pl *ProfileListWrapper) EditProfile(userID uint, data models.EditProfileNec) (*models.Profile, error) {
-	pl.ProfileList.Mux.Lock()
-	defer pl.ProfileList.Mux.Unlock()
-
-	_, ok := pl.ProfileList.Profiles[userID]
-	if !ok {
-		return nil, errProfileNotExists
-	}
-
-	old := pl.ProfileList.Profiles[userID]
-
-	old.Name = data.Name
-	old.Surname = data.Surname
-	old.City = data.City
-	old.Phone = data.Phone
-	old.Avatar = "" // ОПАСНОСТЬ
-	old.MerchantsName = data.MerchantsName
-	old.SubersCount = data.SubersCount
-	old.SubonsCount = data.SubonsCount
-
-	// pl.Profiles[userID] = &Profile{
-	// 	UserID:       old.UserID,
-	// 	RegisterTime: old.RegisterTime,
-	// 	Name:         data.Name,
-	// 	Surname:      data.Surname,
-	// 	City:         data.City,
-	// 	Phone:        data.Phone,
-	// 	Avatar:       data.Avatar,
-	// }
-
-	return pl.ProfileList.Profiles[userID], nil
-}
-
-// func NewProfileList() *ProfileList {
-// 	return &ProfileList{
-// 		mu: sync.RWMutex{},
-// 	}
-// }
-
-func NewProfileList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileListWrapper {
-	return &ProfileListWrapper{
-		ProfileList: &models.ProfileList{
-			Profiles: map[uint]*models.Profile{
-				1: {
-					UserID:  1,
-					Name:    "Vladimir",
-					Surname: "Vasilievich",
-					City: models.City{
-						ID:          1,
-						CityName:    "Moscow",
-						Translation: "Москва",
-					},
-					Phone:          "1234567890",
-					Avatar:         "", // Предполагается, что Image имеет конструктор по умолчанию
-					RegisterTime:   time.Now(),
-					Rating:         5.0,
-					ReactionsCount: 10,
-					Approved:       true,
-					MerchantsName:  "Vova",
-					SubersCount:    10,
-					SubonsCount:    100,
-				},
-				2: {
-					Name:    "Petr",
-					Surname: "Andreevich",
-					UserID:  2,
-					City: models.City{
-						ID:          1,
-						CityName:    "Kaluga",
-						Translation: "Калуга",
-					},
-					Phone:          "1234567890",
-					Avatar:         "", // Предполагается, что Image имеет конструктор по умолчанию
-					RegisterTime:   time.Now(),
-					Rating:         4.4,
-					ReactionsCount: 10,
-					Approved:       false,
-					MerchantsName:  "Petya",
-					SubersCount:    100,
-					SubonsCount:    10,
-				},
-			},
-			Mux: sync.RWMutex{},
-		},
-		Pool:   pool,
-		Logger: logger,
-	}
 }

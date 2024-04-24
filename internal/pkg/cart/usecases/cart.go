@@ -1,13 +1,15 @@
 package usecases
 
 import (
+	"context"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	useruc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 )
 
-type CartInfo interface {
-	GetCartByUserID(userID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) ([]*models.Advert, error)
-	DeleteAdvByIDs(userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) error
-	AppendAdvByIDs(userID uint, advertID uint, userList useruc.UsersInfo, advertsList advuc.AdvertsInfo) bool
+type CartStorageInterface interface {
+	GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error)
+	DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error
+	AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool
 }
