@@ -25,6 +25,7 @@ const (
 	ErrUnauthorized       = "User not authorized"
 	ErrAuthorized         = "User already authorized"
 	ErrDifferentPasswords = "Passwords do not match"
+	ErrNotValidData       = "User data is not valid"
 
 	ErrAdvertNotExist = "Advert does not exist"
 

@@ -1,18 +1,16 @@
 package delivery
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
@@ -53,24 +51,14 @@ func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface, userStora
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
 // @Router /api/adverts/list [get]
 func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	loggerA := utils.GetLoggerFromContext(ctx).With(zap.String("func", utils.GFN()))
-
-	utils.LogHandlerInfo(loggerA, http.StatusBadRequest, "aboba")
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	vars := mux.Vars(request)
 	city := vars["city"]
@@ -100,7 +88,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -108,24 +96,19 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	vars := mux.Vars(request)
 	city := vars["city"]
@@ -136,7 +119,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 
 	ad, err := storage.GetAdvert(ctx, uint(id), city, category)
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -144,24 +127,19 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
@@ -170,7 +148,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 
 	ad, err := storage.GetAdvertByOnlyByID(ctx, uint(id))
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -178,28 +156,23 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
 }
 
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
 
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
-
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
-		childLogger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -229,7 +202,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	advert, err = storage.CreateAdvert(ctx, photos, data)
 
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -237,28 +210,23 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
 }
 
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
 
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
-
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
-		childLogger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -290,7 +258,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	advert, err = storage.EditAdvert(ctx, photos, data)
 
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -298,6 +266,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
 }
 
@@ -338,20 +307,14 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 // }
 
 func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := advertsHandler.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
@@ -360,7 +323,7 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 
 	err := storage.CloseAdvert(ctx, uint(id))
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -370,5 +333,6 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 
 	adResponse := NewAdvertsOkResponse(nil)
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, adResponse)
 }

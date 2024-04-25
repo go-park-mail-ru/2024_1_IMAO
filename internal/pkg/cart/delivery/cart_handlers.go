@@ -2,6 +2,8 @@ package delivery
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -14,6 +16,8 @@ import (
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
+
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
 type CartHandler struct {
@@ -54,13 +58,14 @@ func NewCartHandler(storage cartusecases.CartStorageInterface, advertStorage adv
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
 // @Router /api/adverts/list [get]
 func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
 
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage
@@ -68,6 +73,10 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !userStorage.SessionExists(session.Value) {
+		if err == nil {
+			err = errors.New("no such cookie in userStorage")
+		}
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -82,6 +91,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
@@ -89,16 +99,18 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	}
 	log.Println("Get cart for user", user.ID)
 	responses.SendOkResponse(writer, NewCartOkResponse(adsList))
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
 func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
 
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage
@@ -107,6 +119,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
@@ -114,6 +127,10 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !userStorage.SessionExists(session.Value) {
+		if err == nil {
+			err = errors.New("no such cookie in userStorage")
+		}
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println("User not authorized")
 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
@@ -124,23 +141,26 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	isAppended := storage.AppendAdvByIDs(ctx, user.ID, data.AdvertID, cartHandler.userStorage, cartHandler.advertStorage)
 
+	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended))
+
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the cart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	} else {
 		log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from thecart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	}
-
-	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended))
 }
 
 func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
 
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage
@@ -149,6 +169,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
@@ -169,6 +190,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)
+			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 			responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
 				responses.ErrBadRequest))
 
@@ -179,4 +201,6 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	log.Println("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
 
 	responses.SendOkResponse(writer, NewCartChangeResponse(false))
+
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from cart of user %s", fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
 }

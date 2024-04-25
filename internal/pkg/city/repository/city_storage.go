@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -28,11 +30,15 @@ func NewCityStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CityStorage 
 }
 
 func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	SQLCityList := `SELECT id, name, translation FROM public.city;`
-	cl.logger.Infof(`SELECT id, name, translation FROM public.city;`)
+
+	logging.LogInfo(logger, "SELECT FROM city")
+
 	rows, err := tx.Query(ctx, SQLCityList)
 	if err != nil {
-		cl.logger.Errorf("Something went wrong while executing select city query, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select city query, err=%v", err))
 
 		return nil, err
 	}
@@ -48,7 +54,7 @@ func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.City
 	}
 
 	if err := rows.Err(); err != nil {
-		cl.logger.Errorf("Something went wrong while scanning city rows, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning city rows, err=%v", err))
 
 		return nil, err
 	}
@@ -57,6 +63,8 @@ func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.City
 }
 
 func (cl *CityStorage) GetCityList(ctx context.Context) (*models.CityList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	var cityList *models.CityList
 
 	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
@@ -67,7 +75,7 @@ func (cl *CityStorage) GetCityList(ctx context.Context) (*models.CityList, error
 	})
 
 	if err != nil {
-		cl.logger.Errorf("Something went wrong while getting city list, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting city list, err=%v", err))
 
 		return nil, err
 	}

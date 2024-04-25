@@ -12,11 +12,11 @@ func NewLogger(outputPaths []string, errorOutputPaths []string, options ...zap.O
 	config.ErrorOutputPaths = errorOutputPaths
 	config.EncoderConfig = zapcore.EncoderConfig{
 		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
+		LevelKey:       "lvl",
+		NameKey:        "",
+		CallerKey:      "",
+		MessageKey:     "",
+		StacktraceKey:  "",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
 		EncodeTime:     zapcore.ISO8601TimeEncoder,

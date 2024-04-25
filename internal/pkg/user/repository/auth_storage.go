@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -36,23 +37,19 @@ func NewUserStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *UserStorage 
 }
 
 func (active *UserStorage) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=$1 );`
-	childLogger.Infof(`SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=%s`, email)
+
+	logging.LogInfo(logger, "SELECT FROM user")
+
 	userLine := tx.QueryRow(ctx, SQLUserExists, email)
 
 	var exists bool
 
 	if err := userLine.Scan(&exists); err != nil {
-		childLogger.Errorf("Error while scanning user exists, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("error while scanning user exists, err=%v", err))
+
 		return false, err
 	}
 
@@ -60,14 +57,7 @@ func (active *UserStorage) userExists(ctx context.Context, tx pgx.Tx, email stri
 }
 
 func (active *UserStorage) UserExists(ctx context.Context, email string) bool {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var exists bool
 
@@ -79,28 +69,23 @@ func (active *UserStorage) UserExists(ctx context.Context, email string) bool {
 	})
 
 	if err != nil {
-		childLogger.Errorf("Error while executing user exists query, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+
 	}
 
 	return exists
 }
 
 func (active *UserStorage) GetLastID(ctx context.Context) uint {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var lastID uint
 	_ = pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			childLogger.Errorf("Something went wrong while getting user id from seq, err=%v", err)
-			return fmt.Errorf("Something went wrong while getting user id from seq in func GetLastID", err)
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting user id from seq, err=%v", err))
+
+			return err
 		}
 		lastID = uint(id)
 
@@ -111,38 +96,27 @@ func (active *UserStorage) GetLastID(ctx context.Context) uint {
 }
 
 func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
-	childLogger.Infof(`INSERT INTO public."user"(email, password_hash) VALUES (%s, %s)`, user.Email, user.PasswordHash)
+
+	logging.LogInfo(logger, "INSERT INTO user")
+
 	var err error
 
 	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
 
 	if err != nil {
-		childLogger.Errorf("Something went wrong while executing create user query, err=%v", err)
-		return fmt.Errorf("Something went wrong while executing create user query in func createUser", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create user query, err=%v", err))
+
+		return err
 	}
 
 	return nil
 }
 
 func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	if active.UserExists(ctx, email) {
 		return nil, errUserExists
@@ -156,13 +130,15 @@ func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash s
 	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		err := active.createUser(ctx, tx, &user)
 		if err != nil {
-			childLogger.Errorf("Something went wrong while creating user, err=%v", err)
-			return fmt.Errorf("Something went wrong while creating user", err)
+			logging.LogError(logger, fmt.Errorf("something went wrong while creating user, err=%v", err))
+
+			return err
 		}
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			childLogger.Errorf("Something went wrong getting user id from seq, err=%v", err)
-			return fmt.Errorf("Something went wrong getting user id from seq", err)
+			logging.LogError(logger, fmt.Errorf("something went wrong getting user id from seq, err=%v", err))
+
+			return err
 		}
 		user.ID = uint(id)
 
@@ -170,7 +146,7 @@ func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash s
 	})
 
 	if err != nil {
-		childLogger.Errorf("Error while creating user, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("error while creating user, err=%v", err))
 
 		return nil, err
 	}
@@ -181,23 +157,18 @@ func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash s
 }
 
 func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserExists := `UPDATE public."user"	SET email=$1 WHERE id=$2 RETURNING id, email;`
-	childLogger.Infof(`UPDATE public."user"	SET email=%s WHERE id=%s RETURNING id, email;`, email, id)
+
+	logging.LogInfo(logger, "UPDATE user")
+
 	userLine := tx.QueryRow(ctx, SQLUserExists, email, id)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email); err != nil {
-		childLogger.Errorf("Error while scanning edit user email, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("error while scanning edit user email, err=%v", err))
 
 		return nil, err
 	}
@@ -206,14 +177,7 @@ func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint
 }
 
 func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var user *models.User
 
@@ -225,7 +189,7 @@ func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email str
 	})
 
 	if err != nil {
-		childLogger.Errorf("Something went wrong while editing user profile , err=%v", errUserNotExists)
+		logging.LogError(logger, fmt.Errorf("something went wrong while editing user profile , err=%v", errUserNotExists))
 
 		return nil, errUserNotExists
 	}
@@ -234,23 +198,18 @@ func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email str
 }
 
 func (active *UserStorage) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserByEmail := `SELECT id, email, password_hash	FROM public."user" where email = $1 `
-	childLogger.Infof(`SELECT id, email, password_hash	FROM public."user" where email = %s`, email)
+
+	logging.LogInfo(logger, "SELECT FROM user")
+
 	userLine := tx.QueryRow(ctx, SQLUserByEmail, email)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		childLogger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%v", err))
 
 		return nil, err
 	}
@@ -260,16 +219,9 @@ func (active *UserStorage) getUserByEmail(ctx context.Context, tx pgx.Tx, email 
 
 // НЕ ПРОТЕСТИРОВАНО
 func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	var user *models.User
-
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByEmail(ctx, tx, email)
@@ -279,7 +231,8 @@ func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*m
 	})
 
 	if err != nil {
-		childLogger.Errorf("Something went wrong while getting user by email from seq, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%v", err))
+
 		return nil, errUserNotExists
 	}
 
@@ -287,23 +240,19 @@ func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*m
 }
 
 func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserById := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
-	childLogger.Infof(`SELECT id, email, password_hash	FROM public."user" where id = %s`, id)
+
+	logging.LogInfo(logger, "SELECT FROM user")
+
 	userLine := tx.QueryRow(ctx, SQLUserById, id)
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		childLogger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%v", err))
+
 		return nil, err
 	}
 
@@ -312,16 +261,9 @@ func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) 
 
 // НЕ ПРОТЕСТИРОВАНО
 func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	var user *models.User
-
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.getUserByID(ctx, tx, userID)
@@ -331,7 +273,8 @@ func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*model
 	})
 
 	if err != nil {
-		childLogger.Errorf("Something went wrong while getting user by id from seq, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%v", err))
+
 		return nil, errUserNotExists
 	}
 
@@ -340,14 +283,7 @@ func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*model
 
 // НЕ ПРОТЕСТИРОВАНО
 func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	active.sessionList.Mux.Lock()
 	defer active.sessionList.Mux.Unlock()
@@ -364,7 +300,8 @@ func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID strin
 	})
 
 	if err != nil {
-		childLogger.Errorf("Something went wrong while getting user by session from seq, err=%v", err)
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by session from seq, err=%v", err))
+
 		return nil, errUserNotExists
 	}
 
@@ -389,17 +326,10 @@ func (active *UserStorage) AddSession(id uint) string {
 }
 
 func (active *UserStorage) RemoveSession(ctx context.Context, sessionID string) error {
-	requestUUID, ok := ctx.Value("requestUUID").(string)
-	if !ok {
-		requestUUID = "unknow"
-	}
-
-	childLogger := active.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	if !active.SessionExists(sessionID) {
-		childLogger.Errorf("Something went wrong while removing session STILL MAP, err=%v", errSessionNotExists)
+		logging.LogError(logger, fmt.Errorf("something went wrong while removing session from MAP, err=%v", errSessionNotExists))
 
 		return errSessionNotExists
 	}

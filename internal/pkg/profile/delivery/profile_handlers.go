@@ -1,13 +1,12 @@
 package delivery
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
@@ -17,6 +16,7 @@ import (
 	profileusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
 type ProfileHandler struct {
@@ -39,20 +39,14 @@ func NewProfileHandler(storage profileusecases.ProfileStorageInterface, userStor
 }
 
 func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := h.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	vars := mux.Vars(request)
 
@@ -60,7 +54,7 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 
 	p, err := h.storage.GetProfileByUserID(ctx, uint(id))
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -68,24 +62,19 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
 }
 
 func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := h.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	userStorage := h.userStorage
 	storage := h.storage
@@ -93,7 +82,10 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !userStorage.SessionExists(session.Value) {
-		childLogger.Info("User not authorized")
+		if err == nil {
+			err = errors.New("no such cookie in userStorage")
+		}
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -107,7 +99,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		childLogger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -115,7 +107,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	p, err := storage.SetProfileCity(ctx, user.ID, data)
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -123,6 +115,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
 }
 
@@ -173,20 +166,14 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 // }
 
 func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := h.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	userStorage := h.userStorage
 	storage := h.storage
@@ -194,7 +181,10 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !userStorage.SessionExists(session.Value) {
-		childLogger.Info("User not authorized")
+		if err == nil {
+			err = errors.New("no such cookie in userStorage")
+		}
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -208,7 +198,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	err = json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
-		childLogger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -216,7 +206,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	p, err := storage.SetProfilePhone(ctx, user.ID, data)
 	if err != nil {
-		childLogger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -224,24 +214,19 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewProfileOkResponse(p))
 }
 
 func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodPost {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
-
-	ctx := request.Context()
-	requestUUID := uuid.New().String()
-
-	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-	childLogger := h.logger.With(
-		zap.String("requestUUID", requestUUID),
-	)
 
 	userStorage := h.userStorage
 	storage := h.storage
@@ -249,7 +234,10 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	session, err := request.Cookie("session_id")
 
 	if err != nil || !userStorage.SessionExists(session.Value) {
-		childLogger.Info("User not authorized")
+		if err == nil {
+			err = errors.New("no such cookie in userStorage")
+		}
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println("User not authorized")
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
@@ -261,7 +249,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	err = request.ParseMultipartForm(2 << 20)
 	if err != nil {
-		childLogger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
@@ -289,6 +277,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewProfileOkResponse(pl))
 }
 

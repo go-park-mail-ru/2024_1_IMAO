@@ -7,6 +7,7 @@ import (
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"go.uber.org/zap"
 )
 
@@ -27,17 +28,18 @@ func NewCityHandler(storage cityusecases.CityStorageInterface, addrOrigin string
 }
 
 func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	if request.Method != http.MethodGet {
 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
 		return
 	}
 
-	ctx := request.Context()
-
 	city, err := h.storage.GetCityList(ctx)
 	if err != nil {
-		h.logger.Error(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
@@ -45,5 +47,6 @@ func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewCityListOkResponse(city))
 }
