@@ -206,6 +206,8 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, advertID uint, city, ca
 		}
 	}
 
+	advertsList.Advert.Sanitize()
+
 	return advertsList, nil
 }
 
@@ -262,6 +264,8 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 
 			return nil, err
 		}
+
+		returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -347,6 +351,8 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 
 			return nil, err
 		}
+
+		returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -512,6 +518,9 @@ func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, us
 				Photos:    num.Photos,
 				PhotosIMG: num.PhotosIMG,
 			}
+
+			returningAdInList.Sanitize()
+
 			advertsList = append(advertsList, &returningAdInList)
 		}
 
@@ -623,6 +632,8 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 			return nil, err
 		}
 	}
+
+	advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -872,6 +883,8 @@ func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.Fil
 			return nil, err
 		}
 	}
+
+	advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }

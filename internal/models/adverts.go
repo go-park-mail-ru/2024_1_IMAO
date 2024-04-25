@@ -3,6 +3,8 @@ package models
 import (
 	"sync"
 	"time"
+
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -80,29 +82,15 @@ type ReturningAdvertList struct {
 	Mux         sync.RWMutex
 }
 
-// type AdvertDB struct {
-// 	ID          uint      `json:"id"`
-// 	UserID      uint      `json:"userId"`
-// 	CityID      uint      `json:"cityId"`
-// 	CategoryID  uint      `json:"categoryId"`
-// 	Title       string    `json:"title"`
-// 	Description string    `json:"description"`
-// 	Price       uint      `json:"price"`
-// 	CreatedTime time.Time `json:"created"`
-// 	ClosedTime  time.Time `json:"closed"`
-// 	Active      bool      `json:"active"`
-// 	IsUsed      bool      `json:"isUsed"`
-// 	StatusID    uint      `json:"statusID"`
-// }
+func (adv *Advert) Sanitize() {
+	sanitizer := bluemonday.UGCPolicy()
 
-// type ReturningAdvertDB struct {
-// 	Advert   Advert   `json:"advert"`
-// 	City     City     `json:"city"`
-// 	Category Category `json:"category"`
-// 	Status   Status   `json:"status"`
-// }
+	adv.Title = sanitizer.Sanitize(adv.Title)
+	adv.Description = sanitizer.Sanitize(adv.Description)
+}
 
-// type ReturningAdvertDBList struct {
-// 	AdvertItems []*ReturningAdvertDB
-// 	Mux       sync.RWMutex
-// }
+func (advl *ReturningAdInList) Sanitize() {
+	sanitizer := bluemonday.UGCPolicy()
+
+	advl.Title = sanitizer.Sanitize(advl.Title)
+}

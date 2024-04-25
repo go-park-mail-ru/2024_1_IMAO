@@ -3,6 +3,8 @@ package models
 import (
 	"sync"
 	"time"
+
+	"github.com/microcosm-cc/bluemonday"
 )
 
 type Profile struct {
@@ -76,4 +78,13 @@ type EditProfileNec struct {
 	MerchantsName string `json:"merchantsName"`
 	SubersCount   int    `json:"subersCount"`
 	SubonsCount   int    `json:"subonsCount"`
+}
+
+func (prof *Profile) Sanitize() {
+	sanitizer := bluemonday.UGCPolicy()
+
+	prof.Name = sanitizer.Sanitize(prof.Name)
+	prof.Surname = sanitizer.Sanitize(prof.Surname)
+	prof.MerchantsName = sanitizer.Sanitize(prof.MerchantsName)
+	prof.Phone = sanitizer.Sanitize(prof.Phone)
 }

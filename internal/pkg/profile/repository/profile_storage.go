@@ -86,6 +86,8 @@ func (pl *ProfileStorage) CreateProfile(ctx context.Context, userID uint) *model
 		return nil
 	}
 
+	profile.Sanitize()
+
 	return &profile
 }
 
@@ -198,6 +200,8 @@ func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, userID uint) (
 		return nil, err
 	}
 
+	profile.Sanitize()
+
 	return profile, nil
 }
 
@@ -288,6 +292,8 @@ func (pl *ProfileStorage) SetProfileCity(ctx context.Context, userID uint, data 
 		return nil, err
 	}
 
+	profile.Sanitize()
+
 	return profile, nil
 }
 
@@ -377,6 +383,8 @@ func (pl *ProfileStorage) SetProfilePhone(ctx context.Context, userID uint, data
 
 		return nil, err
 	}
+
+	profile.Sanitize()
 
 	return profile, nil
 }
@@ -574,6 +582,8 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint, file 
 
 		return nil, err
 	}
+
+	profile.Sanitize()
 
 	return profile, nil
 }
