@@ -6,6 +6,8 @@ import (
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 
+	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
+
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
 	citydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/delivery"
@@ -32,6 +34,8 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 	profileStorage profusecases.ProfileStorageInterface, userStorage authusecases.UsersStorageInterface) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware)
+	logMiddleware := createLogMiddleware.CreateLogMiddleware(logger)
+	router.Use(logMiddleware)
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
 

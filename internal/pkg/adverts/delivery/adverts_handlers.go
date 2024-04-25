@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
@@ -62,6 +62,10 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	ctx := request.Context()
 	requestUUID := uuid.New().String()
 
+	loggerA := utils.GetLoggerFromContext(ctx).With(zap.String("func", utils.GFN()))
+
+	utils.LogHandlerInfo(loggerA, http.StatusBadRequest, "aboba")
+
 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
 
 	childLogger := advertsHandler.logger.With(
@@ -78,11 +82,6 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	startID, errstartID := strconv.Atoi(request.URL.Query().Get("startId"))
 	userID, errUser := strconv.Atoi(request.URL.Query().Get("userId"))
 	deleted, errdeleted := strconv.Atoi(request.URL.Query().Get("deleted"))
-
-	fmt.Println("errCount", errCount)
-	fmt.Println("errstartID", errstartID)
-	fmt.Println("errUser", errUser)
-	fmt.Println("errdeleted", errdeleted)
 
 	if city == "" && request.URL.Query().Get("city") != "" {
 		city = request.URL.Query().Get("city")
