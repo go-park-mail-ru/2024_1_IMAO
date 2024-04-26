@@ -17,6 +17,11 @@ type AuthErrResponse struct {
 	Status string `json:"status"`
 }
 
+type SessionOKResponse struct {
+	Code      int    `json:"code"`
+	TokenBody string `json:"tokenBody"`
+}
+
 type ValidationErrResponse struct {
 	Code   int      `json:"code"`
 	Status []string `json:"status"`
@@ -42,5 +47,12 @@ func NewValidationErrResponse(code int, status []string) *ValidationErrResponse 
 	return &ValidationErrResponse{
 		Code:   code,
 		Status: status,
+	}
+}
+
+func NewSessionOkResponse(tokenBody string) *SessionOKResponse {
+	return &SessionOKResponse{
+		Code:      responses.StatusOk,
+		TokenBody: tokenBody,
 	}
 }

@@ -56,17 +56,22 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 
 	log.Println("Server is running")
 
-	subrouter := router.PathPrefix("/api/adverts").Subrouter()
-	subrouter.Use(AuthCheckMiddleware)
-	subrouter.Use(csrfMiddleware)
-	subrouter.HandleFunc("/create", advertsHandler.CreateAdvert).Methods("POST")
+	subrouterAdvertsCreate := router.PathPrefix("/api/adverts").Subrouter()
+	subrouterAdvertsCreate.Use(AuthCheckMiddleware)
+	subrouterAdvertsCreate.Use(csrfMiddleware)
+	subrouterAdvertsCreate.HandleFunc("/create", advertsHandler.CreateAdvert).Methods("POST")
 
-	subrouter2 := router.PathPrefix("/api/auth").Subrouter()
-	subrouter2.Use(AuthCheckMiddleware)
-	subrouter2.HandleFunc("/csrf", authHandler.GetCSRFToken).Methods("GET")
+	subrouterAuthCSRF := router.PathPrefix("/api/auth").Subrouter()
+	subrouterAuthCSRF.Use(AuthCheckMiddleware)
+	subrouterAuthCSRF.HandleFunc("/csrf", authHandler.GetCSRFToken).Methods("GET")
+
+	subrouterAdvertsEdit := router.PathPrefix("/api/adverts").Subrouter()
+	subrouterAdvertsEdit.Use(AuthCheckMiddleware)
+	subrouterAdvertsEdit.Use(csrfMiddleware)
+	subrouterAdvertsEdit.HandleFunc("/edit", advertsHandler.EditAdvert).Methods("POST")
 
 	//router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
-	router.HandleFunc("/api/adverts/edit", advertsHandler.EditAdvert)
+	//router.HandleFunc("/api/adverts/edit", advertsHandler.EditAdvert)
 	router.HandleFunc("/api/adverts/", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z_]+}", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList)

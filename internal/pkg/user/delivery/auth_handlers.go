@@ -439,5 +439,5 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 	fmt.Printf("Сгенерированный токен: %s\n", token)
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, token)
+	responses.SendOkResponse(writer, NewSessionOkResponse(token))
 }
