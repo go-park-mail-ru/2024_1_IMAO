@@ -24,3 +24,12 @@ type SessionList struct {
 	Sessions map[string]uint
 	Mux      sync.RWMutex
 }
+
+type CSRFToken struct {
+	TokenBody string
+}
+
+type Session struct {
+	UserID uint32
+	Value  string
+}

@@ -1,0 +1,3 @@
+csrf:
+    csrf_cookie: Vol40kCSRF
+    csrf_lifetime: 36h0m0s

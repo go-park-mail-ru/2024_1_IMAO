@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
+	csrf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 
@@ -393,4 +395,67 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, "", true))
 
 	log.Println("User", user.Email, "successfully changed his authorization data.")
+}
+
+func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	// storage := authHandler.storage
+
+	// session, err := request.Cookie("session_id")
+
+	// if err != nil || !storage.SessionExists(session.Value) {
+	// 	if err == nil {
+	// 		err = errors.New("no such cookie in userStorage")
+	// 	}
+	// 	logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
+	// 	log.Println("User not authorized")
+	// 	responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
+	// 		responses.ErrUnauthorized))
+
+	// 	return
+	// }
+
+	//user, _ := storage.GetUserBySession(ctx, session.Value)
+
+	//userID := storage.MAP_GetUserIDBySession(session.Value)
+
+	sessionInstance2, ok := ctx.Value(config.SessionContextKey).(models.Session)
+	if !ok {
+		sessionInstance2 = models.Session{}
+	}
+
+	secret := "Vol4okSecretKey"
+	hashToken, err := csrf.NewHMACHashToken(secret)
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	// sessionInstance := models.Session{
+	// 	UserID: uint32(userID),
+	// 	Value:  session.Value,
+	// }
+
+	tokenExpTime := time.Now().Add(24 * time.Hour).Unix()
+	token, err := hashToken.Create(&sessionInstance2, tokenExpTime)
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+	fmt.Printf("Сгенерированный токен: %s\n", token)
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, token)
 }

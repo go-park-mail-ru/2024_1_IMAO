@@ -308,6 +308,12 @@ func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID strin
 	return user, nil
 }
 
+func (active *UserStorage) MAP_GetUserIDBySession(sessionID string) uint {
+	userID := active.sessionList.Sessions[sessionID]
+
+	return userID
+}
+
 func (active *UserStorage) SessionExists(sessionID string) bool {
 	_, exists := active.sessionList.Sessions[sessionID]
 

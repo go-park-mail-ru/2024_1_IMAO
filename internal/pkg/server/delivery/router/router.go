@@ -6,6 +6,8 @@ import (
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 
+	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
+	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
@@ -36,6 +38,9 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 	router.Use(recoveryMiddleware)
 	logMiddleware := createLogMiddleware.CreateLogMiddleware(logger)
 	router.Use(logMiddleware)
+	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()
+	//router.Use(csrfMiddleware)
+	AuthCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(userStorage)
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
 
@@ -51,7 +56,15 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 
 	log.Println("Server is running")
 
-	router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
+	subrouter := router.PathPrefix("/api/adverts").Subrouter()
+	subrouter.Use(csrfMiddleware)
+	subrouter.HandleFunc("/create", advertsHandler.CreateAdvert).Methods("POST")
+
+	subrouter2 := router.PathPrefix("/api/auth").Subrouter()
+	subrouter2.Use(AuthCheckMiddleware)
+	subrouter2.HandleFunc("/csrf", authHandler.GetCSRFToken).Methods("GET")
+
+	//router.HandleFunc("/api/adverts/create", advertsHandler.CreateAdvert)
 	router.HandleFunc("/api/adverts/edit", advertsHandler.EditAdvert)
 	router.HandleFunc("/api/adverts/", advertsHandler.GetAdsList)
 	router.HandleFunc("/api/adverts/{city:[a-zA-Z_]+}", advertsHandler.GetAdsList)
@@ -66,6 +79,7 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 	router.HandleFunc("/api/auth/logout", authHandler.Logout)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup)
 	router.HandleFunc("/api/auth/edit/email", authHandler.EditUserEmail)
+	//router.HandleFunc("/api/auth/csrf", authHandler.GetCSRFToken)
 
 	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
 	//router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)

@@ -20,4 +20,6 @@ type UsersStorageInterface interface {
 	SessionExists(sessionID string) bool
 	AddSession(email uint) string
 	RemoveSession(ctx context.Context, sessionID string) error
+
+	MAP_GetUserIDBySession(sessionID string) uint
 }
