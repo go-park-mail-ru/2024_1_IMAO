@@ -407,33 +407,18 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 		return
 	}
 
-	// storage := authHandler.storage
-
-	// session, err := request.Cookie("session_id")
-
-	// if err != nil || !storage.SessionExists(session.Value) {
-	// 	if err == nil {
-	// 		err = errors.New("no such cookie in userStorage")
-	// 	}
-	// 	logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-	// 	log.Println("User not authorized")
-	// 	responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
-	// 		responses.ErrUnauthorized))
-
-	// 	return
-	// }
-
-	//user, _ := storage.GetUserBySession(ctx, session.Value)
-
-	//userID := storage.MAP_GetUserIDBySession(session.Value)
-
-	sessionInstance2, ok := ctx.Value(config.SessionContextKey).(models.Session)
+	sessionInstance, ok := ctx.Value(config.SessionContextKey).(models.Session)
 	if !ok {
-		sessionInstance2 = models.Session{}
+		err := errors.New("error while getting sessionInstance from context")
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
 	}
 
 	secret := "Vol4okSecretKey"
 	hashToken, err := csrf.NewHMACHashToken(secret)
+
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -441,13 +426,10 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 			responses.ErrInternalServer))
 	}
 
-	// sessionInstance := models.Session{
-	// 	UserID: uint32(userID),
-	// 	Value:  session.Value,
-	// }
+	fmt.Printf("ID сессии: %s\n", sessionInstance.Value)
 
 	tokenExpTime := time.Now().Add(24 * time.Hour).Unix()
-	token, err := hashToken.Create(&sessionInstance2, tokenExpTime)
+	token, err := hashToken.Create(&sessionInstance, tokenExpTime)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)

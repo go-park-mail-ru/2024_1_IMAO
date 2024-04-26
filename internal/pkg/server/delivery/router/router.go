@@ -57,6 +57,7 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 	log.Println("Server is running")
 
 	subrouter := router.PathPrefix("/api/adverts").Subrouter()
+	subrouter.Use(AuthCheckMiddleware)
 	subrouter.Use(csrfMiddleware)
 	subrouter.HandleFunc("/create", advertsHandler.CreateAdvert).Methods("POST")
 

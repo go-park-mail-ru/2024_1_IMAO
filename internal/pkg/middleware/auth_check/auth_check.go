@@ -3,8 +3,6 @@ package authcheck
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log"
 
 	"net/http"
 
@@ -12,7 +10,6 @@ import (
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	authudel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	authusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
@@ -27,15 +24,12 @@ func CreateAuthCheckMiddleware(storage authusecases.UsersStorageInterface) mux.M
 			logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 			session, err := request.Cookie("session_id")
 
-			fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-
 			if err != nil || !storage.SessionExists(session.Value) {
 				if err == nil {
 					err = errors.New("no such cookie in userStorage")
 				}
 				logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-				log.Println("User not authorized")
-				responses.SendErrResponse(writer, authudel.NewAuthErrResponse(responses.StatusUnauthorized,
+				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusUnauthorized,
 					responses.ErrUnauthorized))
 
 				return

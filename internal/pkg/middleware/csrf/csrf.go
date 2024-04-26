@@ -4,14 +4,17 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
+	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	"go.uber.org/zap"
 
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/gorilla/mux"
@@ -62,22 +65,36 @@ func (tk *HashToken) Check(s *models.Session, inputToken string) (bool, error) {
 
 func CreateCsrfMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			csrfLogger := logging.GetLoggerFromContext(r.Context()).With(slog.String("func", logging.GetFunctionName()))
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			ctx := request.Context()
+			logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 			secret := "Vol4okSecretKey"
 			hashToken, err := NewHMACHashToken(secret)
 
-			session := models.Session{}
+			sessionInstance, ok := ctx.Value(config.SessionContextKey).(models.Session)
+			if !ok {
+				err := errors.New("error while getting sessionInstance from context")
+				logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+					responses.ErrInternalServer))
 
-			inputToken := r.PostFormValue("CSRFToken")
-			isValid, err := hashToken.Check(&session, inputToken)
-			if err != nil || !isValid {
-				logging.LogInfo(csrfLogger, "csrf is not valid")
+				return
 			}
 
-			logging.LogInfo(csrfLogger, "success")
-			next.ServeHTTP(w, r)
+			inputToken := request.PostFormValue("CSRFToken")
+			isValid, err := hashToken.Check(&sessionInstance, inputToken)
+			if err != nil || !isValid {
+				logging.LogInfo(logger, "csrf is not valid")
+				logging.LogHandlerError(logger, err, responses.StatusForbidden)
+				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusForbidden,
+					responses.ErrForbidden))
+
+				return
+			}
+
+			logging.LogInfo(logger, "success")
+			next.ServeHTTP(writer, request)
 		})
 	}
 }

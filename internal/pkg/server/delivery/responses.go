@@ -63,3 +63,15 @@ func SendErrResponse(writer http.ResponseWriter, response any) {
 	writer.Header().Set("Content-Type", "application/json")
 	sendResponse(writer, response)
 }
+
+type ErrResponse struct {
+	Code   int    `json:"code"`
+	Status string `json:"status"`
+}
+
+func NewErrResponse(code int, status string) *ErrResponse {
+	return &ErrResponse{
+		Code:   code,
+		Status: status,
+	}
+}
