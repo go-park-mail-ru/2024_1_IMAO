@@ -87,13 +87,28 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger, advertStorage advu
 	router.HandleFunc("/api/auth/edit/email", authHandler.EditUserEmail)
 	//router.HandleFunc("/api/auth/csrf", authHandler.GetCSRFToken)
 
+	subrouterProfileEdit := router.PathPrefix("/api/profile").Subrouter()
+	subrouterProfileEdit.Use(AuthCheckMiddleware)
+	subrouterProfileEdit.Use(csrfMiddleware)
+	subrouterProfileEdit.HandleFunc("/edit", profileHandler.EditProfile).Methods("POST")
+
+	subrouterProfilePhone := router.PathPrefix("/api/profile").Subrouter()
+	subrouterProfilePhone.Use(AuthCheckMiddleware)
+	//subrouterProfilePhone.Use(csrfMiddleware)
+	subrouterProfilePhone.HandleFunc("/phone", profileHandler.SetProfilePhone).Methods("POST")
+
+	subrouterProfileCity := router.PathPrefix("/api/profile").Subrouter()
+	subrouterProfileCity.Use(AuthCheckMiddleware)
+	//subrouterProfileCity.Use(csrfMiddleware)
+	subrouterProfileCity.HandleFunc("/city", profileHandler.SetProfileCity).Methods("POST")
+
 	router.HandleFunc("/api/profile/{id:[0-9]+}", profileHandler.GetProfile)
 	//router.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
 	//router.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
-	router.HandleFunc("/api/profile/edit", profileHandler.EditProfile)
+	//router.HandleFunc("/api/profile/edit", profileHandler.EditProfile)
 	//router.HandleFunc("/api/profile/set", profileHandler.SetProfile)
-	router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
-	router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
+	//router.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
+	//router.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 
 	router.HandleFunc("/api/city", cityHandler.GetCityList)
 
