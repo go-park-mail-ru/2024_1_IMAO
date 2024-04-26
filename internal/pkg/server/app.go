@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
+	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
-	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/router"
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
 
