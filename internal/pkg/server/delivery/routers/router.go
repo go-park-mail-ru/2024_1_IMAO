@@ -1,11 +1,12 @@
 package routers
 
 import (
+	"log"
+
 	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
 	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
-	"log"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
@@ -47,7 +48,7 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger,
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
 	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage, plug, plug, logger)
-	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug, logger)
+	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug)
 	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage, plug, plug, logger)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage, plug, plug, logger)
 	cityHandler := citydel.NewCityHandler(cityStorage, plug, plug, logger)

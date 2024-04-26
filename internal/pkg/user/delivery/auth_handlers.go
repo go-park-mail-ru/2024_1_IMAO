@@ -31,17 +31,15 @@ type AuthHandler struct {
 	profileStorage profusecases.ProfileStorageInterface
 	addrOrigin     string
 	schema         string
-	logger         *zap.SugaredLogger
 }
 
 func NewAuthHandler(storage userusecases.UsersStorageInterface, profileStorage profusecases.ProfileStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *AuthHandler {
+	addrOrigin string, schema string) *AuthHandler {
 	return &AuthHandler{
 		storage:        storage,
 		profileStorage: profileStorage,
 		addrOrigin:     addrOrigin,
 		schema:         schema,
-		logger:         logger,
 	}
 }
 

@@ -1,6 +1,8 @@
 package delivery_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,24 +10,87 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
-
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
+	models "github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	mock_profile "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/mocks"
+	delivery "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+	mock_user "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/mocks"
+	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 )
 
-func TestHandler_Login(t *testing.T) {
-	authHandler := &authdel.AuthHandler{
-		UsersList: &authrepo.UsersListWrapper{
-			UsersList: ,
-			Pool:      ,
-			Logger:    ,
-		},
-		
-		
-	}
+// func TestHandler_Login(t *testing.T) {
 
-	
+// }
+
+const plug = ""
+
+func TestLogin(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	usersStorageInterface := mock_user.NewMockUsersStorageInterface(ctrl)
+	profileStorageInterface := mock_profile.NewMockProfileStorageInterface(ctrl)
+	defer ctrl.Finish()
+
+	authHandler := delivery.NewAuthHandler(usersStorageInterface, profileStorageInterface, plug, plug)
+	mockResponseWriter := httptest.NewRecorder()
+
+	// Создаем экземпляр AuthHandler с моком storage
+
+	// Подготовка тестовых данных
+	testUser := models.UnauthorizedUser{
+		Email:    "test@example.com",
+		Password: "password",
+	}
+	testUserJSON, _ := json.Marshal(testUser)
+	request, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(testUserJSON))
+	request.Header.Set("Content-Type", "application/json")
+
+	// Настройка мока для GetUserByEmail
+	usersStorageInterface.EXPECT().GetUserByEmail(gomock.Any(), testUser.Email).Return(&models.User{
+		ID:           1,
+		Email:        "test@example.com",
+		PasswordHash: utils.HashPassword("password"), //
+	}, nil)
+	usersStorageInterface.EXPECT().AddSession(uint(1)).Return("session_id")
+	//usersStorageInterface.EXPECT().AddSession(100).Return()
+
+	// Настройка мока для AddSession
+	//mockStorage.EXPECT().AddSession(gomock.Any()).Return("session_id", nil)
+
+	// Вызов функции Login
+	authHandler.Login(mockResponseWriter, request)
+
+	// Проверка ответа
+	assert.Equal(t, http.StatusOK, mockResponseWriter.Code)
+	// Здесь можно добавить дополнительные проверки, например, содержимое ответа
 }
+
+// func TestLogout(t *testing.T) {
+// 	ctrl := gomock.NewController(t)
+// 	usersStorageInterface := mock_user.NewMockUsersStorageInterface(ctrl)
+// 	//profileStorageInterface := mock_profile.NewMockProfileStorageInterface(ctrl)
+// 	defer ctrl.Finish()
+
+// 	//mockResponseWriter := httptest.NewRecorder()
+
+// 	// Создаем экземпляр AuthHandler с моком storage
+// 	//authHandler := delivery.NewAuthHandler(usersStorageInterface, profileStorageInterface, plug, plug)
+
+// 	// Подготовка тестового запроса
+// 	//request, _ := http.NewRequest("POST", "/logout", nil)
+// 	//request.AddCookie(&http.Cookie{Name: "session_id", Value: "test_session_id"})
+
+// 	// Настройка мока для RemoveSession
+// 	usersStorageInterface.EXPECT().RemoveSession(gomock.Any(), "test_session_id").Return(nil)
+
+// 	// Вызов функции Logout
+// 	//authHandler.Logout(mockResponseWriter, request)
+
+// 	// Проверка ответа
+// 	//assert.Equal(t, http.StatusOK, mockResponseWriter.Code)
+// 	// Проверка, что cookie был установлен с датой истечения
+// 	//cookies := mockResponseWriter.Header().Get("Set-Cookie")
+// 	//assert.Contains(t, cookies, "session_id=; expires=")
+// 	// Здесь можно добавить дополнительные проверки, например, содержимое ответа
+// }
 
 // func TestLoginHandlerSuccessful(t *testing.T) { //nolint:funlen
 // 	t.Parallel()

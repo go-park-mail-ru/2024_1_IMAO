@@ -12,45 +12,45 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockUsersInfo is a mock of UsersInfo interface.
-type MockUsersInfo struct {
+// MockUsersStorageInterface is a mock of UsersStorageInterface interface.
+type MockUsersStorageInterface struct {
 	ctrl     *gomock.Controller
-	recorder *MockUsersInfoMockRecorder
+	recorder *MockUsersStorageInterfaceMockRecorder
 }
 
-// MockUsersInfoMockRecorder is the mock recorder for MockUsersInfo.
-type MockUsersInfoMockRecorder struct {
-	mock *MockUsersInfo
+// MockUsersStorageInterfaceMockRecorder is the mock recorder for MockUsersStorageInterface.
+type MockUsersStorageInterfaceMockRecorder struct {
+	mock *MockUsersStorageInterface
 }
 
-// NewMockUsersInfo creates a new mock instance.
-func NewMockUsersInfo(ctrl *gomock.Controller) *MockUsersInfo {
-	mock := &MockUsersInfo{ctrl: ctrl}
-	mock.recorder = &MockUsersInfoMockRecorder{mock}
+// NewMockUsersStorageInterface creates a new mock instance.
+func NewMockUsersStorageInterface(ctrl *gomock.Controller) *MockUsersStorageInterface {
+	mock := &MockUsersStorageInterface{ctrl: ctrl}
+	mock.recorder = &MockUsersStorageInterfaceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUsersInfo) EXPECT() *MockUsersInfoMockRecorder {
+func (m *MockUsersStorageInterface) EXPECT() *MockUsersStorageInterfaceMockRecorder {
 	return m.recorder
 }
 
 // AddSession mocks base method.
-func (m *MockUsersInfo) AddSession(email uint) string {
+func (m *MockUsersStorageInterface) AddSession(id uint) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddSession", email)
+	ret := m.ctrl.Call(m, "AddSession", id)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // AddSession indicates an expected call of AddSession.
-func (mr *MockUsersInfoMockRecorder) AddSession(email interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) AddSession(id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSession", reflect.TypeOf((*MockUsersInfo)(nil).AddSession), email)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSession", reflect.TypeOf((*MockUsersStorageInterface)(nil).AddSession), id)
 }
 
 // CreateUser mocks base method.
-func (m *MockUsersInfo) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+func (m *MockUsersStorageInterface) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", ctx, email, passwordHash)
 	ret0, _ := ret[0].(*models.User)
@@ -59,28 +59,28 @@ func (m *MockUsersInfo) CreateUser(ctx context.Context, email, passwordHash stri
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockUsersInfoMockRecorder) CreateUser(ctx, email, passwordHash interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) CreateUser(ctx, email, passwordHash interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUsersInfo)(nil).CreateUser), ctx, email, passwordHash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUsersStorageInterface)(nil).CreateUser), ctx, email, passwordHash)
 }
 
-// EditUser mocks base method.
-func (m *MockUsersInfo) EditUser(id uint, email, passwordHash string) (*models.User, error) {
+// EditUserEmail mocks base method.
+func (m *MockUsersStorageInterface) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EditUser", id, email, passwordHash)
+	ret := m.ctrl.Call(m, "EditUserEmail", ctx, id, email)
 	ret0, _ := ret[0].(*models.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EditUser indicates an expected call of EditUser.
-func (mr *MockUsersInfoMockRecorder) EditUser(id, email, passwordHash interface{}) *gomock.Call {
+// EditUserEmail indicates an expected call of EditUserEmail.
+func (mr *MockUsersStorageInterfaceMockRecorder) EditUserEmail(ctx, id, email interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditUser", reflect.TypeOf((*MockUsersInfo)(nil).EditUser), id, email, passwordHash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditUserEmail", reflect.TypeOf((*MockUsersStorageInterface)(nil).EditUserEmail), ctx, id, email)
 }
 
 // GetLastID mocks base method.
-func (m *MockUsersInfo) GetLastID(ctx context.Context) uint {
+func (m *MockUsersStorageInterface) GetLastID(ctx context.Context) uint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLastID", ctx)
 	ret0, _ := ret[0].(uint)
@@ -88,13 +88,13 @@ func (m *MockUsersInfo) GetLastID(ctx context.Context) uint {
 }
 
 // GetLastID indicates an expected call of GetLastID.
-func (mr *MockUsersInfoMockRecorder) GetLastID(ctx interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) GetLastID(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastID", reflect.TypeOf((*MockUsersInfo)(nil).GetLastID), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastID", reflect.TypeOf((*MockUsersStorageInterface)(nil).GetLastID), ctx)
 }
 
 // GetUserByEmail mocks base method.
-func (m *MockUsersInfo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (m *MockUsersStorageInterface) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserByEmail", ctx, email)
 	ret0, _ := ret[0].(*models.User)
@@ -103,13 +103,13 @@ func (m *MockUsersInfo) GetUserByEmail(ctx context.Context, email string) (*mode
 }
 
 // GetUserByEmail indicates an expected call of GetUserByEmail.
-func (mr *MockUsersInfoMockRecorder) GetUserByEmail(ctx, email interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) GetUserByEmail(ctx, email interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByEmail", reflect.TypeOf((*MockUsersInfo)(nil).GetUserByEmail), ctx, email)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByEmail", reflect.TypeOf((*MockUsersStorageInterface)(nil).GetUserByEmail), ctx, email)
 }
 
 // GetUserBySession mocks base method.
-func (m *MockUsersInfo) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
+func (m *MockUsersStorageInterface) GetUserBySession(ctx context.Context, sessionID string) (*models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserBySession", ctx, sessionID)
 	ret0, _ := ret[0].(*models.User)
@@ -118,13 +118,27 @@ func (m *MockUsersInfo) GetUserBySession(ctx context.Context, sessionID string) 
 }
 
 // GetUserBySession indicates an expected call of GetUserBySession.
-func (mr *MockUsersInfoMockRecorder) GetUserBySession(ctx, sessionID interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) GetUserBySession(ctx, sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserBySession", reflect.TypeOf((*MockUsersInfo)(nil).GetUserBySession), ctx, sessionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserBySession", reflect.TypeOf((*MockUsersStorageInterface)(nil).GetUserBySession), ctx, sessionID)
+}
+
+// MAP_GetUserIDBySession mocks base method.
+func (m *MockUsersStorageInterface) MAP_GetUserIDBySession(sessionID string) uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MAP_GetUserIDBySession", sessionID)
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// MAP_GetUserIDBySession indicates an expected call of MAP_GetUserIDBySession.
+func (mr *MockUsersStorageInterfaceMockRecorder) MAP_GetUserIDBySession(sessionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MAP_GetUserIDBySession", reflect.TypeOf((*MockUsersStorageInterface)(nil).MAP_GetUserIDBySession), sessionID)
 }
 
 // RemoveSession mocks base method.
-func (m *MockUsersInfo) RemoveSession(ctx context.Context, sessionID string) error {
+func (m *MockUsersStorageInterface) RemoveSession(ctx context.Context, sessionID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveSession", ctx, sessionID)
 	ret0, _ := ret[0].(error)
@@ -132,13 +146,13 @@ func (m *MockUsersInfo) RemoveSession(ctx context.Context, sessionID string) err
 }
 
 // RemoveSession indicates an expected call of RemoveSession.
-func (mr *MockUsersInfoMockRecorder) RemoveSession(ctx, sessionID interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) RemoveSession(ctx, sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSession", reflect.TypeOf((*MockUsersInfo)(nil).RemoveSession), ctx, sessionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSession", reflect.TypeOf((*MockUsersStorageInterface)(nil).RemoveSession), ctx, sessionID)
 }
 
 // SessionExists mocks base method.
-func (m *MockUsersInfo) SessionExists(sessionID string) bool {
+func (m *MockUsersStorageInterface) SessionExists(sessionID string) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SessionExists", sessionID)
 	ret0, _ := ret[0].(bool)
@@ -146,13 +160,13 @@ func (m *MockUsersInfo) SessionExists(sessionID string) bool {
 }
 
 // SessionExists indicates an expected call of SessionExists.
-func (mr *MockUsersInfoMockRecorder) SessionExists(sessionID interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) SessionExists(sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SessionExists", reflect.TypeOf((*MockUsersInfo)(nil).SessionExists), sessionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SessionExists", reflect.TypeOf((*MockUsersStorageInterface)(nil).SessionExists), sessionID)
 }
 
 // UserExists mocks base method.
-func (m *MockUsersInfo) UserExists(ctx context.Context, email string) bool {
+func (m *MockUsersStorageInterface) UserExists(ctx context.Context, email string) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UserExists", ctx, email)
 	ret0, _ := ret[0].(bool)
@@ -160,7 +174,7 @@ func (m *MockUsersInfo) UserExists(ctx context.Context, email string) bool {
 }
 
 // UserExists indicates an expected call of UserExists.
-func (mr *MockUsersInfoMockRecorder) UserExists(ctx, email interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) UserExists(ctx, email interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserExists", reflect.TypeOf((*MockUsersInfo)(nil).UserExists), ctx, email)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserExists", reflect.TypeOf((*MockUsersStorageInterface)(nil).UserExists), ctx, email)
 }

@@ -13,31 +13,45 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockAdvertsInfo is a mock of AdvertsInfo interface.
-type MockAdvertsInfo struct {
+// MockAdvertsStorageInterface is a mock of AdvertsStorageInterface interface.
+type MockAdvertsStorageInterface struct {
 	ctrl     *gomock.Controller
-	recorder *MockAdvertsInfoMockRecorder
+	recorder *MockAdvertsStorageInterfaceMockRecorder
 }
 
-// MockAdvertsInfoMockRecorder is the mock recorder for MockAdvertsInfo.
-type MockAdvertsInfoMockRecorder struct {
-	mock *MockAdvertsInfo
+// MockAdvertsStorageInterfaceMockRecorder is the mock recorder for MockAdvertsStorageInterface.
+type MockAdvertsStorageInterfaceMockRecorder struct {
+	mock *MockAdvertsStorageInterface
 }
 
-// NewMockAdvertsInfo creates a new mock instance.
-func NewMockAdvertsInfo(ctrl *gomock.Controller) *MockAdvertsInfo {
-	mock := &MockAdvertsInfo{ctrl: ctrl}
-	mock.recorder = &MockAdvertsInfoMockRecorder{mock}
+// NewMockAdvertsStorageInterface creates a new mock instance.
+func NewMockAdvertsStorageInterface(ctrl *gomock.Controller) *MockAdvertsStorageInterface {
+	mock := &MockAdvertsStorageInterface{ctrl: ctrl}
+	mock.recorder = &MockAdvertsStorageInterfaceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockAdvertsInfo) EXPECT() *MockAdvertsInfoMockRecorder {
+func (m *MockAdvertsStorageInterface) EXPECT() *MockAdvertsStorageInterfaceMockRecorder {
 	return m.recorder
 }
 
+// CloseAdvert mocks base method.
+func (m *MockAdvertsStorageInterface) CloseAdvert(ctx context.Context, advertID uint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseAdvert", ctx, advertID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloseAdvert indicates an expected call of CloseAdvert.
+func (mr *MockAdvertsStorageInterfaceMockRecorder) CloseAdvert(ctx, advertID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseAdvert", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).CloseAdvert), ctx, advertID)
+}
+
 // CreateAdvert mocks base method.
-func (m *MockAdvertsInfo) CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+func (m *MockAdvertsStorageInterface) CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAdvert", ctx, files, data)
 	ret0, _ := ret[0].(*models.ReturningAdvert)
@@ -46,13 +60,28 @@ func (m *MockAdvertsInfo) CreateAdvert(ctx context.Context, files []*multipart.F
 }
 
 // CreateAdvert indicates an expected call of CreateAdvert.
-func (mr *MockAdvertsInfoMockRecorder) CreateAdvert(ctx, files, data interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) CreateAdvert(ctx, files, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAdvert", reflect.TypeOf((*MockAdvertsInfo)(nil).CreateAdvert), ctx, files, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAdvert", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).CreateAdvert), ctx, files, data)
+}
+
+// EditAdvert mocks base method.
+func (m *MockAdvertsStorageInterface) EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EditAdvert", ctx, files, data)
+	ret0, _ := ret[0].(*models.ReturningAdvert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EditAdvert indicates an expected call of EditAdvert.
+func (mr *MockAdvertsStorageInterfaceMockRecorder) EditAdvert(ctx, files, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditAdvert", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).EditAdvert), ctx, files, data)
 }
 
 // GetAdvert mocks base method.
-func (m *MockAdvertsInfo) GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error) {
+func (m *MockAdvertsStorageInterface) GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAdvert", ctx, advertID, city, category)
 	ret0, _ := ret[0].(*models.ReturningAdvert)
@@ -61,13 +90,13 @@ func (m *MockAdvertsInfo) GetAdvert(ctx context.Context, advertID uint, city, ca
 }
 
 // GetAdvert indicates an expected call of GetAdvert.
-func (mr *MockAdvertsInfoMockRecorder) GetAdvert(ctx, advertID, city, category interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetAdvert(ctx, advertID, city, category interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvert", reflect.TypeOf((*MockAdvertsInfo)(nil).GetAdvert), ctx, advertID, city, category)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvert", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetAdvert), ctx, advertID, city, category)
 }
 
 // GetAdvertByOnlyByID mocks base method.
-func (m *MockAdvertsInfo) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
+func (m *MockAdvertsStorageInterface) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAdvertByOnlyByID", ctx, advertID)
 	ret0, _ := ret[0].(*models.ReturningAdvert)
@@ -76,13 +105,13 @@ func (m *MockAdvertsInfo) GetAdvertByOnlyByID(ctx context.Context, advertID uint
 }
 
 // GetAdvertByOnlyByID indicates an expected call of GetAdvertByOnlyByID.
-func (mr *MockAdvertsInfoMockRecorder) GetAdvertByOnlyByID(ctx, advertID interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetAdvertByOnlyByID(ctx, advertID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertByOnlyByID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetAdvertByOnlyByID), ctx, advertID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertByOnlyByID", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetAdvertByOnlyByID), ctx, advertID)
 }
 
 // GetAdvertsByCategory mocks base method.
-func (m *MockAdvertsInfo) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (m *MockAdvertsStorageInterface) GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAdvertsByCategory", ctx, category, city, startID, num)
 	ret0, _ := ret[0].([]*models.ReturningAdInList)
@@ -91,13 +120,13 @@ func (m *MockAdvertsInfo) GetAdvertsByCategory(ctx context.Context, category, ci
 }
 
 // GetAdvertsByCategory indicates an expected call of GetAdvertsByCategory.
-func (mr *MockAdvertsInfoMockRecorder) GetAdvertsByCategory(ctx, category, city, startID, num interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetAdvertsByCategory(ctx, category, city, startID, num interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertsByCategory", reflect.TypeOf((*MockAdvertsInfo)(nil).GetAdvertsByCategory), ctx, category, city, startID, num)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertsByCategory", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetAdvertsByCategory), ctx, category, city, startID, num)
 }
 
 // GetAdvertsByCity mocks base method.
-func (m *MockAdvertsInfo) GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (m *MockAdvertsStorageInterface) GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAdvertsByCity", ctx, city, startID, num)
 	ret0, _ := ret[0].([]*models.ReturningAdInList)
@@ -106,79 +135,22 @@ func (m *MockAdvertsInfo) GetAdvertsByCity(ctx context.Context, city string, sta
 }
 
 // GetAdvertsByCity indicates an expected call of GetAdvertsByCity.
-func (mr *MockAdvertsInfoMockRecorder) GetAdvertsByCity(ctx, city, startID, num interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetAdvertsByCity(ctx, city, startID, num interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertsByCity", reflect.TypeOf((*MockAdvertsInfo)(nil).GetAdvertsByCity), ctx, city, startID, num)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertsByCity", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetAdvertsByCity), ctx, city, startID, num)
 }
 
-// GetCategoryID mocks base method.
-func (m *MockAdvertsInfo) GetCategoryID(city string) (uint, error) {
+// GetAdvertsForUserWhereStatusIs mocks base method.
+func (m *MockAdvertsStorageInterface) GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCategoryID", city)
-	ret0, _ := ret[0].(uint)
+	ret := m.ctrl.Call(m, "GetAdvertsForUserWhereStatusIs", ctx, userId, deleted)
+	ret0, _ := ret[0].([]*models.ReturningAdInList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCategoryID indicates an expected call of GetCategoryID.
-func (mr *MockAdvertsInfoMockRecorder) GetCategoryID(city interface{}) *gomock.Call {
+// GetAdvertsForUserWhereStatusIs indicates an expected call of GetAdvertsForUserWhereStatusIs.
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetAdvertsForUserWhereStatusIs(ctx, userId, deleted interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetCategoryID), city)
-}
-
-// GetCityID mocks base method.
-func (m *MockAdvertsInfo) GetCityID(city string) (uint, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCityID", city)
-	ret0, _ := ret[0].(uint)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCityID indicates an expected call of GetCityID.
-func (mr *MockAdvertsInfoMockRecorder) GetCityID(city interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCityID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetCityID), city)
-}
-
-// GetLastAdvertID mocks base method.
-func (m *MockAdvertsInfo) GetLastAdvertID() uint {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLastAdvertID")
-	ret0, _ := ret[0].(uint)
-	return ret0
-}
-
-// GetLastAdvertID indicates an expected call of GetLastAdvertID.
-func (mr *MockAdvertsInfoMockRecorder) GetLastAdvertID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastAdvertID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetLastAdvertID))
-}
-
-// GetLastCategoryID mocks base method.
-func (m *MockAdvertsInfo) GetLastCategoryID() uint {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLastCategoryID")
-	ret0, _ := ret[0].(uint)
-	return ret0
-}
-
-// GetLastCategoryID indicates an expected call of GetLastCategoryID.
-func (mr *MockAdvertsInfoMockRecorder) GetLastCategoryID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastCategoryID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetLastCategoryID))
-}
-
-// GetLastLocationID mocks base method.
-func (m *MockAdvertsInfo) GetLastLocationID() uint {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLastLocationID")
-	ret0, _ := ret[0].(uint)
-	return ret0
-}
-
-// GetLastLocationID indicates an expected call of GetLastLocationID.
-func (mr *MockAdvertsInfoMockRecorder) GetLastLocationID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastLocationID", reflect.TypeOf((*MockAdvertsInfo)(nil).GetLastLocationID))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdvertsForUserWhereStatusIs", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetAdvertsForUserWhereStatusIs), ctx, userId, deleted)
 }

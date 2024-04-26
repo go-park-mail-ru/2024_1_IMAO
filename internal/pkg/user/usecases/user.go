@@ -18,7 +18,7 @@ type UsersStorageInterface interface {
 	EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error)
 
 	SessionExists(sessionID string) bool
-	AddSession(email uint) string
+	AddSession(id uint) string
 	RemoveSession(ctx context.Context, sessionID string) error
 
 	MAP_GetUserIDBySession(sessionID string) uint

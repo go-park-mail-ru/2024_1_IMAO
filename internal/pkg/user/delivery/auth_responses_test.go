@@ -2,29 +2,35 @@ package delivery_test
 
 import (
 	"testing"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	delivery "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 )
 
 func TestNewAuthOkResponse(t *testing.T) {
 	t.Parallel()
 
-	user := storage.User{
+	user := models.User{
 		ID:           2,
-		Name:         "Barak",
-		Surname:      "Obama",
 		Email:        "bigbob@mail.ru",
 		PasswordHash: "111-222-333",
 	}
-	sessionID := "testSessionID"
+	avatar := "imageBytes"
 	isAuth := true
 
-	response := responses.NewAuthOkResponse(user, sessionID, isAuth)
+	response := delivery.NewAuthOkResponse(user, avatar, isAuth)
+
+	if response.User.Email != user.Email {
+		t.Errorf("Expected Code to be %s, got %s", user.Email, response.User.Email)
+	}
 
 	if response.Code != responses.StatusOk {
 		t.Errorf("Expected Code to be %d, got %d", responses.StatusOk, response.Code)
 	}
 
-	if response.SessionID != sessionID {
-		t.Errorf("Expected SessionID to be %s, got %s", sessionID, response.SessionID)
+	if response.Avatar != avatar {
+		t.Errorf("Expected SessionID to be %s, got %s", avatar, response.Avatar)
 	}
 
 	if response.IsAuth != isAuth {
@@ -38,7 +44,7 @@ func TestNewAuthErrResponse(t *testing.T) {
 	code := responses.StatusUnauthorized
 	status := responses.ErrUnauthorized
 
-	response := responses.NewAuthErrResponse(code, status)
+	response := delivery.NewAuthErrResponse(code, status)
 
 	if response.Code != code {
 		t.Errorf("Expected Code to be %d, got %d", code, response.Code)
