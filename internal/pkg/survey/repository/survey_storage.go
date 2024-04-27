@@ -89,6 +89,14 @@ func (survey *SurveyStorage) InsertUserSurvey(ctx context.Context, surveyAnswers
 func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswersList models.SurveyAnswersList) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
+	fail := survey.InsertUserSurvey(ctx, surveyAnswersList)
+
+	if fail != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting UserSurvey, err=%v", fail))
+
+		return fail
+	}
+
 	for i := 0; i < len(surveyAnswersList.Survey); i++ {
 
 		err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
@@ -103,14 +111,6 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 
 			return err
 		}
-	}
-
-	fail := survey.InsertUserSurvey(ctx, surveyAnswersList)
-
-	if fail != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while inserting UserSurvey, err=%v", fail))
-
-		return fail
 	}
 
 	return nil
