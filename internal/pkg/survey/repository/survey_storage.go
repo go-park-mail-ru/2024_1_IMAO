@@ -108,7 +108,8 @@ func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID ui
 	return exists, nil
 }
 
-func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx, surveyInstance *models.Survey) (*models.SurveyResults, error) {
+func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx,
+	surveyInstance *models.Survey) (*models.SurveyResults, error) {
 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -157,7 +158,7 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx, surveyIn
 			return nil, err
 		}
 
-		surveyResults.Results[answerNumber].QuestionResults = append(surveyResults.Results[answerNumber].QuestionResults)
+		surveyResults.Results[answerNumber-1].QuestionResults[answerValue-1] = answerCount
 
 		// if answerNumber == questionNumber {
 		// 	questionResults.QuestionResults = append(questionResults.QuestionResults, answerCount)
