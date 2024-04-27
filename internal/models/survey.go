@@ -11,6 +11,12 @@ type SurveyAnswersList struct {
 	Survey   []*SurveyAnswer `json:"survey"`
 }
 
+type Survey struct {
+	SurveyTitle       string `json:"surveyTitle"`
+	SurveyDescription string `json:"surveyDescription"`
+	QuestionNumber    uint   `json:"questionNumber"`
+}
+
 type SurveyResults struct {
 	SurveyTitle       string             `json:"surveyTitle"`
 	SurveyDescription string             `json:"surveyDescription"`

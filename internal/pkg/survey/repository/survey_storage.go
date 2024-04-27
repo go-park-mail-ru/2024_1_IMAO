@@ -108,7 +108,7 @@ func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID ui
 	return exists, nil
 }
 
-func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models.SurveyResults, error) {
+func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx, surveyInstance *models.Survey) (*models.SurveyResults, error) {
 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -118,7 +118,7 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models
 	GROUP BY answer_num, answer_value
 	ORDER BY answer_num, answer_value;`
 
-	logging.LogInfo(logger, "SELECT FROM advert_image")
+	logging.LogInfo(logger, "SELECT FROM answer")
 
 	rows, err := tx.Query(ctx, SQLGetStatics)
 	if err != nil {
@@ -129,16 +129,22 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models
 	defer rows.Close()
 
 	surveyResults := &models.SurveyResults{
-		SurveyTitle:       "Название опроса",
-		SurveyDescription: "Описание опроса",
-		Results:           nil,
+		SurveyTitle:       surveyInstance.SurveyTitle,
+		SurveyDescription: surveyInstance.SurveyTitle,
+		Results:           make([]*models.QuestionResults, surveyInstance.QuestionNumber),
 	} // ПОТЕНЦИАЛЬНАЯ ПРОБЛЕМА
 
-	var questionNumber uint = 1
-
-	questionResults := &models.QuestionResults{
-		QuestionResults: nil,
+	for i := 0; i < len(surveyResults.Results); i++ {
+		surveyResults.Results[i] = &models.QuestionResults{
+			QuestionResults: make([]uint, 5),
+		}
 	}
+
+	// var questionNumber uint = 1
+
+	// questionResults := &models.QuestionResults{
+	// 	QuestionResults: nil,
+	// }
 
 	for rows.Next() {
 		var answerNumber uint
@@ -151,29 +157,68 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models
 			return nil, err
 		}
 
-		if answerNumber == questionNumber {
-			questionResults.QuestionResults = append(questionResults.QuestionResults, answerCount)
-		} else {
-			surveyResults.Results = append(surveyResults.Results, questionResults)
+		surveyResults.Results[answerNumber].QuestionResults = append(surveyResults.Results[answerNumber].QuestionResults)
 
-			questionResults = &models.QuestionResults{
-				QuestionResults: nil,
-			}
-			questionNumber++
-		}
+		// if answerNumber == questionNumber {
+		// 	questionResults.QuestionResults = append(questionResults.QuestionResults, answerCount)
+		// } else {
+		// 	surveyResults.Results = append(surveyResults.Results, questionResults)
+
+		// 	questionResults = &models.QuestionResults{
+		// 		QuestionResults: nil,
+		// 	}
+		// 	questionNumber++
+		// }
 
 	}
 
 	return surveyResults, nil
 }
 
+func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyId uint) (*models.Survey, error) {
+
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSelectFromSurvey := `SELECT title, description, question_number
+	FROM public.survey WHERE id = $1;`
+
+	logging.LogInfo(logger, "SELECT FROM survey")
+
+	userLine := tx.QueryRow(ctx, SQLSelectFromSurvey, surveyId)
+
+	surveyInstance := &models.Survey{}
+
+	if err := userLine.Scan(&surveyInstance.SurveyTitle, &surveyInstance.SurveyDescription, &surveyInstance.QuestionNumber); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning survey, err=%v", err))
+
+		return nil, err
+	}
+
+	return surveyInstance, nil
+
+}
+
 func (survey *SurveyStorage) GetStatics(ctx context.Context) (*models.SurveyResults, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var surveyResults *models.SurveyResults
+	var surveyInstance *models.Survey
 
 	err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
-		surveyResultsInternal, err := survey.getStatics(ctx, tx)
+		surveyInstanceInternal, err := survey.getSurvey(ctx, tx, 1)
+		surveyInstance = surveyInstanceInternal
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+
+		return nil, err
+	}
+
+	err = pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
+		surveyResultsInternal, err := survey.getStatics(ctx, tx, surveyInstance)
 		surveyResults = surveyResultsInternal
 
 		return err
