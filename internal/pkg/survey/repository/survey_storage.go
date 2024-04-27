@@ -65,31 +65,45 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 	return nil
 }
 
-func (survey *SurveyStorage) selectFromUserSurvey(ctx context.Context, tx pgx.Tx, userID, surveyID uint) error {
+func (survey *SurveyStorage) selectFromUserSurvey(ctx context.Context, tx pgx.Tx, userID, surveyID uint) (bool, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLInsertAnswer := `
-	INSERT INTO public.answer(
-		user_id, survey_id, answer_num, answer_value)
-		VALUES ($1, $2, $3, $4);`
+	SQLSelectFromUserSurvey := `SELECT EXISTS(SELECT 1 FROM public.user_survey WHERE user_id=$1 AND survey_id = $2);`
 
-	logging.LogInfo(logger, "INSERT INTO answer")
+	logging.LogInfo(logger, "SELECT FROM user_survey")
 
-	var err error
+	userLine := tx.QueryRow(ctx, SQLSelectFromUserSurvey, userID, surveyID)
 
-	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID, answerNum, answerValue)
+	var exists bool
 
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertAnswer query, err=%v", err))
+	if err := userLine.Scan(&exists); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning UserSurvey exists, err=%v", err))
 
-		return err
+		return false, err
 	}
 
-	return nil
+	return exists, nil
 }
 
-func (survey *SurveyStorage) GetResults() {
+func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID uint) (bool, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
+	var exists bool
+
+	err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
+		userExists, err := survey.selectFromUserSurvey(ctx, tx, userID, surveyID)
+		exists = userExists
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+
+		return true, err
+	}
+
+	return exists, nil
 }
 
 func (survey *SurveyStorage) GetStatics() {
