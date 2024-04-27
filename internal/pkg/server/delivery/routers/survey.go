@@ -9,6 +9,9 @@ import (
 func ServeSurveyRouter(router *mux.Router, surveyHandler *delivery.SurveyHandler,
 	authCheckMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/survey").Subrouter()
+	subrouter.Use(authCheckMiddleware)
 
-	subrouter.
+	subrouter.HandleFunc("/create", surveyHandler.CreateAnswer).Methods("POST")
+	subrouter.HandleFunc("/statistics", surveyHandler.GetStatistics).Methods("GET")
+	subrouter.HandleFunc("/check", surveyHandler.CheckIfAnswered).Methods("GET")
 }
