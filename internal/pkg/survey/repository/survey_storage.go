@@ -128,14 +128,17 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models
 	}
 	defer rows.Close()
 
-	var surveyResults *models.SurveyResults // ПОТЕНЦИАЛЬНАЯ ПРОБЛЕМА
-
-	surveyResults.SurveyTitle = "Название опроса"
-	surveyResults.SurveyDescription = "Описание опроса"
+	surveyResults := &models.SurveyResults{
+		SurveyTitle:       "Название опроса",
+		SurveyDescription: "Описание опроса",
+		Results:           nil,
+	} // ПОТЕНЦИАЛЬНАЯ ПРОБЛЕМА
 
 	var questionNumber uint = 1
 
-	var questionResults *models.QuestionResults
+	questionResults := &models.QuestionResults{
+		QuestionResults: nil,
+	}
 
 	for rows.Next() {
 		var answerNumber uint
@@ -153,7 +156,10 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models
 		} else {
 			surveyResults.Results = append(surveyResults.Results, questionResults)
 
-			questionResults = new(models.QuestionResults)
+			questionResults = &models.QuestionResults{
+				QuestionResults: nil,
+			}
+			questionNumber++
 		}
 
 	}
