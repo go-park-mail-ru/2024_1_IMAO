@@ -21,6 +21,29 @@ func NewSurveyStorage(pool *pgxpool.Pool) *SurveyStorage {
 	}
 }
 
+func (survey *SurveyStorage) insertUserSurvey(ctx context.Context, tx pgx.Tx, userID, surveyID uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLInsertAnswer := `
+	INSERT INTO public.user_survey(
+		user_id, survey_id)
+		VALUES ($1, $2);`
+
+	logging.LogInfo(logger, "INSERT INTO user_survey")
+
+	var err error
+
+	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID)
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertUserSurvey query, err=%v", err))
+
+		return err
+	}
+
+	return nil
+}
+
 func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID, surveyID, answerNum,
 	answerValue uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -45,6 +68,24 @@ func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID
 	return nil
 }
 
+func (survey *SurveyStorage) InsertUserSurvey(ctx context.Context, surveyAnswersList models.SurveyAnswersList) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
+		err := survey.insertUserSurvey(ctx, tx, surveyAnswersList.UserID, surveyAnswersList.SurveyID)
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting user_survey, err=%v", err))
+
+		return err
+	}
+
+	return nil
+}
+
 func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswersList models.SurveyAnswersList) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -62,6 +103,14 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 
 			return err
 		}
+	}
+
+	fail := survey.InsertUserSurvey(ctx, surveyAnswersList)
+
+	if fail != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting UserSurvey, err=%v", fail))
+
+		return fail
 	}
 
 	return nil
