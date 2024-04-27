@@ -16,6 +16,7 @@ import (
 	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
 	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
+	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
 	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
 
 	"github.com/gorilla/handlers"
@@ -53,8 +54,10 @@ func (srv *Server) Run() error {
 	orderStorage := orderrepo.NewOrderStorage(connPool, logger)
 	profileStorage := profilerepo.NewProfileStorage(connPool, logger)
 	userStorage := authrepo.NewUserStorage(connPool, logger)
+	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
-	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage, profileStorage, userStorage)
+	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage,
+		profileStorage, userStorage, surveyStorage)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
