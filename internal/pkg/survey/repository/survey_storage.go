@@ -21,7 +21,8 @@ func NewSurveyStorage(pool *pgxpool.Pool) *SurveyStorage {
 	}
 }
 
-func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID, surveyID, answerNum, answerValue uint) error {
+func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID, surveyID, answerNum,
+	answerValue uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLInsertAnswer := `
@@ -50,7 +51,8 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 	for i := 0; i < len(surveyAnswers); i++ {
 
 		err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
-			err := survey.insertAnswer(ctx, tx, surveyAnswers[i].UserID, surveyAnswers[i].SurveyID, surveyAnswers[i].AnswerNum, surveyAnswers[i].AnswerValue)
+			err := survey.insertAnswer(ctx, tx, surveyAnswers[i].UserID, surveyAnswers[i].SurveyID,
+				surveyAnswers[i].AnswerNum, surveyAnswers[i].AnswerValue)
 
 			return err
 		})
