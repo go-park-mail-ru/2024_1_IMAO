@@ -108,43 +108,77 @@ func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID ui
 	return exists, nil
 }
 
-//func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (models.SurveyResults, error) {
-//
-//	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-//
-//	SQLGetStatics := `
-//	SELECT answer_num, answer_value, COUNT(*) AS answer_count
-//	FROM answer
-//	GROUP BY answer_num, answer_value
-//	ORDER BY answer_num, answer_value;`
-//
-//	logging.LogInfo(logger, "SELECT FROM advert_image")
-//
-//	rows, err := tx.Query(ctx, SQLGetStatics)
-//	if err != nil {
-//		logging.LogError(logger, fmt.Errorf("something went wrong while executing select statistics, err=%v", err))
-//
-//		return nil, err
-//	}
-//	defer rows.Close()
-//
-//	var urlArray []string
-//
-//	for rows.Next() {
-//		var returningUrl string
-//
-//		if err := rows.Scan(&returningUrl); err != nil {
-//			logging.LogError(logger, fmt.Errorf("something went wrong while scanning rows of advert images for advert %v, err=%v", advertID, err))
-//
-//			return nil, err
-//		}
-//
-//		urlArray = append(urlArray, returningUrl)
-//	}
-//
-//	return urlArray, nil
-//}
+func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx) (*models.SurveyResults, error) {
 
-func (survey *SurveyStorage) GetStatics() {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLGetStatics := `
+	SELECT answer_num, answer_value, COUNT(*) AS answer_count
+	FROM answer
+	GROUP BY answer_num, answer_value
+	ORDER BY answer_num, answer_value;`
+
+	logging.LogInfo(logger, "SELECT FROM advert_image")
+
+	rows, err := tx.Query(ctx, SQLGetStatics)
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select statistics, err=%v", err))
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	var surveyResults *models.SurveyResults // ПОТЕНЦИАЛЬНАЯ ПРОБЛЕМА
+
+	surveyResults.SurveyTitle = "Название опроса"
+	surveyResults.SurveyDescription = "Описание опроса"
+
+	var questionNumber uint = 1
+
+	var questionResults *models.QuestionResults
+
+	for rows.Next() {
+		var answerNumber uint
+		var answerValue uint
+		var answerCount uint
+
+		if err := rows.Scan(&answerNumber, &answerValue, &answerCount); err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while scanning rows of answers, err=%v", err))
+
+			return nil, err
+		}
+
+		if answerNumber == questionNumber {
+			questionResults.QuestionResults = append(questionResults.QuestionResults, answerCount)
+		} else {
+			surveyResults.Results = append(surveyResults.Results, questionResults)
+
+			questionResults = new(models.QuestionResults)
+		}
+
+	}
+
+	return surveyResults, nil
+}
+
+func (survey *SurveyStorage) GetStatics(ctx context.Context) (*models.SurveyResults, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var surveyResults *models.SurveyResults
+
+	err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
+		surveyResultsInternal, err := survey.getStatics(ctx, tx)
+		surveyResults = surveyResultsInternal
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+
+		return nil, err
+	}
+
+	return surveyResults, nil
 
 }

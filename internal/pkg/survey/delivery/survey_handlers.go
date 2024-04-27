@@ -2,6 +2,10 @@ package delivery
 
 import (
 	"encoding/json"
+	"log"
+	"net/http"
+	"strconv"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
@@ -10,9 +14,6 @@ import (
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"strconv"
 )
 
 type SurveyHandler struct {
@@ -82,9 +83,20 @@ func (surveyHandler *SurveyHandler) CheckIfAnswered(writer http.ResponseWriter, 
 }
 
 func (surveyHandler *SurveyHandler) GetStatistics(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	storage := surveyHandler.surveyStorage
 
-	storage.GetStatics()
+	surveyResults, err := storage.GetStatics(ctx)
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
 
-	responses.SendOkResponse(writer, NewSurveyOkResponse(nil))
+		return
+	}
+
+	responses.SendOkResponse(writer, NewSurveyOkResponse(surveyResults))
 }
