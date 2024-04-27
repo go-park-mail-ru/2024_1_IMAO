@@ -31,10 +31,19 @@ func NewSurveyHandler(userStorage userusecases.UsersStorageInterface,
 func (surveyHandler *SurveyHandler) CreateAnswer(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+	storage := surveyHandler.surveyStorage
 
 	var survey models.SurveyAnswersList
 
 	err := json.NewDecoder(request.Body).Decode(&survey)
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		log.Println(err, responses.StatusInternalServerError)
+		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	err = storage.SaveSurveyResults(ctx, survey)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -73,5 +82,9 @@ func (surveyHandler *SurveyHandler) CheckIfAnswered(writer http.ResponseWriter, 
 }
 
 func (surveyHandler *SurveyHandler) GetStatistics(writer http.ResponseWriter, request *http.Request) {
+	storage := surveyHandler.surveyStorage
+
+	storage.GetStatics()
+
 	responses.SendOkResponse(writer, NewSurveyOkResponse(nil))
 }

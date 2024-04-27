@@ -7,7 +7,7 @@ import (
 )
 
 type SurveyStorageInterface interface {
-	SaveSurveyResults(ctx context.Context, surveyAnswers []*models.SurveyAnswer) error
+	SaveSurveyResults(ctx context.Context, surveyAnswers models.SurveyAnswersList) error
 	GetResults(ctx context.Context, userID, surveyID uint) (bool, error)
 	GetStatics()
 }
