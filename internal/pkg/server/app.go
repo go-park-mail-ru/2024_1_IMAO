@@ -2,11 +2,12 @@ package server
 
 import (
 	"context"
-	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
@@ -61,7 +62,7 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"www.vol-4-ok.ru:8008"}) // "http://109.120.183.3:8008"
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru:8008"}) // "http://109.120.183.3:8008"
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
