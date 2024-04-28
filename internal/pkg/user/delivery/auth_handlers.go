@@ -29,17 +29,13 @@ const (
 type AuthHandler struct {
 	storage        userusecases.UsersStorageInterface
 	profileStorage profusecases.ProfileStorageInterface
-	addrOrigin     string
-	schema         string
 }
 
-func NewAuthHandler(storage userusecases.UsersStorageInterface, profileStorage profusecases.ProfileStorageInterface,
-	addrOrigin string, schema string) *AuthHandler {
+func NewAuthHandler(storage userusecases.UsersStorageInterface,
+	profileStorage profusecases.ProfileStorageInterface) *AuthHandler {
 	return &AuthHandler{
 		storage:        storage,
 		profileStorage: profileStorage,
-		addrOrigin:     addrOrigin,
-		schema:         schema,
 	}
 }
 

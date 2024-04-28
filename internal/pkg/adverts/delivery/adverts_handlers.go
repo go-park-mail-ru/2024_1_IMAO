@@ -23,19 +23,13 @@ const (
 type AdvertsHandler struct {
 	storage     advertusecases.AdvertsStorageInterface
 	userStorage userusecases.UsersStorageInterface
-	addrOrigin  string
-	schema      string
-	logger      *zap.SugaredLogger
 }
 
-func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *AdvertsHandler {
+func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface,
+	userStorage userusecases.UsersStorageInterface) *AdvertsHandler {
 	return &AdvertsHandler{
 		storage:     storage,
 		userStorage: userStorage,
-		addrOrigin:  addrOrigin,
-		schema:      schema,
-		logger:      logger,
 	}
 }
 

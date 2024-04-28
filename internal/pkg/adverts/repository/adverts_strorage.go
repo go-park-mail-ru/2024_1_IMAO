@@ -27,14 +27,12 @@ var (
 )
 
 type AdvertStorage struct {
-	pool   *pgxpool.Pool
-	logger *zap.SugaredLogger
+	pool *pgxpool.Pool
 }
 
-func NewAdvertStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *AdvertStorage {
+func NewAdvertStorage(pool *pgxpool.Pool) *AdvertStorage {
 	return &AdvertStorage{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
 	}
 }
 

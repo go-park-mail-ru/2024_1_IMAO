@@ -48,12 +48,12 @@ func (srv *Server) Run() error {
 
 	defer logger.Sync()
 
-	advertStorage := advertrepo.NewAdvertStorage(connPool, logger)
-	cartStorage := cartrepo.NewCartStorage(connPool, logger)
-	cityStorage := cityrepo.NewCityStorage(connPool, logger)
-	orderStorage := orderrepo.NewOrderStorage(connPool, logger)
-	profileStorage := profilerepo.NewProfileStorage(connPool, logger)
-	userStorage := authrepo.NewUserStorage(connPool, logger)
+	advertStorage := advertrepo.NewAdvertStorage(connPool)
+	cartStorage := cartrepo.NewCartStorage(connPool)
+	cityStorage := cityrepo.NewCityStorage(connPool)
+	orderStorage := orderrepo.NewOrderStorage(connPool)
+	profileStorage := profilerepo.NewProfileStorage(connPool)
+	userStorage := authrepo.NewUserStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
 	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage,

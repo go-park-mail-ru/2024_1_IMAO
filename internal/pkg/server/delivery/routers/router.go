@@ -25,13 +25,10 @@ import (
 	authusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-const plug = ""
-
-func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger,
+func NewRouter(logger *zap.SugaredLogger,
 	advertStorage advusecases.AdvertsStorageInterface,
 	cartStorage cartusecases.CartStorageInterface,
 	cityStorage cityusecases.CityStorageInterface,
@@ -49,12 +46,12 @@ func NewRouter(pool *pgxpool.Pool, logger *zap.SugaredLogger,
 	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()
 	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(userStorage)
 
-	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
-	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage, plug, plug, logger)
-	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug)
-	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage, plug, plug, logger)
-	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage, plug, plug, logger)
-	cityHandler := citydel.NewCityHandler(cityStorage, plug, plug, logger)
+	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage)
+	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage)
+	authHandler := authdel.NewAuthHandler(userStorage, profileStorage)
+	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage)
+	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage)
+	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(userStorage, surveyStorage)
 
 	log.Println("Server is running")

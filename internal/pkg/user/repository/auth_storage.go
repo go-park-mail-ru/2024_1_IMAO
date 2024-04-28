@@ -24,14 +24,12 @@ var (
 
 type UserStorage struct {
 	pool        *pgxpool.Pool
-	logger      *zap.SugaredLogger
 	sessionList *models.SessionList
 }
 
-func NewUserStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *UserStorage {
+func NewUserStorage(pool *pgxpool.Pool) *UserStorage {
 	return &UserStorage{
 		pool:        pool,
-		logger:      logger,
 		sessionList: NewSessionList(),
 	}
 }

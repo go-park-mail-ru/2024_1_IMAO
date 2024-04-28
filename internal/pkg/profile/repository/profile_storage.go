@@ -25,14 +25,12 @@ var (
 )
 
 type ProfileStorage struct {
-	pool   *pgxpool.Pool
-	logger *zap.SugaredLogger
+	pool *pgxpool.Pool
 }
 
-func NewProfileStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *ProfileStorage {
+func NewProfileStorage(pool *pgxpool.Pool) *ProfileStorage {
 	return &ProfileStorage{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
 	}
 }
 

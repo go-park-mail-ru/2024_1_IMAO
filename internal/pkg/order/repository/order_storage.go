@@ -18,14 +18,12 @@ var (
 
 type OrderStorage struct {
 	pool      *pgxpool.Pool
-	logger    *zap.SugaredLogger
 	OrderList *models.OrderList
 }
 
-func NewOrderStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *OrderStorage {
+func NewOrderStorage(pool *pgxpool.Pool) *OrderStorage {
 	return &OrderStorage{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
 	}
 }
 

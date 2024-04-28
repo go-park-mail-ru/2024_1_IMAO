@@ -24,20 +24,14 @@ type CartHandler struct {
 	storage       cartusecases.CartStorageInterface
 	advertStorage advertusecases.AdvertsStorageInterface
 	userStorage   userusecases.UsersStorageInterface
-	addrOrigin    string
-	schema        string
-	logger        *zap.SugaredLogger
 }
 
-func NewCartHandler(storage cartusecases.CartStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *CartHandler {
+func NewCartHandler(storage cartusecases.CartStorageInterface, advertStorage advertusecases.AdvertsStorageInterface,
+	userStorage userusecases.UsersStorageInterface) *CartHandler {
 	return &CartHandler{
 		storage:       storage,
 		advertStorage: advertStorage,
 		userStorage:   userStorage,
-		addrOrigin:    addrOrigin,
-		schema:        schema,
-		logger:        logger,
 	}
 }
 

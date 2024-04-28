@@ -18,14 +18,12 @@ var (
 )
 
 type CityStorage struct {
-	pool   *pgxpool.Pool
-	logger *zap.SugaredLogger
+	pool *pgxpool.Pool
 }
 
-func NewCityStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CityStorage {
+func NewCityStorage(pool *pgxpool.Pool) *CityStorage {
 	return &CityStorage{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
 	}
 }
 

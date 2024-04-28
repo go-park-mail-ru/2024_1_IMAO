@@ -22,19 +22,13 @@ import (
 type ProfileHandler struct {
 	storage     profileusecases.ProfileStorageInterface
 	userStorage userusecases.UsersStorageInterface
-	addrOrigin  string
-	schema      string
-	logger      *zap.SugaredLogger
 }
 
-func NewProfileHandler(storage profileusecases.ProfileStorageInterface, userStorage userusecases.UsersStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *ProfileHandler {
+func NewProfileHandler(storage profileusecases.ProfileStorageInterface,
+	userStorage userusecases.UsersStorageInterface) *ProfileHandler {
 	return &ProfileHandler{
 		storage:     storage,
 		userStorage: userStorage,
-		addrOrigin:  addrOrigin,
-		schema:      schema,
-		logger:      logger,
 	}
 }
 
@@ -263,7 +257,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	}
 
 	if err != nil {
-		h.logger.Error(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.ErrInternalServer)
 		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))

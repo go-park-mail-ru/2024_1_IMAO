@@ -19,14 +19,12 @@ var (
 )
 
 type CartStorage struct {
-	pool   *pgxpool.Pool
-	logger *zap.SugaredLogger
+	pool *pgxpool.Pool
 }
 
-func NewCartStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CartStorage {
+func NewCartStorage(pool *pgxpool.Pool) *CartStorage {
 	return &CartStorage{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
 	}
 }
 

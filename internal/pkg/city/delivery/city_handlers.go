@@ -12,18 +12,12 @@ import (
 )
 
 type CityHandler struct {
-	storage    cityusecases.CityStorageInterface
-	addrOrigin string
-	schema     string
-	logger     *zap.SugaredLogger
+	storage cityusecases.CityStorageInterface
 }
 
-func NewCityHandler(storage cityusecases.CityStorageInterface, addrOrigin string, schema string, logger *zap.SugaredLogger) *CityHandler {
+func NewCityHandler(storage cityusecases.CityStorageInterface) *CityHandler {
 	return &CityHandler{
-		storage:    storage,
-		addrOrigin: addrOrigin,
-		schema:     schema,
-		logger:     logger,
+		storage: storage,
 	}
 }
 

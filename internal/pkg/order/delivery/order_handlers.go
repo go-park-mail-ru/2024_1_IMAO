@@ -25,21 +25,16 @@ type OrderHandler struct {
 	cartStorage   cartusecases.CartStorageInterface
 	advertStorage advertusecases.AdvertsStorageInterface
 	userStorage   userusecases.UsersStorageInterface
-	addrOrigin    string
-	schema        string
-	logger        *zap.SugaredLogger
 }
 
-func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage cartusecases.CartStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *OrderHandler {
+func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage cartusecases.CartStorageInterface,
+	advertStorage advertusecases.AdvertsStorageInterface,
+	userStorage userusecases.UsersStorageInterface) *OrderHandler {
 	return &OrderHandler{
 		storage:       storage,
 		cartStorage:   cartStorage,
 		advertStorage: advertStorage,
 		userStorage:   userStorage,
-		addrOrigin:    addrOrigin,
-		schema:        schema,
-		logger:        logger,
 	}
 }
 
