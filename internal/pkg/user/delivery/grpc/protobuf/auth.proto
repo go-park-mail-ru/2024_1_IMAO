@@ -1,0 +1,50 @@
+//protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative *.proto
+
+syntax = "proto3";
+
+option go_package = "./internal/pkg/user/delivery/grpc";
+
+import "google/protobuf/empty.proto";
+
+service Auth {
+    rpc UserExists(EmailOnlyRequest) returns (ExistsResponse) {}
+    rpc CreateUser(UnauthorizedUser) returns (User) {}
+    rpc GetUserByEmail(EmailOnlyRequest) returns (User) {}
+    rpc GetUserBySession(SessionData) returns (User) {}
+    rpc EditUserEmail(EditEmailRequest) returns (User) {}
+    rpc SessionExists(SessionData) returns (ExistsResponse) {}
+    rpc AddSession(IDOnlyRequest) returns (SessionData) {}
+    rpc RemoveSession(SessionData) returns (google.protobuf.Empty) {}
+}
+
+message EmailOnlyRequest {
+    string Email = 1;
+}
+
+message ExistsResponse {
+    bool Exists = 1;
+}
+
+message UnauthorizedUser {
+    string Email = 1;
+    string PasswordHash = 2;
+}
+
+message User {
+    uint64 ID = 1;
+    string Email = 2;
+    string PasswordHash = 3;
+}
+
+message SessionData {
+    string SessionID = 1;
+}
+
+message IDOnlyRequest {
+    uint64 ID = 1;
+}
+
+message EditEmailRequest {
+    uint64 ID = 1;
+    string Email = 2;
+}
