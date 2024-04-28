@@ -61,12 +61,6 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := authHandler.storage
 
 	session, cookieErr := request.Cookie("session_id")
@@ -149,12 +143,6 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := authHandler.storage
 
 	session, err := request.Cookie("session_id")
@@ -203,12 +191,6 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := authHandler.storage
 	profileStorage := authHandler.profileStorage
@@ -300,12 +282,6 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := authHandler.storage
 	profileStorage := authHandler.profileStorage
 
@@ -334,12 +310,6 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := authHandler.storage
 

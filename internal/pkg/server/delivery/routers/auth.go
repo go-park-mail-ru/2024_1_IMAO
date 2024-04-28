@@ -9,11 +9,11 @@ func ServeAuthRouter(router *mux.Router, authHandler *delivery.AuthHandler,
 	authCheckMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/auth").Subrouter()
 
-	subrouter.HandleFunc("/login", authHandler.Login)
-	subrouter.HandleFunc("/check_auth", authHandler.CheckAuth)
-	subrouter.HandleFunc("/logout", authHandler.Logout)
-	subrouter.HandleFunc("/signup", authHandler.Signup)
-	subrouter.HandleFunc("/edit/email", authHandler.EditUserEmail)
+	subrouter.HandleFunc("/login", authHandler.Login).Methods("POST")
+	subrouter.HandleFunc("/check_auth", authHandler.CheckAuth).Methods("GET")
+	subrouter.HandleFunc("/logout", authHandler.Logout).Methods("POST")
+	subrouter.HandleFunc("/signup", authHandler.Signup).Methods("POST")
+	subrouter.HandleFunc("/edit/email", authHandler.EditUserEmail).Methods("POST")
 
 	subrouterCSRF := subrouter.PathPrefix("/csrf").Subrouter()
 	subrouterCSRF.Use(authCheckMiddleware)

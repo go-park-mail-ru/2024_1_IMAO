@@ -63,12 +63,6 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := orderHandler.storage
 	userStorage := orderHandler.userStorage
 
@@ -108,12 +102,6 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := orderHandler.storage
 	cartStorage := orderHandler.cartStorage
@@ -160,14 +148,6 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 		storage.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.advertStorage)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
-
-	// isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
-
-	// if isAppended {
-	// 	log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
-	// } else {
-	// 	log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
-	// }
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewOrderCreateResponse(true))

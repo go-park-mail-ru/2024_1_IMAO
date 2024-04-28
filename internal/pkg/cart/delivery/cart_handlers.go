@@ -61,12 +61,6 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage
 
@@ -105,12 +99,6 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage
@@ -155,12 +143,6 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := cartHandler.storage
 	userStorage := cartHandler.userStorage

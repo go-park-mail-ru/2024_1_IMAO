@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+const (
+	staticDirectory = "./uploads"
+)
+
 func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	uploadedFile, err := file.Open()
 	if err != nil {
@@ -20,7 +24,7 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 
 	currentTime := time.Now()
 
-	dirName := fmt.Sprintf("./uploads/%s/%d-%02d-%02d", folderName,
+	dirName := fmt.Sprintf("%s/%s/%d-%02d-%02d", staticDirectory, folderName,
 		currentTime.Year(), currentTime.Month(), currentTime.Day())
 
 	err = os.MkdirAll(dirName, os.ModePerm)

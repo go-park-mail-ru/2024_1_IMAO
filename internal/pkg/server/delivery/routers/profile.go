@@ -9,7 +9,7 @@ func ServeProfileRouter(router *mux.Router, profileHandler *delivery.ProfileHand
 	authCheckMiddleware, csrfMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/profile").Subrouter()
 
-	subrouter.HandleFunc("/{id:[0-9]+}", profileHandler.GetProfile)
+	subrouter.HandleFunc("/{id:[0-9]+}", profileHandler.GetProfile).Methods("GET")
 	//subrouter.HandleFunc("/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
 	//subrouter.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
 	//subrouter.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)

@@ -42,12 +42,6 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	vars := mux.Vars(request)
 
 	id, _ := strconv.Atoi(vars["id"])
