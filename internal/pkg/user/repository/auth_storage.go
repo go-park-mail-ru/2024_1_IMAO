@@ -298,7 +298,8 @@ func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID strin
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by session from seq, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while getting user by session from seq, err=%v", err))
 
 		return nil, errUserNotExists
 	}
@@ -333,7 +334,8 @@ func (active *UserStorage) RemoveSession(ctx context.Context, sessionID string) 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	if !active.SessionExists(sessionID) {
-		logging.LogError(logger, fmt.Errorf("something went wrong while removing session from MAP, err=%v", errSessionNotExists))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while removing session from MAP, err=%v", errSessionNotExists))
 
 		return errSessionNotExists
 	}
