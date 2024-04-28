@@ -56,7 +56,7 @@ func (srv *Server) Run() error {
 	userStorage := authrepo.NewUserStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
-	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage,
+	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
 		profileStorage, userStorage, surveyStorage)
 
 	credentials := handlers.AllowCredentials()
