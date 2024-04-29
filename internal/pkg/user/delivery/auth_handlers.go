@@ -39,6 +39,18 @@ func NewAuthHandler(storage userusecases.UsersStorageInterface,
 	}
 }
 
+func createSession(sessionID string) *http.Cookie {
+	return &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  time.Now().Add(sessionTime),
+		HttpOnly: true,
+		SameSite: 4,
+		Secure:   true,
+	}
+}
+
 // Login godoc
 // @Summary User login
 // @Description Authenticate user and create a new session
@@ -103,16 +115,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	}
 
 	sessionID := storage.AddSession(expectedUser.ID)
-
-	cookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		Expires:  time.Now().Add(sessionTime),
-		HttpOnly: true,
-		SameSite: 4,
-		Secure:   true,
-	}
+	cookie := createSession(sessionID)
 	http.SetCookie(writer, cookie)
 
 	userData := NewAuthOkResponse(*expectedUser, sessionID, true)
@@ -249,15 +252,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	profileStorage.CreateProfile(ctx, user.ID)
 
 	sessionID := storage.AddSession(user.ID)
-	cookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		Expires:  time.Now().Add(sessionTime),
-		HttpOnly: true,
-		SameSite: 4,
-		Secure:   true,
-	}
+	cookie := createSession(sessionID)
 	http.SetCookie(writer, cookie)
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(*user, sessionID, true))
