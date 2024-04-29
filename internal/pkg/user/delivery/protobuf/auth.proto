@@ -7,41 +7,27 @@ option go_package = "./internal/pkg/user/delivery/grpc";
 import "google/protobuf/empty.proto";
 
 service Auth {
-    rpc UserExists(EmailOnlyRequest) returns (ExistsResponse) {}
-    rpc CreateUser(UnauthorizedUser) returns (User) {}
-    rpc GetUserByEmail(EmailOnlyRequest) returns (User) {}
-    rpc GetUserBySession(SessionData) returns (User) {}
-    rpc EditUserEmail(EditEmailRequest) returns (User) {}
-    rpc SessionExists(SessionData) returns (ExistsResponse) {}
-    rpc AddSession(IDOnlyRequest) returns (SessionData) {}
-    rpc RemoveSession(SessionData) returns (google.protobuf.Empty) {}
+    rpc Login(ExistedUserData) returns (User);
+    rpc Logout(SessionData) returns (google.protobuf.Empty);
+    rpc CheckAuth(SessionData) returns (User);
+    rpc EditEmail(EditEmailRequest) returns (User);
 }
 
-message EmailOnlyRequest {
+message ExistedUserData {
     string Email = 1;
-}
-
-message ExistsResponse {
-    bool Exists = 1;
-}
-
-message UnauthorizedUser {
-    string Email = 1;
-    string PasswordHash = 2;
+    string Password = 2;
 }
 
 message User {
     uint64 ID = 1;
     string Email = 2;
     string PasswordHash = 3;
+    string Avatar = 4;
+    bool IsAuth = 5;
 }
 
 message SessionData {
     string SessionID = 1;
-}
-
-message IDOnlyRequest {
-    uint64 ID = 1;
 }
 
 message EditEmailRequest {

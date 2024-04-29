@@ -22,28 +22,20 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Auth_UserExists_FullMethodName       = "/Auth/UserExists"
-	Auth_CreateUser_FullMethodName       = "/Auth/CreateUser"
-	Auth_GetUserByEmail_FullMethodName   = "/Auth/GetUserByEmail"
-	Auth_GetUserBySession_FullMethodName = "/Auth/GetUserBySession"
-	Auth_EditUserEmail_FullMethodName    = "/Auth/EditUserEmail"
-	Auth_SessionExists_FullMethodName    = "/Auth/SessionExists"
-	Auth_AddSession_FullMethodName       = "/Auth/AddSession"
-	Auth_RemoveSession_FullMethodName    = "/Auth/RemoveSession"
+	Auth_Login_FullMethodName     = "/Auth/Login"
+	Auth_Logout_FullMethodName    = "/Auth/Logout"
+	Auth_CheckAuth_FullMethodName = "/Auth/CheckAuth"
+	Auth_EditEmail_FullMethodName = "/Auth/EditEmail"
 )
 
 // AuthClient is the client API for Auth service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthClient interface {
-	UserExists(ctx context.Context, in *EmailOnlyRequest, opts ...grpc.CallOption) (*ExistsResponse, error)
-	CreateUser(ctx context.Context, in *UnauthorizedUser, opts ...grpc.CallOption) (*User, error)
-	GetUserByEmail(ctx context.Context, in *EmailOnlyRequest, opts ...grpc.CallOption) (*User, error)
-	GetUserBySession(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error)
-	EditUserEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error)
-	SessionExists(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*ExistsResponse, error)
-	AddSession(ctx context.Context, in *IDOnlyRequest, opts ...grpc.CallOption) (*SessionData, error)
-	RemoveSession(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*User, error)
+	Logout(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CheckAuth(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error)
+	EditEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type authClient struct {
@@ -54,72 +46,36 @@ func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 	return &authClient{cc}
 }
 
-func (c *authClient) UserExists(ctx context.Context, in *EmailOnlyRequest, opts ...grpc.CallOption) (*ExistsResponse, error) {
-	out := new(ExistsResponse)
-	err := c.cc.Invoke(ctx, Auth_UserExists_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) CreateUser(ctx context.Context, in *UnauthorizedUser, opts ...grpc.CallOption) (*User, error) {
+func (c *authClient) Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*User, error) {
 	out := new(User)
-	err := c.cc.Invoke(ctx, Auth_CreateUser_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Auth_Login_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authClient) GetUserByEmail(ctx context.Context, in *EmailOnlyRequest, opts ...grpc.CallOption) (*User, error) {
-	out := new(User)
-	err := c.cc.Invoke(ctx, Auth_GetUserByEmail_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) GetUserBySession(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error) {
-	out := new(User)
-	err := c.cc.Invoke(ctx, Auth_GetUserBySession_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) EditUserEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error) {
-	out := new(User)
-	err := c.cc.Invoke(ctx, Auth_EditUserEmail_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) SessionExists(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*ExistsResponse, error) {
-	out := new(ExistsResponse)
-	err := c.cc.Invoke(ctx, Auth_SessionExists_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) AddSession(ctx context.Context, in *IDOnlyRequest, opts ...grpc.CallOption) (*SessionData, error) {
-	out := new(SessionData)
-	err := c.cc.Invoke(ctx, Auth_AddSession_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) RemoveSession(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *authClient) Logout(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Auth_RemoveSession_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Auth_Logout_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) CheckAuth(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, Auth_CheckAuth_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) EditEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, Auth_EditEmail_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,14 +86,10 @@ func (c *authClient) RemoveSession(ctx context.Context, in *SessionData, opts ..
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility
 type AuthServer interface {
-	UserExists(context.Context, *EmailOnlyRequest) (*ExistsResponse, error)
-	CreateUser(context.Context, *UnauthorizedUser) (*User, error)
-	GetUserByEmail(context.Context, *EmailOnlyRequest) (*User, error)
-	GetUserBySession(context.Context, *SessionData) (*User, error)
-	EditUserEmail(context.Context, *EditEmailRequest) (*User, error)
-	SessionExists(context.Context, *SessionData) (*ExistsResponse, error)
-	AddSession(context.Context, *IDOnlyRequest) (*SessionData, error)
-	RemoveSession(context.Context, *SessionData) (*emptypb.Empty, error)
+	Login(context.Context, *ExistedUserData) (*User, error)
+	Logout(context.Context, *SessionData) (*emptypb.Empty, error)
+	CheckAuth(context.Context, *SessionData) (*User, error)
+	EditEmail(context.Context, *EditEmailRequest) (*User, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -145,29 +97,17 @@ type AuthServer interface {
 type UnimplementedAuthServer struct {
 }
 
-func (UnimplementedAuthServer) UserExists(context.Context, *EmailOnlyRequest) (*ExistsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UserExists not implemented")
+func (UnimplementedAuthServer) Login(context.Context, *ExistedUserData) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServer) CreateUser(context.Context, *UnauthorizedUser) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+func (UnimplementedAuthServer) Logout(context.Context, *SessionData) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
-func (UnimplementedAuthServer) GetUserByEmail(context.Context, *EmailOnlyRequest) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUserByEmail not implemented")
+func (UnimplementedAuthServer) CheckAuth(context.Context, *SessionData) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckAuth not implemented")
 }
-func (UnimplementedAuthServer) GetUserBySession(context.Context, *SessionData) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUserBySession not implemented")
-}
-func (UnimplementedAuthServer) EditUserEmail(context.Context, *EditEmailRequest) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EditUserEmail not implemented")
-}
-func (UnimplementedAuthServer) SessionExists(context.Context, *SessionData) (*ExistsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SessionExists not implemented")
-}
-func (UnimplementedAuthServer) AddSession(context.Context, *IDOnlyRequest) (*SessionData, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddSession not implemented")
-}
-func (UnimplementedAuthServer) RemoveSession(context.Context, *SessionData) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveSession not implemented")
+func (UnimplementedAuthServer) EditEmail(context.Context, *EditEmailRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditEmail not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 
@@ -182,146 +122,74 @@ func RegisterAuthServer(s grpc.ServiceRegistrar, srv AuthServer) {
 	s.RegisterService(&Auth_ServiceDesc, srv)
 }
 
-func _Auth_UserExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EmailOnlyRequest)
+func _Auth_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExistedUserData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServer).UserExists(ctx, in)
+		return srv.(AuthServer).Login(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Auth_UserExists_FullMethodName,
+		FullMethod: Auth_Login_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).UserExists(ctx, req.(*EmailOnlyRequest))
+		return srv.(AuthServer).Login(ctx, req.(*ExistedUserData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnauthorizedUser)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_CreateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).CreateUser(ctx, req.(*UnauthorizedUser))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Auth_GetUserByEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EmailOnlyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).GetUserByEmail(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_GetUserByEmail_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).GetUserByEmail(ctx, req.(*EmailOnlyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Auth_GetUserBySession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SessionData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServer).GetUserBySession(ctx, in)
+		return srv.(AuthServer).Logout(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Auth_GetUserBySession_FullMethodName,
+		FullMethod: Auth_Logout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).GetUserBySession(ctx, req.(*SessionData))
+		return srv.(AuthServer).Logout(ctx, req.(*SessionData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_EditUserEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Auth_CheckAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).CheckAuth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_CheckAuth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).CheckAuth(ctx, req.(*SessionData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_EditEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EditEmailRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServer).EditUserEmail(ctx, in)
+		return srv.(AuthServer).EditEmail(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Auth_EditUserEmail_FullMethodName,
+		FullMethod: Auth_EditEmail_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).EditUserEmail(ctx, req.(*EditEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Auth_SessionExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SessionData)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).SessionExists(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_SessionExists_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).SessionExists(ctx, req.(*SessionData))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Auth_AddSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IDOnlyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).AddSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_AddSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).AddSession(ctx, req.(*IDOnlyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Auth_RemoveSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SessionData)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).RemoveSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_RemoveSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).RemoveSession(ctx, req.(*SessionData))
+		return srv.(AuthServer).EditEmail(ctx, req.(*EditEmailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -334,36 +202,20 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AuthServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "UserExists",
-			Handler:    _Auth_UserExists_Handler,
+			MethodName: "Login",
+			Handler:    _Auth_Login_Handler,
 		},
 		{
-			MethodName: "CreateUser",
-			Handler:    _Auth_CreateUser_Handler,
+			MethodName: "Logout",
+			Handler:    _Auth_Logout_Handler,
 		},
 		{
-			MethodName: "GetUserByEmail",
-			Handler:    _Auth_GetUserByEmail_Handler,
+			MethodName: "CheckAuth",
+			Handler:    _Auth_CheckAuth_Handler,
 		},
 		{
-			MethodName: "GetUserBySession",
-			Handler:    _Auth_GetUserBySession_Handler,
-		},
-		{
-			MethodName: "EditUserEmail",
-			Handler:    _Auth_EditUserEmail_Handler,
-		},
-		{
-			MethodName: "SessionExists",
-			Handler:    _Auth_SessionExists_Handler,
-		},
-		{
-			MethodName: "AddSession",
-			Handler:    _Auth_AddSession_Handler,
-		},
-		{
-			MethodName: "RemoveSession",
-			Handler:    _Auth_RemoveSession_Handler,
+			MethodName: "EditEmail",
+			Handler:    _Auth_EditEmail_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
