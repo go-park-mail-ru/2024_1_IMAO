@@ -32,7 +32,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthClient interface {
-	Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*User, error)
+	Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*LoggedUser, error)
 	Logout(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CheckAuth(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error)
 	EditEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error)
@@ -46,8 +46,8 @@ func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 	return &authClient{cc}
 }
 
-func (c *authClient) Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*User, error) {
-	out := new(User)
+func (c *authClient) Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*LoggedUser, error) {
+	out := new(LoggedUser)
 	err := c.cc.Invoke(ctx, Auth_Login_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (c *authClient) EditEmail(ctx context.Context, in *EditEmailRequest, opts .
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility
 type AuthServer interface {
-	Login(context.Context, *ExistedUserData) (*User, error)
+	Login(context.Context, *ExistedUserData) (*LoggedUser, error)
 	Logout(context.Context, *SessionData) (*emptypb.Empty, error)
 	CheckAuth(context.Context, *SessionData) (*User, error)
 	EditEmail(context.Context, *EditEmailRequest) (*User, error)
@@ -97,7 +97,7 @@ type AuthServer interface {
 type UnimplementedAuthServer struct {
 }
 
-func (UnimplementedAuthServer) Login(context.Context, *ExistedUserData) (*User, error) {
+func (UnimplementedAuthServer) Login(context.Context, *ExistedUserData) (*LoggedUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
 func (UnimplementedAuthServer) Logout(context.Context, *SessionData) (*emptypb.Empty, error) {
