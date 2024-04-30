@@ -1,3 +1,7 @@
 csrf:
     csrf_cookie: Vol40kCSRF
     csrf_lifetime: 36h0m0s
+server:
+    host: 127.0.0.1
+    port: :8080
+    user_service_port: :8081

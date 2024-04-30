@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	errWrongPassword = errors.New("passwords fo not match")
+	errWrongPassword = errors.New("passwords do not match")
 )
 
 type AuthManager struct {
