@@ -24,78 +24,60 @@ func NewFavouritesStorage(pool *pgxpool.Pool) *FavouritesStorage {
 	}
 }
 
-func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertByUserId := `
-			SELECT 
-			a.id, 
-			a.user_id,
-			a.city_id, 
-			c.name AS city_name, 
-			c.translation AS city_translation, 
-			a.category_id, 
-			cat.name AS category_name, 
-			cat.translation AS category_translation, 
-			a.title, 
-			a.description, 
-			a.price, 
-			a.created_time, 
-			a.closed_time, 
-			a.is_used,
-			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
-		FROM 
-			public.advert a
-		LEFT JOIN 
-			public.city c ON a.city_id = c.id
-		LEFT JOIN 
-			public.category cat ON a.category_id = cat.id
-		LEFT JOIN 
-			public.cart cart ON a.id = cart.advert_id
-		WHERE cart.user_id = $1;`
+	SQLGetFavouritesByUserID := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
+		THEN 1 ELSE 0 END AS bool) AS in_cart
+	FROM public.advert a
+	INNER JOIN city c ON a.city_id = c.id
+	INNER JOIN category ON a.category_id = category.id
+	INNER JOIN favourite f ON a.id = f.advert_id
+	WHERE f.user_id = $1
+	ORDER BY a.id;
+	`
 
-	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
+	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
-	rows, err := tx.Query(ctx, SQLAdvertByUserId, userID)
+	rows, err := tx.Query(ctx, SQLGetFavouritesByUserID, userID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v", err))
 
 		return nil, err
 	}
 	defer rows.Close()
 
-	var adsList []*models.ReturningAdvert
+	var adsList []*models.ReturningAdInList
 	for rows.Next() {
+		returningAdInList := models.ReturningAdInList{}
 
-		categoryModel := models.Category{}
-		cityModel := models.City{}
-		advertModel := models.Advert{}
-		photoPad := models.PhotoPadSoloImage{}
+		photoPad := models.PhotoPad{}
 
-		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
-			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo); err != nil {
-
-			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
-
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title,
+			&returningAdInList.Price, &photoPad.Photo, &returningAdInList.InCart); err != nil {
 			return nil, err
 		}
 
-		advertModel.CityID = cityModel.ID
-		advertModel.CategoryID = categoryModel.ID
+		returningAdInList.InFavourites = true
 
-		photoURLToInsert := ""
 		if photoPad.Photo != nil {
-			photoURLToInsert = *photoPad.Photo
+			for _, ptr := range photoPad.Photo {
+				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
+			}
 		}
 
-		returningAdvertList := models.ReturningAdvert{
-			Advert:   advertModel,
-			City:     cityModel,
-			Category: categoryModel,
-		}
+		for i := 0; i < len(returningAdInList.Photos); i++ {
 
-		decodedImage, err := utils.DecodeImage(photoURLToInsert)
+			image, err := utils.DecodeImage(returningAdInList.Photos[i])
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
+			if err != nil {
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+
+				return nil, err
+			}
+		}
 
 		if err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
@@ -103,23 +85,28 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 			return nil, err
 		}
 
-		returningAdvertList.Photos = append(returningAdvertList.Photos, photoURLToInsert)
-		returningAdvertList.PhotosIMG = append(returningAdvertList.PhotosIMG, decodedImage)
+		returningAdInList.Sanitize()
 
-		adsList = append(adsList, &returningAdvertList)
+		adsList = append(adsList, &returningAdInList)
+	}
+
+	if err := rows.Err(); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+
+		return nil, err
 	}
 
 	return adsList, nil
 }
 
-func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	cart := []*models.ReturningAdvert{}
+	var favourites []*models.ReturningAdInList
 
 	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
-		cartInner, err := favouritesStorage.getFavouritesByUserID(ctx, tx, userID)
-		cart = cartInner
+		favouritesInner, err := favouritesStorage.getFavouritesByUserID(ctx, tx, userID)
+		favourites = favouritesInner
 
 		return err
 	})
@@ -130,11 +117,11 @@ func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Co
 		return nil, err
 	}
 
-	if cart == nil {
-		cart = []*models.ReturningAdvert{}
+	if favourites == nil {
+		favourites = []*models.ReturningAdInList{}
 	}
 
-	return cart, nil
+	return favourites, nil
 }
 
 func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {

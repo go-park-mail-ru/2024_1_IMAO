@@ -79,9 +79,9 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 
 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
-	var adsList []*models.ReturningAdvert
+	var adsList []*models.ReturningAdInList
 
-	adsList, err = storage.GetFavouritesByUserID(ctx, uint(user.ID), favouritesHandler.userStorage, favouritesHandler.advertStorage)
+	adsList, err = storage.GetFavouritesByUserID(ctx, uint(user.ID))
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -91,9 +91,9 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 
 		return
 	}
-	log.Println("Get cart for user", user.ID)
+	log.Println("Get favourites for user", user.ID)
 	responses.SendOkResponse(writer, NewFavouritesOkResponse(adsList))
-	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Get favourites for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
 func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.ResponseWriter, request *http.Request) {
@@ -138,11 +138,11 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 	responses.SendOkResponse(writer, NewFavouritesChangeResponse(isAppended))
 
 	if isAppended {
-		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the cart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		log.Println("Advert", data.AdvertID, "has been added to favourites of user", user.ID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the favourites of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	} else {
-		log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from thecart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		log.Println("Advert", data.AdvertID, "has been removed from favourites of user", user.ID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from the favourites of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	}
 }
 

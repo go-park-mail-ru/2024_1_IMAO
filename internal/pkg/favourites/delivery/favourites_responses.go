@@ -6,8 +6,8 @@ import (
 )
 
 type FavouritesOkResponse struct {
-	Code  int                       `json:"code"`
-	Items []*models.ReturningAdvert `json:"items"`
+	Code  int                         `json:"code"`
+	Items []*models.ReturningAdInList `json:"items"`
 }
 
 type FavouritesChangeResponse struct {
@@ -27,7 +27,7 @@ func NewFavouritesChangeResponse(isAppended bool) *FavouritesChangeResponse {
 	}
 }
 
-func NewFavouritesOkResponse(adverts []*models.ReturningAdvert) *FavouritesOkResponse {
+func NewFavouritesOkResponse(adverts []*models.ReturningAdInList) *FavouritesOkResponse {
 	return &FavouritesOkResponse{
 		Code:  responses.StatusOk,
 		Items: adverts,

@@ -9,7 +9,7 @@ import (
 )
 
 type FavouritesStorageInterface interface {
-	GetFavouritesByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error)
+	GetFavouritesByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdInList, error)
 	DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error
 	AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool
 }
