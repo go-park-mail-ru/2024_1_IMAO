@@ -8,6 +8,7 @@ import (
 	protobuf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (
@@ -17,13 +18,15 @@ var (
 type AuthManager struct {
 	protobuf.UnimplementedAuthServer
 
-	UserStorage *AuthHandler
+	UserStorage    userusecases.UsersStorageInterface
+	ProfileStorage profusecases.ProfileStorageInterface
 }
 
 func NewAuthManager(storage userusecases.UsersStorageInterface,
 	profileStorage profusecases.ProfileStorageInterface) *AuthManager {
 	return &AuthManager{
-		UserStorage: NewAuthHandler(storage, profileStorage),
+		UserStorage:    storage,
+		ProfileStorage: profileStorage,
 	}
 }
 
@@ -44,7 +47,7 @@ func newProtobufUser(user *models.User, avatar string, isAuth bool) *protobuf.Us
 func (manager *AuthManager) Login(ctx context.Context, in *protobuf.ExistedUserData) (*protobuf.LoggedUser, error) {
 	email := in.GetEmail()
 	password := in.GetPassword()
-	storage := manager.UserStorage.storage
+	storage := manager.UserStorage
 
 	user, err := storage.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -65,39 +68,64 @@ func (manager *AuthManager) Login(ctx context.Context, in *protobuf.ExistedUserD
 	}, nil
 }
 
-func (manager *AuthManager) Logout(ctx context.Context, in *protobuf.SessionData) error {
+func (manager *AuthManager) Logout(ctx context.Context, in *protobuf.SessionData) (*emptypb.Empty, error) {
 	sessionID := in.GetSessionID()
-	storage := manager.UserStorage.storage
+	storage := manager.UserStorage
 
 	err := storage.RemoveSession(ctx, sessionID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &emptypb.Empty{}, nil
 }
 
-func (manager *AuthManager) CheckAuth(ctx context.Context, in *protobuf.SessionData) *protobuf.User {
+func (manager *AuthManager) Signup(ctx context.Context,
+	in *protobuf.NewUserData) (*protobuf.LoggedUser, error) {
+	email := in.GetEmail()
+	password := in.GetPassword()
+	passwordRepeat := in.GetPasswordRepeat()
+	storage := manager.UserStorage
+	profileStorage := manager.ProfileStorage
+
+	user, err := storage.CreateUser(ctx, email, password, passwordRepeat)
+	if err != nil {
+		return nil, err
+	}
+	profileStorage.CreateProfile(ctx, user.ID)
+	sessionID := storage.AddSession(user.ID)
+
+	return &protobuf.LoggedUser{
+		ID:           uint64(user.ID),
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		SessionID:    sessionID,
+		IsAuth:       true,
+	}, nil
+}
+
+func (manager *AuthManager) CheckAuth(ctx context.Context, in *protobuf.SessionData) (*protobuf.User, error) {
 	sessionID := in.GetSessionID()
-	storage := manager.UserStorage.storage
-	profileStorage := manager.UserStorage.profileStorage
+	storage := manager.UserStorage
+	profileStorage := manager.ProfileStorage
 
 	if !storage.SessionExists(sessionID) {
-		return newProtobufUser(nil, "", false)
+		return newProtobufUser(nil, "", false), nil
 	}
 
 	user, _ := storage.GetUserBySession(ctx, sessionID)
 	profile, _ := profileStorage.GetProfileByUserID(ctx, user.ID)
 
-	return newProtobufUser(user, profile.AvatarIMG, true)
+	return newProtobufUser(user, profile.AvatarIMG, true), nil
 }
 
 func (manager *AuthManager) EditEmail(ctx context.Context, in *protobuf.EditEmailRequest) (*protobuf.User, error) {
 	email := in.GetEmail()
-	id := in.GetID()
-	storage := manager.UserStorage.storage
+	sessionID := in.GetSessionID()
+	storage := manager.UserStorage
 
-	user, err := storage.EditUserEmail(ctx, uint(id), email)
+	user, _ := storage.GetUserBySession(ctx, sessionID)
+	user, err := storage.EditUserEmail(ctx, user.ID, email)
 	if err != nil {
 		return nil, err
 	}

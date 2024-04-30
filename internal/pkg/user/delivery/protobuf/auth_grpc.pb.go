@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	Auth_Login_FullMethodName     = "/Auth/Login"
+	Auth_Signup_FullMethodName    = "/Auth/Signup"
 	Auth_Logout_FullMethodName    = "/Auth/Logout"
 	Auth_CheckAuth_FullMethodName = "/Auth/CheckAuth"
 	Auth_EditEmail_FullMethodName = "/Auth/EditEmail"
@@ -33,6 +34,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthClient interface {
 	Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*LoggedUser, error)
+	Signup(ctx context.Context, in *NewUserData, opts ...grpc.CallOption) (*LoggedUser, error)
 	Logout(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CheckAuth(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*User, error)
 	EditEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error)
@@ -49,6 +51,15 @@ func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 func (c *authClient) Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*LoggedUser, error) {
 	out := new(LoggedUser)
 	err := c.cc.Invoke(ctx, Auth_Login_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) Signup(ctx context.Context, in *NewUserData, opts ...grpc.CallOption) (*LoggedUser, error) {
+	out := new(LoggedUser)
+	err := c.cc.Invoke(ctx, Auth_Signup_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +98,7 @@ func (c *authClient) EditEmail(ctx context.Context, in *EditEmailRequest, opts .
 // for forward compatibility
 type AuthServer interface {
 	Login(context.Context, *ExistedUserData) (*LoggedUser, error)
+	Signup(context.Context, *NewUserData) (*LoggedUser, error)
 	Logout(context.Context, *SessionData) (*emptypb.Empty, error)
 	CheckAuth(context.Context, *SessionData) (*User, error)
 	EditEmail(context.Context, *EditEmailRequest) (*User, error)
@@ -99,6 +111,9 @@ type UnimplementedAuthServer struct {
 
 func (UnimplementedAuthServer) Login(context.Context, *ExistedUserData) (*LoggedUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedAuthServer) Signup(context.Context, *NewUserData) (*LoggedUser, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
 }
 func (UnimplementedAuthServer) Logout(context.Context, *SessionData) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
@@ -136,6 +151,24 @@ func _Auth_Login_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServer).Login(ctx, req.(*ExistedUserData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewUserData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).Signup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_Signup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).Signup(ctx, req.(*NewUserData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -204,6 +237,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _Auth_Login_Handler,
+		},
+		{
+			MethodName: "Signup",
+			Handler:    _Auth_Signup_Handler,
 		},
 		{
 			MethodName: "Logout",

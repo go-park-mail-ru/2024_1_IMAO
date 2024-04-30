@@ -10,7 +10,7 @@ import (
 
 type UsersStorageInterface interface {
 	UserExists(ctx context.Context, email string) bool
-	CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error)
+	CreateUser(ctx context.Context, email, password, passwordRepeat string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserBySession(ctx context.Context, sessionID string) (*models.User, error)
 	GetLastID(ctx context.Context) uint

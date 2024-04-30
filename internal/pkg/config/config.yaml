@@ -4,4 +4,4 @@ csrf:
 server:
     host: 127.0.0.1
     port: :8080
-    user_service_port: :8081
+    auth_service_port: :8081

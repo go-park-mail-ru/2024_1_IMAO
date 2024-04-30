@@ -1,12 +1,11 @@
 package routers
 
 import (
-	"log"
-
 	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
 	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
@@ -35,7 +34,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	orderStorage orderusecases.OrderStorageInterface,
 	profileStorage profusecases.ProfileStorageInterface,
 	userStorage authusecases.UsersStorageInterface,
-	surveyStorage surveyusecases.SurveyStorageInterface) *mux.Router {
+	surveyStorage surveyusecases.SurveyStorageInterface,
+	authClient authproto.AuthClient) *mux.Router {
 
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
@@ -46,15 +46,13 @@ func NewRouter(logger *zap.SugaredLogger,
 	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()
 	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(userStorage)
 
-	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage)
+	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
 	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage)
-	authHandler := authdel.NewAuthHandler(userStorage, profileStorage)
+	authHandler := authdel.NewAuthHandler(authClient, profileStorage)
 	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(userStorage, surveyStorage)
-
-	log.Println("Server is running")
 
 	rootRouter := router.PathPrefix("/api").Subrouter()
 	ServeAuthRouter(rootRouter, authHandler, authCheckMiddleware)

@@ -15,7 +15,7 @@ const (
 	RequestUUIDContextKey RequestUUIDKey = "requestUUID"
 	LoggerContextKey      LoggerKey      = "logger"
 	SessionContextKey     SessionKey     = "session"
-	CfgPath                              = "./internal/pkg/config/config.yaml"
+	cfgPath                              = "./internal/pkg/config/config.yaml"
 )
 
 type CsrfConfig struct {
@@ -26,7 +26,7 @@ type CsrfConfig struct {
 type ServerConfig struct {
 	Host            string `yaml:"host"`
 	Port            string `yaml:"port"`
-	UserServicePort string `yaml:"user_service_port"`
+	AuthServicePort string `yaml:"auth_service_port"`
 }
 
 type Config struct {
@@ -36,7 +36,7 @@ type Config struct {
 func ReadConfig() *Config {
 	cfg := &Config{}
 
-	file, err := os.Open(CfgPath)
+	file, err := os.Open(cfgPath)
 	if err != nil {
 		log.Println("Something went wrong while opening config file:", err)
 		return nil

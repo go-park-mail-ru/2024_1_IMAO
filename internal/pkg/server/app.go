@@ -2,7 +2,11 @@ package server
 
 import (
 	"context"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net/http"
 	"strings"
@@ -56,8 +60,22 @@ func (srv *Server) Run() error {
 	userStorage := authrepo.NewUserStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
+	cfg := config.ReadConfig()
+
+	authAddr := cfg.Server.Host + cfg.Server.AuthServicePort
+	grpcConnAuth, err := grpc.Dial(
+		authAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Println("Error occurred while starting grpc connection on auth service", err)
+		return err
+	}
+	defer grpcConnAuth.Close()
+	authClient := authproto.NewAuthClient(grpcConnAuth)
+
 	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
-		profileStorage, userStorage, surveyStorage)
+		profileStorage, userStorage, surveyStorage, authClient)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
@@ -73,6 +91,7 @@ func (srv *Server) Run() error {
 		WriteTimeout: Timeout,
 	}
 
+	log.Println("Server is running on port", Address)
 	return srv.server.ListenAndServe()
 }
 

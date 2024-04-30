@@ -14,11 +14,8 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	csrf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
-
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
-
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
@@ -27,14 +24,14 @@ const (
 )
 
 type AuthHandler struct {
-	storage        userusecases.UsersStorageInterface
+	authClient     authproto.AuthClient
 	profileStorage profusecases.ProfileStorageInterface
 }
 
-func NewAuthHandler(storage userusecases.UsersStorageInterface,
+func NewAuthHandler(authClient authproto.AuthClient,
 	profileStorage profusecases.ProfileStorageInterface) *AuthHandler {
 	return &AuthHandler{
-		storage:        storage,
+		authClient:     authClient,
 		profileStorage: profileStorage,
 	}
 }
@@ -69,61 +66,40 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := authHandler.storage
+	client := authHandler.authClient
 
-	session, cookieErr := request.Cookie("session_id")
-
-	if cookieErr == nil && storage.SessionExists(session.Value) {
-		logging.LogHandlerInfo(logger, responses.ErrAuthorized, responses.StatusBadRequest)
-		log.Println(responses.ErrAuthorized, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrAuthorized))
-
-		return
-	}
-
-	var user models.UnauthorizedUser
-
+	user := new(models.UnauthorizedUser)
 	err := json.NewDecoder(request.Body).Decode(&user)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
-	email := user.Email
-	password := user.Password
-
-	expectedUser, err := storage.GetUserByEmail(ctx, email)
+	authUser, err := client.Login(ctx, &authproto.ExistedUserData{
+		Email:    user.Email,
+		Password: user.Password,
+	})
 	if err != nil {
-		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongCredentials))
+		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
+		log.Println(err, responses.StatusUnauthorized)
+		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
+			responses.ErrUnauthorized))
 
 		return
 	}
-
-	if !utils.CheckPassword(password, expectedUser.PasswordHash) {
-		logging.LogHandlerInfo(logger, responses.ErrDifferentPasswords, responses.StatusBadRequest)
-		log.Println("Passwords do not match", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrWrongCredentials))
-
-		return
-	}
-
-	sessionID := storage.AddSession(expectedUser.ID)
-	cookie := createSession(sessionID)
+	cookie := createSession(authUser.SessionID)
 	http.SetCookie(writer, cookie)
 
-	userData := NewAuthOkResponse(*expectedUser, sessionID, true)
+	userData := NewAuthOkResponse(models.User{
+		ID:    uint(authUser.ID),
+		Email: authUser.Email,
+	}, authUser.SessionID, true)
 	responses.SendOkResponse(writer, userData)
 
-	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ", user.Email, sessionID), responses.StatusOk)
-	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
-
+	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
+		user.Email, authUser.SessionID), responses.StatusOk)
 }
 
 // Logout godoc
@@ -142,22 +118,15 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := authHandler.storage
+	client := authHandler.authClient
 
 	session, err := request.Cookie("session_id")
-	if err != nil {
+	_, clientErr := client.Logout(ctx, &authproto.SessionData{SessionID: session.Value})
+	if err != nil || clientErr != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
+		logging.LogHandlerError(logger, clientErr, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
-
-		return
-	}
-
-	err = storage.RemoveSession(ctx, session.Value)
-	if err != nil {
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println(err, responses.StatusUnauthorized)
+		log.Println(clientErr, responses.StatusUnauthorized)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
 
@@ -172,7 +141,6 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 
 	// ПО-ХОРОШЕМУ НУЖНО ПЕРЕПИСАТЬ ХЭНДЛЕР, ЧТОБЫ В ЛОГЕ МОЖНО БЫЛО ВЫВОДИТЬ КАКОЙ ИМЕННО ПОЛЬЗОВАТЕЛЬ РАЗЛОГИНИЛСЯ
 	logging.LogHandlerInfo(logger, "User have been logged out", responses.StatusOk)
-	log.Println("User have been logged out")
 }
 
 // Signup godoc
@@ -191,74 +159,41 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := authHandler.storage
-	profileStorage := authHandler.profileStorage
-
-	session, cookieErr := request.Cookie("session_id")
-
-	if cookieErr == nil && storage.SessionExists(session.Value) {
-		logging.LogHandlerInfo(logger, responses.ErrAuthorized, responses.StatusBadRequest)
-		log.Println("User already authorized", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrAuthorized))
-
-		return
-	}
+	client := authHandler.authClient
 
 	var newUser models.UnauthorizedUser
-
 	err := json.NewDecoder(request.Body).Decode(&newUser)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
-	email := newUser.Email
-	password := newUser.Password
-	passwordRepeat := newUser.PasswordRepeat
-
-	if storage.UserExists(ctx, email) {
-		logging.LogHandlerInfo(logger, responses.ErrUserAlreadyExists, responses.StatusBadRequest)
-		log.Println("User already exists", responses.StatusBadRequest)
+	user, err := client.Signup(ctx, &authproto.NewUserData{
+		Email:          newUser.Email,
+		Password:       newUser.Password,
+		PasswordRepeat: newUser.PasswordRepeat,
+	})
+	if err != nil {
+		logging.LogHandlerError(logger, responses.ErrWrongCredentials, responses.StatusBadRequest)
+		log.Println(err)
 		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrUserAlreadyExists))
+			responses.ErrWrongCredentials))
 
 		return
 	}
-
-	errors := utils.Validate(email, password)
-	if errors != nil {
-		logging.LogHandlerInfo(logger, responses.ErrNotValidData, responses.StatusBadRequest)
-		log.Println("Bad user data", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewValidationErrResponse(responses.StatusBadRequest,
-			errors))
-
-		return
-	}
-
-	if password != passwordRepeat {
-		logging.LogHandlerInfo(logger, responses.ErrDifferentPasswords, responses.StatusBadRequest)
-		log.Println("Passwords do not match")
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			responses.ErrDifferentPasswords))
-
-		return
-	}
-
-	user, _ := storage.CreateUser(ctx, email, utils.HashPassword(password))
-
-	profileStorage.CreateProfile(ctx, user.ID)
-
-	sessionID := storage.AddSession(user.ID)
-	cookie := createSession(sessionID)
+	cookie := createSession(user.SessionID)
 	http.SetCookie(writer, cookie)
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, sessionID, true))
+	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+		ID:    uint(user.ID),
+		Email: user.Email,
+	}, user.SessionID, true))
 
-	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ", user.Email, sessionID), responses.StatusOk)
-	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
+	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
+		user.Email, user.SessionID), responses.StatusOk)
+	log.Println("User", user.Email, "have been authorized with session ID:", user.SessionID)
 }
 
 // CheckAuth godoc
@@ -273,39 +208,34 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := authHandler.storage
-	profileStorage := authHandler.profileStorage
+	client := authHandler.authClient
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !storage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
+	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
 		responses.SendOkResponse(writer, NewAuthOkResponse(models.User{}, "", false))
 
 		return
 	}
 
-	user, _ := storage.GetUserBySession(ctx, session.Value)
-	profile, _ := profileStorage.GetProfileByUserID(ctx, user.ID)
-
-	log.Println("User authorized")
-
+	user, _ := client.CheckAuth(ctx, &authproto.SessionData{
+		SessionID: session.Value,
+	})
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, profile.AvatarIMG, true))
+	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+		ID:    uint(user.ID),
+		Email: user.Email,
+	}, user.Avatar, user.IsAuth))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := authHandler.storage
+	client := authHandler.authClient
 
 	session, err := request.Cookie("session_id")
-
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
@@ -315,32 +245,19 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 		return
 	}
 
-	user, _ := storage.GetUserBySession(ctx, session.Value)
-
 	var newUser models.UnauthorizedUser
-
 	err = json.NewDecoder(request.Body).Decode(&newUser)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
-	email := newUser.Email
-
-	errors := utils.ValidateEmail(email)
-	if errors != nil {
-		logging.LogHandlerInfo(logger, responses.ErrNotValidData, responses.StatusBadRequest)
-		log.Println("Email is not valid", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
-			"Email is not valid"))
-
-		return
-	}
-
-	user, err = storage.EditUserEmail(ctx, user.ID, email)
-
+	user, err := client.EditEmail(ctx, &authproto.EditEmailRequest{
+		Email:     newUser.Email,
+		SessionID: session.Value,
+	})
 	if err != nil {
 		logging.LogHandlerInfo(logger, responses.ErrUserAlreadyExists, responses.StatusBadRequest)
 		log.Println("This email is already in use", responses.StatusBadRequest)
@@ -350,10 +267,12 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 		return
 	}
 
-	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s successfully changed his authorization data", user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, "", true))
-
-	log.Println("User", user.Email, "successfully changed his authorization data.")
+	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s successfully changed his authorization data",
+		user.Email), responses.StatusOk)
+	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+		ID:    uint(user.ID),
+		Email: user.Email,
+	}, "", true))
 }
 
 func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request *http.Request) {

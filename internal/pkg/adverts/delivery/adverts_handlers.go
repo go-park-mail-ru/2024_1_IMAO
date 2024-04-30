@@ -13,7 +13,6 @@ import (
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 )
 
 const (
@@ -21,15 +20,12 @@ const (
 )
 
 type AdvertsHandler struct {
-	storage     advertusecases.AdvertsStorageInterface
-	userStorage userusecases.UsersStorageInterface
+	storage advertusecases.AdvertsStorageInterface
 }
 
-func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface,
-	userStorage userusecases.UsersStorageInterface) *AdvertsHandler {
+func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface) *AdvertsHandler {
 	return &AdvertsHandler{
-		storage:     storage,
-		userStorage: userStorage,
+		storage: storage,
 	}
 }
 

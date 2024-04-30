@@ -8,6 +8,7 @@ import "google/protobuf/empty.proto";
 
 service Auth {
     rpc Login(ExistedUserData) returns (LoggedUser);
+    rpc Signup(NewUserData) returns (LoggedUser);
     rpc Logout(SessionData) returns (google.protobuf.Empty);
     rpc CheckAuth(SessionData) returns (User);
     rpc EditEmail(EditEmailRequest) returns (User);
@@ -16,6 +17,12 @@ service Auth {
 message ExistedUserData {
     string Email = 1;
     string Password = 2;
+}
+
+message NewUserData {
+    string Email = 1;
+    string Password = 2;
+    string PasswordRepeat = 3;
 }
 
 message User {
@@ -39,6 +46,10 @@ message SessionData {
 }
 
 message EditEmailRequest {
-    uint64 ID = 1;
+    string SessionID = 1;
     string Email = 2;
+}
+
+message BoolResponse {
+    bool Ok = 1;
 }

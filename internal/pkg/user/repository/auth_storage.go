@@ -19,6 +19,7 @@ var (
 	errUserNotExists    = errors.New("user does not exist")
 	errUserExists       = errors.New("user already exists")
 	errSessionNotExists = errors.New("session does not exist")
+	errWrongData        = errors.New("wrong registration data")
 	NameSeqUser         = pgx.Identifier{"public", "user_id_seq"} //nolint:gochecknoglobals
 )
 
@@ -113,16 +114,25 @@ func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *mode
 	return nil
 }
 
-func (active *UserStorage) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+func (active *UserStorage) CreateUser(ctx context.Context, email,
+	password, passwordRepeat string) (*models.User, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	if active.UserExists(ctx, email) {
 		return nil, errUserExists
 	}
 
+	errs := utils.Validate(email, password)
+	if password != passwordRepeat {
+		errs = append(errs, "Passwords do not match")
+	}
+	if errs != nil {
+		return nil, errWrongData
+	}
+
 	user := models.User{
 		Email:        email,
-		PasswordHash: passwordHash,
+		PasswordHash: utils.HashPassword(password),
 	}
 
 	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
@@ -176,10 +186,14 @@ func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint
 
 func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+	err := utils.ValidateEmail(email)
+	if err != nil {
+		return nil, err
+	}
 
 	var user *models.User
 
-	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		userInner, err := active.editUserEmail(ctx, tx, id, email)
 		user = userInner
 
