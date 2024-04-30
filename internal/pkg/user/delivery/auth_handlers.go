@@ -125,7 +125,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	}
 	http.SetCookie(writer, cookie)
 
-	userData := NewAuthOkResponse(*expectedUser, sessionID, true)
+	userData := NewAuthOkResponse(*expectedUser, "", true)
 	responses.SendOkResponse(writer, userData)
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ", user.Email, sessionID), responses.StatusOk)
@@ -282,7 +282,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 	http.SetCookie(writer, cookie)
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, sessionID, true))
+	responses.SendOkResponse(writer, NewAuthOkResponse(*user, "", true))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ", user.Email, sessionID), responses.StatusOk)
 	log.Println("User", user.Email, "have been authorized with session ID:", sessionID)
@@ -328,7 +328,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	log.Println("User authorized")
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, NewAuthOkResponse(*user, profile.AvatarIMG, true))
+	responses.SendOkResponse(writer, NewAuthOkResponseLogged(*user, profile.AvatarIMG, true, profile.CartNum, profile.FavNum))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {

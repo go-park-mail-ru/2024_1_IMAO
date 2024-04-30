@@ -111,7 +111,9 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 			(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1 ) AS subscription_count,
 			(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
 			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
-			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count
+			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count,
+			p.cart_adverts_number,
+			p.fav_adverts_number
 		FROM 
 			public.profile p
 		INNER JOIN 
@@ -131,7 +133,8 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation, &profile.SubersCount,
-		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount); err != nil {
+		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount,
+		&profile.CartNum, &profile.FavNum); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile, err=%v", err))
 
