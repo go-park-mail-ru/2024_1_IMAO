@@ -8,6 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	useruc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,7 +49,8 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 			a.price, 
 			a.created_time, 
 			a.closed_time, 
-			a.is_used
+			a.is_used,
+			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
 		FROM 
 			public.advert a
 		LEFT JOIN 
@@ -59,7 +61,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 			public.cart cart ON a.id = cart.advert_id
 		WHERE cart.user_id = $1;`
 
-	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city")
+	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
 
 	rows, err := tx.Query(ctx, SQLAdvertByUserId, userID)
 	if err != nil {
@@ -75,10 +77,11 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 		categoryModel := models.Category{}
 		cityModel := models.City{}
 		advertModel := models.Advert{}
+		photoPad := models.PhotoPadSoloImage{}
 
 		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed); err != nil {
+			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo); err != nil {
 
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
 
@@ -88,11 +91,27 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 		advertModel.CityID = cityModel.ID
 		advertModel.CategoryID = categoryModel.ID
 
+		photoURLToInsert := ""
+		if photoPad.Photo != nil {
+			photoURLToInsert = *photoPad.Photo
+		}
+
 		returningAdvertList := models.ReturningAdvert{
 			Advert:   advertModel,
 			City:     cityModel,
 			Category: categoryModel,
 		}
+
+		decodedImage, err := utils.DecodeImage(photoURLToInsert)
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("Something went wrong while decoding image, err=%v", err))
+
+			return nil, err
+		}
+
+		returningAdvertList.Photos = append(returningAdvertList.Photos, photoURLToInsert)
+		returningAdvertList.PhotosIMG = append(returningAdvertList.PhotosIMG, decodedImage)
 
 		adsList = append(adsList, &returningAdvertList)
 	}

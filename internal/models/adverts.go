@@ -58,6 +58,10 @@ type PhotoPad struct {
 	Photo []*string `json:"photo"`
 }
 
+type PhotoPadSoloImage struct {
+	Photo *string `json:"photo"`
+}
+
 type AdvertsList struct {
 	Adverts           []*Advert
 	Categories        []*Category
