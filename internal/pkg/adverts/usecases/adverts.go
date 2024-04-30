@@ -11,7 +11,7 @@ import (
 
 type AdvertsStorageInterface interface {
 	GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error)
-	GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error)
+	GetAdvertsByCity(ctx context.Context, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
 

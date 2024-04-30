@@ -65,6 +65,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	category := vars["category"]
 
 	storage := advertsHandler.storage
+	userStorage := advertsHandler.userStorage
 
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
 	startID, errstartID := strconv.Atoi(request.URL.Query().Get("startId"))
@@ -80,10 +81,19 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	var adsList []*models.ReturningAdInList
 	var err error
 
+	session, cookieErr := request.Cookie("session_id")
+
+	var userIdCookie uint = 0
+
+	if cookieErr == nil && userStorage.SessionExists(session.Value) {
+		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+
+	}
+
 	if category != "" {
 		adsList, err = storage.GetAdvertsByCategory(ctx, category, city, uint(startID), uint(count))
 	} else if errCount == nil && errstartID == nil {
-		adsList, err = storage.GetAdvertsByCity(ctx, city, uint(startID), uint(count))
+		adsList, err = storage.GetAdvertsByCity(ctx, city, userIdCookie, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
 		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
 	}

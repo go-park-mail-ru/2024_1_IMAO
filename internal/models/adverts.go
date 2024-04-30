@@ -73,13 +73,14 @@ type AdvertsList struct {
 }
 
 type ReturningAdInList struct {
-	ID        uint     `json:"id"`
-	Title     string   `json:"title"`
-	Price     uint     `json:"price"`
-	City      string   `json:"city"`
-	Category  string   `json:"category"`
-	Photos    []string `json:"photos"`
-	PhotosIMG []string `json:"photosIMG"`
+	ID           uint     `json:"id"`
+	Title        string   `json:"title"`
+	Price        uint     `json:"price"`
+	City         string   `json:"city"`
+	Category     string   `json:"category"`
+	Photos       []string `json:"photos"`
+	PhotosIMG    []string `json:"photosIMG"`
+	InFavourites bool     `json:"inFavourites"`
 }
 
 type ReturningAdvertList struct {

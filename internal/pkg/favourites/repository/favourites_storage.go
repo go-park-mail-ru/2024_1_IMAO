@@ -1,8 +1,7 @@
-package storage
+package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
@@ -15,23 +14,17 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	errNotInCart = errors.New("there is no advert in the cart")
-)
-
-type CartStorage struct {
-	pool   *pgxpool.Pool
-	logger *zap.SugaredLogger
+type FavouritesStorage struct {
+	pool *pgxpool.Pool
 }
 
-func NewCartStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *CartStorage {
-	return &CartStorage{
-		pool:   pool,
-		logger: logger,
+func NewFavouritesStorage(pool *pgxpool.Pool) *FavouritesStorage {
+	return &FavouritesStorage{
+		pool: pool,
 	}
 }
 
-func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertByUserId := `
@@ -119,13 +112,13 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 	return adsList, nil
 }
 
-func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	cart := []*models.ReturningAdvert{}
 
-	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
-		cartInner, err := cl.getCartByUserID(ctx, tx, userID)
+	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
+		cartInner, err := favouritesStorage.getCartByUserID(ctx, tx, userID)
 		cart = cartInner
 
 		return err
@@ -144,7 +137,7 @@ func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint, userLis
 	return cart, nil
 }
 
-func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
+func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLDeleteFromCart := `DELETE FROM public.cart
@@ -165,11 +158,11 @@ func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 	return nil
 }
 
-func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error {
+func (favouritesStorage *FavouritesStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
-		err := cl.deleteAdvByIDs(ctx, tx, userID, advertID)
+	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
+		err := favouritesStorage.deleteAdvByIDs(ctx, tx, userID, advertID)
 
 		return err
 	})
@@ -183,7 +176,7 @@ func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID
 	return nil
 }
 
-func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
+func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAddToCart := `WITH deletion AS (
@@ -212,13 +205,13 @@ func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 	return added, nil
 }
 
-func (cl *CartStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool {
+func (favouritesStorage *FavouritesStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var added bool
 
-	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
-		addedInner, err := cl.appendAdvByIDs(ctx, tx, userID, advertID)
+	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
+		addedInner, err := favouritesStorage.appendAdvByIDs(ctx, tx, userID, advertID)
 		added = addedInner
 
 		return err
