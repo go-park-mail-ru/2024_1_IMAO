@@ -24,7 +24,7 @@ func NewFavouritesStorage(pool *pgxpool.Pool) *FavouritesStorage {
 	}
 }
 
-func (favouritesStorage *FavouritesStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertByUserId := `
@@ -112,13 +112,13 @@ func (favouritesStorage *FavouritesStorage) getCartByUserID(ctx context.Context,
 	return adsList, nil
 }
 
-func (favouritesStorage *FavouritesStorage) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
+func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	cart := []*models.ReturningAdvert{}
 
 	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
-		cartInner, err := favouritesStorage.getCartByUserID(ctx, tx, userID)
+		cartInner, err := favouritesStorage.getFavouritesByUserID(ctx, tx, userID)
 		cart = cartInner
 
 		return err
@@ -140,17 +140,17 @@ func (favouritesStorage *FavouritesStorage) GetCartByUserID(ctx context.Context,
 func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLDeleteFromCart := `DELETE FROM public.cart
+	SQLDeleteFromCart := `DELETE FROM public.favourite
 		WHERE user_id = $1 AND advert_id = $2;`
 
-	logging.LogInfo(logger, "DELETE FROM cart")
+	logging.LogInfo(logger, "DELETE FROM favourite")
 
 	var err error
 
 	_, err = tx.Exec(ctx, SQLDeleteFromCart, userID, advertID)
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing advert delete from the cart, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing advert delete from the favourite, err=%v", err))
 
 		return err
 	}
@@ -179,20 +179,20 @@ func (favouritesStorage *FavouritesStorage) DeleteAdvByIDs(ctx context.Context, 
 func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAddToCart := `WITH deletion AS (
-		DELETE FROM public.cart
+	SQLAddToFavourites := `WITH deletion AS (
+		DELETE FROM public.favourite
 		WHERE user_id = $1 AND advert_id = $2
 		RETURNING user_id, advert_id
 	)
-	INSERT INTO public.cart (user_id, advert_id)
+	INSERT INTO public.favourite (user_id, advert_id)
 	SELECT $1, $2
 	WHERE NOT EXISTS (
 		SELECT 1 FROM deletion
 	) RETURNING true;
 	`
-	logging.LogInfo(logger, "DELETE or SELECT FROM cart")
+	logging.LogInfo(logger, "DELETE or SELECT FROM favourite")
 
-	userLine := tx.QueryRow(ctx, SQLAddToCart, userID, advertID)
+	userLine := tx.QueryRow(ctx, SQLAddToFavourites, userID, advertID)
 
 	added := false
 
@@ -218,7 +218,7 @@ func (favouritesStorage *FavouritesStorage) AppendAdvByIDs(ctx context.Context, 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing addvert add to cart, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing addvert add to favourites, err=%v", err))
 	}
 
 	return added

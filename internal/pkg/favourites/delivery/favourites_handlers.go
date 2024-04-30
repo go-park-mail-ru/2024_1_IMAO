@@ -24,20 +24,14 @@ type FavouritesHandler struct {
 	storage       favouritesusecases.FavouritesStorageInterface
 	advertStorage advertusecases.AdvertsStorageInterface
 	userStorage   userusecases.UsersStorageInterface
-	addrOrigin    string
-	schema        string
-	logger        *zap.SugaredLogger
 }
 
 func NewFavouritesHandler(storage favouritesusecases.FavouritesStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
-	addrOrigin string, schema string, logger *zap.SugaredLogger) *FavouritesHandler {
+) *FavouritesHandler {
 	return &FavouritesHandler{
 		storage:       storage,
 		advertStorage: advertStorage,
 		userStorage:   userStorage,
-		addrOrigin:    addrOrigin,
-		schema:        schema,
-		logger:        logger,
 	}
 }
 
@@ -92,17 +86,17 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
 	}
 	log.Println("Get cart for user", user.ID)
-	responses.SendOkResponse(writer, NewCartOkResponse(adsList))
+	responses.SendOkResponse(writer, NewFavouritesOkResponse(adsList))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
-func (favouritesHandler *FavouritesHandler) ChangeCart(writer http.ResponseWriter, request *http.Request) {
+func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -120,7 +114,7 @@ func (favouritesHandler *FavouritesHandler) ChangeCart(writer http.ResponseWrite
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -141,7 +135,7 @@ func (favouritesHandler *FavouritesHandler) ChangeCart(writer http.ResponseWrite
 
 	isAppended := storage.AppendAdvByIDs(ctx, user.ID, data.AdvertID, favouritesHandler.userStorage, favouritesHandler.advertStorage)
 
-	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended))
+	responses.SendOkResponse(writer, NewFavouritesChangeResponse(isAppended))
 
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
@@ -152,7 +146,7 @@ func (favouritesHandler *FavouritesHandler) ChangeCart(writer http.ResponseWrite
 	}
 }
 
-func (favouritesHandler *FavouritesHandler) DeleteFromCart(writer http.ResponseWriter, request *http.Request) {
+func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -170,7 +164,7 @@ func (favouritesHandler *FavouritesHandler) DeleteFromCart(writer http.ResponseW
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -191,16 +185,16 @@ func (favouritesHandler *FavouritesHandler) DeleteFromCart(writer http.ResponseW
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)
 			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-			responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
+			responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusBadRequest,
 				responses.ErrBadRequest))
 
 			return
 		}
 	}
 
-	log.Println("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
+	log.Println("Adverts", data.AdvertIDs, "has been removed from favourites of user", user.ID)
 
-	responses.SendOkResponse(writer, NewCartChangeResponse(false))
+	responses.SendOkResponse(writer, NewFavouritesChangeResponse(false))
 
-	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from cart of user %s", fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from favourites of user %s", fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
 }

@@ -91,11 +91,11 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	}
 
 	if category != "" {
-		adsList, err = storage.GetAdvertsByCategory(ctx, category, city, uint(startID), uint(count))
+		adsList, err = storage.GetAdvertsByCategory(ctx, category, city, userIdCookie, uint(startID), uint(count))
 	} else if errCount == nil && errstartID == nil {
 		adsList, err = storage.GetAdvertsByCity(ctx, city, userIdCookie, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
-		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, uint(userID), uint(deleted))
+		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIdCookie, uint(userID), uint(deleted))
 	}
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
@@ -128,7 +128,16 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	storage := advertsHandler.storage
 	userStorage := advertsHandler.userStorage
 
-	ad, err := storage.GetAdvert(ctx, uint(id), city, category)
+	session, cookieErr := request.Cookie("session_id")
+
+	var userIdCookie uint = 0
+
+	if cookieErr == nil && userStorage.SessionExists(session.Value) {
+		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+
+	}
+
+	ad, err := storage.GetAdvert(ctx, userIdCookie, uint(id), city, category)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -137,8 +146,6 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 
 		return
 	}
-
-	session, cookieErr := request.Cookie("session_id")
 
 	if cookieErr == nil && userStorage.SessionExists(session.Value) {
 		userID := userStorage.MAP_GetUserIDBySession(session.Value)

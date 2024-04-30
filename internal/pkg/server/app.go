@@ -2,11 +2,12 @@ package server
 
 import (
 	"context"
-	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
@@ -14,6 +15,7 @@ import (
 	advertrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
 	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
 	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
+	favrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
 	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
@@ -55,9 +57,10 @@ func (srv *Server) Run() error {
 	profileStorage := profilerepo.NewProfileStorage(connPool, logger)
 	userStorage := authrepo.NewUserStorage(connPool, logger)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
+	favouritesStorage := favrepo.NewFavouritesStorage(connPool)
 
 	router := myrouter.NewRouter(connPool, logger, advertStorage, cartStorage, cityStorage, orderStorage,
-		profileStorage, userStorage, surveyStorage)
+		profileStorage, userStorage, surveyStorage, favouritesStorage)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

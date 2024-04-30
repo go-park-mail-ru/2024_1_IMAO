@@ -20,21 +20,21 @@ type FavouritesErrResponse struct {
 	Status string `json:"status"`
 }
 
-func NewCartChangeResponse(isAppended bool) *FavouritesChangeResponse {
+func NewFavouritesChangeResponse(isAppended bool) *FavouritesChangeResponse {
 	return &FavouritesChangeResponse{
 		Code:       responses.StatusOk,
 		IsAppended: isAppended,
 	}
 }
 
-func NewCartOkResponse(adverts []*models.ReturningAdvert) *FavouritesOkResponse {
+func NewFavouritesOkResponse(adverts []*models.ReturningAdvert) *FavouritesOkResponse {
 	return &FavouritesOkResponse{
 		Code:  responses.StatusOk,
 		Items: adverts,
 	}
 }
 
-func NewCartErrResponse(code int, status string) *FavouritesErrResponse {
+func NewFavouritesErrResponse(code int, status string) *FavouritesErrResponse {
 	return &FavouritesErrResponse{
 		Code:   code,
 		Status: status,

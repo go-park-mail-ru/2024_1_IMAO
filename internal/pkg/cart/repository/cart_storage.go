@@ -206,7 +206,7 @@ func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 	if err := userLine.Scan(&added); err != nil {
 		logging.LogError(logger, fmt.Errorf("error while scanning advert added, err=%v", err))
 
-		return false, err
+		return false, nil
 	}
 
 	return added, nil
