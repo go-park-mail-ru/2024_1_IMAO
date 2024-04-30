@@ -42,6 +42,7 @@ type Advert struct {
 	ClosedTime  time.Time `json:"closed"`
 	Active      bool      `json:"active"`
 	IsUsed      bool      `json:"isUsed"`
+	Views       uint      `json:"views"`
 	Deleted     bool      `json:"-"`
 }
 

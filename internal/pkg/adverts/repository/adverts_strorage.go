@@ -118,6 +118,48 @@ func (ads *AdvertStorage) GetAdvertImagesURLs(ctx context.Context, advertID uint
 	return urlArray, nil
 }
 
+func (ads *AdvertStorage) insertView(ctx context.Context, tx pgx.Tx, userID, advertID uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLInsertView := `
+	INSERT INTO public.view(
+		user_id, advert_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, advert_id) DO NOTHING;`
+
+	logging.LogInfo(logger, "INSERT INTO view")
+
+	var err error
+
+	_, err = tx.Exec(ctx, SQLInsertView, userID, advertID)
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertInsertView query, err=%v", err))
+
+		return err
+	}
+
+	return nil
+}
+
+func (ads *AdvertStorage) InsertView(ctx context.Context, userID, advertID uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		err := ads.insertView(ctx, tx, userID, advertID)
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting view, err=%v", err))
+
+		return err
+	}
+
+	return nil
+}
+
 func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city, category string) (*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -136,7 +178,8 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 		a.price, 
 		a.created_time, 
 		a.closed_time, 
-		a.is_used
+		a.is_used,
+		a.views
 		FROM 
 		public.advert a
 		LEFT JOIN 
@@ -155,7 +198,7 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 		&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed); err != nil {
+		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
 
@@ -220,6 +263,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
 	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
+	ORDER BY id
 	LIMIT $3;
 	`
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")

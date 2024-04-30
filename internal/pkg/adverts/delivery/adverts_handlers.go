@@ -116,6 +116,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	id, _ := strconv.Atoi(vars["id"])
 
 	storage := advertsHandler.storage
+	userStorage := advertsHandler.userStorage
 
 	ad, err := storage.GetAdvert(ctx, uint(id), city, category)
 	if err != nil {
@@ -125,6 +126,21 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 			responses.ErrBadRequest))
 
 		return
+	}
+
+	session, cookieErr := request.Cookie("session_id")
+
+	if cookieErr == nil && userStorage.SessionExists(session.Value) {
+		userID := userStorage.MAP_GetUserIDBySession(session.Value)
+		err = storage.InsertView(ctx, userID, uint(id))
+		if err != nil {
+			logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+			log.Println(err, responses.StatusInternalServerError)
+			responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
+				responses.ErrInternalServer))
+
+			return
+		}
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)

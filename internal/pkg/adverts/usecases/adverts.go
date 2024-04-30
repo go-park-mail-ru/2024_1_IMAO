@@ -19,4 +19,5 @@ type AdvertsStorageInterface interface {
 	EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
 	GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error)
 	CloseAdvert(ctx context.Context, advertID uint) error
+	InsertView(ctx context.Context, userID, advertID uint) error
 }
