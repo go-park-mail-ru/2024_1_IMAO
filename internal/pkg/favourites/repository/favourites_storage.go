@@ -186,7 +186,7 @@ func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, 
 	if err := userLine.Scan(&added); err != nil {
 		logging.LogError(logger, fmt.Errorf("error while scanning advert added, err=%v", err))
 
-		return false, err
+		return false, nil
 	}
 
 	return added, nil
