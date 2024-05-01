@@ -110,6 +110,64 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
 }
 
+func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	storage := advertsHandler.storage
+	userStorage := advertsHandler.userStorage
+
+	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
+	startID, errStartID := strconv.Atoi(request.URL.Query().Get("startId"))
+	title := request.URL.Query().Get("title")
+	city := request.URL.Query().Get("city")
+
+	if city == "" {
+		city = defaultCity
+	}
+
+	var adsList []*models.ReturningAdInList
+	var err error
+
+	session, cookieErr := request.Cookie("session_id")
+
+	var userIdCookie uint = 0
+
+	if cookieErr == nil && userStorage.SessionExists(session.Value) {
+		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+
+	}
+
+	if errCount == nil && errStartID == nil && title != "" {
+		adsList, err = storage.SearchAdvertByTitle(ctx, title, userIdCookie, uint(startID), uint(count))
+	} else {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
+}
+
 func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))

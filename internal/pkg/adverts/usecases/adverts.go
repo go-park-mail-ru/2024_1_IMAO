@@ -14,6 +14,7 @@ type AdvertsStorageInterface interface {
 	GetAdvertsByCity(ctx context.Context, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertsByCategory(ctx context.Context, category, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
+	SearchAdvertByTitle(ctx context.Context, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
 
 	CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
 	EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)

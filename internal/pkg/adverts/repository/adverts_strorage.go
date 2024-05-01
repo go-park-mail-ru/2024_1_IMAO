@@ -1332,3 +1332,195 @@ func AddAdvert(ads *models.AdvertsList, advert *models.Advert) {
 	ads.Adverts = append(ads.Adverts, advert)
 
 }
+
+func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, title string, startID, num uint) ([]*models.ReturningAdInList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
+	FROM public.advert a
+	INNER JOIN city c ON a.city_id = c.id
+	INNER JOIN category ON a.category_id = category.id
+	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND a.id >= $2
+	ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($1 || ':*', ' ', ' | '))) DESC	 
+	LIMIT $3;
+	`
+	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
+
+	const (
+		startAdvertID uint = 1
+		advertLimit   uint = 30
+	)
+
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, title, startID, num)
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v", err))
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	var adsList []*models.ReturningAdInList
+	for rows.Next() {
+		returningAdInList := models.ReturningAdInList{}
+
+		photoPad := models.PhotoPad{}
+
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
+			return nil, err
+		}
+
+		if photoPad.Photo != nil {
+			for _, ptr := range photoPad.Photo {
+				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
+			}
+		}
+
+		for i := 0; i < len(returningAdInList.Photos); i++ {
+
+			image, err := utils.DecodeImage(returningAdInList.Photos[i])
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
+			if err != nil {
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+			}
+		}
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+
+			return nil, err
+		}
+
+		returningAdInList.InFavourites = false
+		returningAdInList.InCart = false
+
+		returningAdInList.Sanitize()
+
+		adsList = append(adsList, &returningAdInList)
+	}
+
+	if err := rows.Err(); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+
+		return nil, err
+	}
+
+	return adsList, nil
+}
+
+func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $4 AND f.advert_id = a.id)
+         THEN 1 ELSE 0 END AS bool) AS in_favourites,
+	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $4 AND c.advert_id = a.id)
+	THEN 1 ELSE 0 END AS bool) AS in_cart
+	FROM public.advert a
+	INNER JOIN city c ON a.city_id = c.id
+	INNER JOIN category ON a.category_id = category.id
+	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND a.id >= $2
+	ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($1 || ':*', ' ', ' | '))) DESC	 
+	LIMIT $3;
+	`
+	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
+
+	const (
+		startAdvertID uint = 1
+		advertLimit   uint = 30
+	)
+
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, title, startID, num, userID)
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v", err))
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	var adsList []*models.ReturningAdInList
+	for rows.Next() {
+		returningAdInList := models.ReturningAdInList{}
+
+		photoPad := models.PhotoPad{}
+
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title,
+			&returningAdInList.Price, &photoPad.Photo, &returningAdInList.InFavourites, &returningAdInList.InCart); err != nil {
+			return nil, err
+		}
+
+		if photoPad.Photo != nil {
+			for _, ptr := range photoPad.Photo {
+				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
+			}
+		}
+
+		for i := 0; i < len(returningAdInList.Photos); i++ {
+
+			image, err := utils.DecodeImage(returningAdInList.Photos[i])
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
+			if err != nil {
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+
+				return nil, err
+			}
+		}
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+
+			return nil, err
+		}
+
+		returningAdInList.Sanitize()
+
+		adsList = append(adsList, &returningAdInList)
+	}
+
+	if err := rows.Err(); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+
+		return nil, err
+	}
+
+	return adsList, nil
+}
+
+func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var advertsList []*models.ReturningAdInList
+
+	if userID == 0 {
+		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+			advertsListInner, err := ads.searchAdvertByTitle(ctx, tx, title, startID, num)
+			advertsList = advertsListInner
+
+			return err
+		})
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+
+			return nil, err
+		}
+
+	} else {
+		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, userID, startID, num)
+			advertsList = advertsListInner
+
+			return err
+		})
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+
+			return nil, err
+		}
+
+	}
+
+	return advertsList, nil
+}
