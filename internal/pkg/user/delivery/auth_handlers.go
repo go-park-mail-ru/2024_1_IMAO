@@ -160,6 +160,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	client := authHandler.authClient
+	profileStorage := authHandler.profileStorage
 
 	var newUser models.UnauthorizedUser
 	err := json.NewDecoder(request.Body).Decode(&newUser)
@@ -185,6 +186,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 	cookie := createSession(user.SessionID)
 	http.SetCookie(writer, cookie)
+	profileStorage.CreateProfile(ctx, uint(user.ID))
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
 		ID:    uint(user.ID),
@@ -209,6 +211,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	client := authHandler.authClient
+	profileStorage := authHandler.profileStorage
 
 	session, err := request.Cookie("session_id")
 
@@ -219,14 +222,24 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
-	user, _ := client.CheckAuth(ctx, &authproto.SessionData{
+	user, _ := client.GetUser(ctx, &authproto.SessionData{
 		SessionID: session.Value,
 	})
-	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
+
+	var avatar string
+
+	if user.IsAuth {
+		profile, _ := profileStorage.GetProfileByUserID(ctx, uint(user.ID))
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
+		avatar = profile.Avatar
+	} else {
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
+	}
+
 	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, user.Avatar, user.IsAuth))
+	}, avatar, user.IsAuth))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {

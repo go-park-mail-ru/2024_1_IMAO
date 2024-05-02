@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -58,28 +57,10 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	userStorage := h.userStorage
 	storage := h.storage
 
 	session, err := request.Cookie("session_id")
-
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
-
-		return
-	}
 
 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
@@ -157,28 +138,10 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	userStorage := h.userStorage
 	storage := h.storage
 
 	session, err := request.Cookie("session_id")
-
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
-
-		return
-	}
 
 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
@@ -220,18 +183,6 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	storage := h.storage
 
 	session, err := request.Cookie("session_id")
-
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusUnauthorized,
-			responses.ErrUnauthorized))
-
-		return
-	}
 
 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 

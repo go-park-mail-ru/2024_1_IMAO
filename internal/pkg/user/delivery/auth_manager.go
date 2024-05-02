@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	protobuf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -18,15 +17,12 @@ var (
 type AuthManager struct {
 	protobuf.UnimplementedAuthServer
 
-	UserStorage    userusecases.UsersStorageInterface
-	ProfileStorage profusecases.ProfileStorageInterface
+	UserStorage userusecases.UsersStorageInterface
 }
 
-func NewAuthManager(storage userusecases.UsersStorageInterface,
-	profileStorage profusecases.ProfileStorageInterface) *AuthManager {
+func NewAuthManager(storage userusecases.UsersStorageInterface) *AuthManager {
 	return &AuthManager{
-		UserStorage:    storage,
-		ProfileStorage: profileStorage,
+		UserStorage: storage,
 	}
 }
 
@@ -86,13 +82,11 @@ func (manager *AuthManager) Signup(ctx context.Context,
 	password := in.GetPassword()
 	passwordRepeat := in.GetPasswordRepeat()
 	storage := manager.UserStorage
-	profileStorage := manager.ProfileStorage
 
 	user, err := storage.CreateUser(ctx, email, password, passwordRepeat)
 	if err != nil {
 		return nil, err
 	}
-	profileStorage.CreateProfile(ctx, user.ID)
 	sessionID := storage.AddSession(user.ID)
 
 	return &protobuf.LoggedUser{
@@ -104,19 +98,22 @@ func (manager *AuthManager) Signup(ctx context.Context,
 	}, nil
 }
 
-func (manager *AuthManager) CheckAuth(ctx context.Context, in *protobuf.SessionData) (*protobuf.User, error) {
+func (manager *AuthManager) GetUser(ctx context.Context, in *protobuf.SessionData) (*protobuf.UserOnly, error) {
 	sessionID := in.GetSessionID()
 	storage := manager.UserStorage
-	profileStorage := manager.ProfileStorage
 
 	if !storage.SessionExists(sessionID) {
-		return newProtobufUser(nil, "", false), nil
+		return &protobuf.UserOnly{}, nil
 	}
 
 	user, _ := storage.GetUserBySession(ctx, sessionID)
-	profile, _ := profileStorage.GetProfileByUserID(ctx, user.ID)
 
-	return newProtobufUser(user, profile.AvatarIMG, true), nil
+	return &protobuf.UserOnly{
+		ID:           uint64(user.ID),
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		IsAuth:       true,
+	}, nil
 }
 
 func (manager *AuthManager) EditEmail(ctx context.Context, in *protobuf.EditEmailRequest) (*protobuf.User, error) {

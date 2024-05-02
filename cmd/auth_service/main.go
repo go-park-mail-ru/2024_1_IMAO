@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
-	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
@@ -40,9 +39,8 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	profileStorage := profilerepo.NewProfileStorage(connPool)
 	userStorage := authrepo.NewUserStorage(connPool)
-	authManager := delivery.NewAuthManager(userStorage, profileStorage)
+	authManager := delivery.NewAuthManager(userStorage)
 
 	srv := grpc.NewServer()
 	authproto.RegisterAuthServer(srv, authManager)

@@ -44,7 +44,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	router.Use(logMiddleware)
 
 	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()
-	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(userStorage)
+	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(authClient)
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
 	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage)
