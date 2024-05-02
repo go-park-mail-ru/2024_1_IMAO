@@ -51,3 +51,7 @@ SELECT * FROM one_word_titles
 UNION 
 SELECT * FROM two_word_titles
 LIMIT 8;
+
+CREATE INDEX trgm_title_idx ON advert USING gist (title gist_trgm_ops);
+
+CREATE EXTENSION pg_trgm;

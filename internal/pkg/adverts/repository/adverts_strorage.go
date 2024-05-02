@@ -1532,21 +1532,11 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	words := strings.Fields(title)
 	wordsCount := len(words)
 
-	SQLSelectSuggestionsOneWord := `WITH one_word_titles AS (
-		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
-									  'MaxFragments=0,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
-		FROM public.advert a
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
-	),
-	two_word_titles AS (
-		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
-									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
-		FROM public.advert a
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
-	)
-	SELECT * FROM one_word_titles
-	UNION
-	SELECT * FROM two_word_titles
+	SQLSelectSuggestionsOneWord := `
+	SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
+								'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
+	FROM public.advert a
+	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	ORDER BY title
 	LIMIT $2;
 	`
@@ -1572,6 +1562,7 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	logging.LogInfo(logger, "SELECT FROM advert")
 	var rows pgx.Rows
 	var err error
+	fmt.Println(wordsCount)
 	if wordsCount > 1 {
 		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num)
 	} else {
