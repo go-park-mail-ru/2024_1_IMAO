@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -203,7 +202,6 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	}
 
 	if err != nil {
-		fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,

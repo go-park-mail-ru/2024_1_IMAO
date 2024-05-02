@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"os"
+	"strings"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -1528,7 +1529,10 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title string, num uint) ([]string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLSelectSuggestions := `WITH one_word_titles AS (
+	words := strings.Fields(title)
+	wordsCount := len(words)
+
+	SQLSelectSuggestionsOneWord := `WITH one_word_titles AS (
 		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
 									  'MaxFragments=0,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
@@ -1546,13 +1550,34 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	ORDER BY title
 	LIMIT $2;
 	`
-	logging.LogInfo(logger, "SELECT FROM advert")
-	const (
-		MaxFragments1 uint = 0
-		MaxFragments2 uint = 1
-		MaxWords      uint = 2
+
+	SQLSelectSuggestionsManyWords := `WITH one_word_titles AS (
+		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
+									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
+		FROM public.advert a
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+	),
+	two_word_titles AS (
+		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
+									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), '<b>|</b>', '', 'g')) AS title
+		FROM public.advert a
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	)
-	rows, err := tx.Query(ctx, SQLSelectSuggestions, title, num)
+	SELECT * FROM one_word_titles
+	UNION
+	SELECT * FROM two_word_titles
+	ORDER BY title
+	LIMIT $2;
+	`
+	logging.LogInfo(logger, "SELECT FROM advert")
+	var rows pgx.Rows
+	var err error
+	if wordsCount > 1 {
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num)
+	} else {
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num)
+	}
+
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select advert title query, err=%v", err))
 
