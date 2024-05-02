@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -166,6 +167,53 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
+}
+
+func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	storage := advertsHandler.storage
+	num, errCount := strconv.Atoi(request.URL.Query().Get("num"))
+	title := request.URL.Query().Get("title")
+	city := request.URL.Query().Get("city")
+
+	if city == "" {
+		city = defaultCity
+	}
+
+	var suggestions []string
+	var err error
+
+	if errCount == nil && title != "" {
+		suggestions, err = storage.GetSuggestions(ctx, title, uint(num))
+	} else {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	if err != nil {
+		fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(suggestions))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, request *http.Request) {

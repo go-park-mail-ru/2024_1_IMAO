@@ -1524,3 +1524,85 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 
 	return advertsList, nil
 }
+
+func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title string, num uint) ([]string, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSelectSuggestions := `WITH one_word_titles AS (
+		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
+									  'MaxFragments=0,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
+		FROM public.advert a
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+	),
+	two_word_titles AS (
+		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
+									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
+		FROM public.advert a
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+	)
+	SELECT * FROM one_word_titles
+	UNION
+	SELECT * FROM two_word_titles
+	ORDER BY title
+	LIMIT $2;
+	`
+	logging.LogInfo(logger, "SELECT FROM advert")
+	const (
+		MaxFragments1 uint = 0
+		MaxFragments2 uint = 1
+		MaxWords      uint = 2
+	)
+	rows, err := tx.Query(ctx, SQLSelectSuggestions, title, num)
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select advert title query, err=%v", err))
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suggestions []string
+	for rows.Next() {
+		var suggestionPad *string
+
+		if err := rows.Scan(&suggestionPad); err != nil {
+			return nil, err
+		}
+
+		suggestionToInsert := ""
+		if suggestionPad != nil {
+			suggestionToInsert = *suggestionPad
+		}
+
+		// ПО-ХОРОШЕМУ СЮДА НУЖНО ПРИКРУТИТЬ САНИТАЙЗЕР
+		suggestions = append(suggestions, suggestionToInsert)
+	}
+
+	if err := rows.Err(); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert titles rows, err=%v", err))
+
+		return nil, err
+	}
+
+	return suggestions, nil
+}
+
+func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title string, num uint) ([]string, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var suggestions []string
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		suggestionsInner, err := ads.getSuggestions(ctx, tx, title, num)
+		suggestions = suggestionsInner
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+
+		return nil, err
+	}
+
+	return suggestions, nil
+}
