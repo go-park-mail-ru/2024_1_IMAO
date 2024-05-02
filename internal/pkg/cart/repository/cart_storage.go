@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
-	useruc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -98,7 +96,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 	return adsList, nil
 }
 
-func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningAdvert, error) {
+func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	cart := []*models.ReturningAdvert{}
@@ -144,7 +142,7 @@ func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 	return nil
 }
 
-func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error {
+func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
@@ -191,7 +189,7 @@ func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 	return added, nil
 }
 
-func (cl *CartStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool {
+func (cl *CartStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var added bool

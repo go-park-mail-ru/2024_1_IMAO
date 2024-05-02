@@ -21,8 +21,6 @@ import (
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
 	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
-	authrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/repository"
-
 	"github.com/gorilla/handlers"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -57,7 +55,6 @@ func (srv *Server) Run() error {
 	cityStorage := cityrepo.NewCityStorage(connPool)
 	orderStorage := orderrepo.NewOrderStorage(connPool)
 	profileStorage := profilerepo.NewProfileStorage(connPool)
-	userStorage := authrepo.NewUserStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
 	cfg := config.ReadConfig()
@@ -75,7 +72,7 @@ func (srv *Server) Run() error {
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
 	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
-		profileStorage, userStorage, surveyStorage, authClient)
+		profileStorage, surveyStorage, authClient)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

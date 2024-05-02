@@ -35,8 +35,6 @@ func newProtobufUser(user *models.User, avatar string, isAuth bool) *protobuf.Us
 		ID:           uint64(user.ID),
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
-		Avatar:       avatar,
-		IsAuth:       isAuth,
 	}
 }
 
@@ -98,17 +96,17 @@ func (manager *AuthManager) Signup(ctx context.Context,
 	}, nil
 }
 
-func (manager *AuthManager) GetUser(ctx context.Context, in *protobuf.SessionData) (*protobuf.UserOnly, error) {
+func (manager *AuthManager) GetCurrentUser(ctx context.Context, in *protobuf.SessionData) (*protobuf.AuthUser, error) {
 	sessionID := in.GetSessionID()
 	storage := manager.UserStorage
 
 	if !storage.SessionExists(sessionID) {
-		return &protobuf.UserOnly{}, nil
+		return &protobuf.AuthUser{}, nil
 	}
 
 	user, _ := storage.GetUserBySession(ctx, sessionID)
 
-	return &protobuf.UserOnly{
+	return &protobuf.AuthUser{
 		ID:           uint64(user.ID),
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,

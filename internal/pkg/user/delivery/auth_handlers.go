@@ -222,7 +222,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		return
 	}
 
-	user, _ := client.GetUser(ctx, &authproto.SessionData{
+	user, _ := client.GetCurrentUser(ctx, &authproto.SessionData{
 		SessionID: session.Value,
 	})
 

@@ -35,7 +35,7 @@ func CreateAuthCheckMiddleware(authClient protobuf.AuthClient) mux.MiddlewareFun
 				return
 			}
 
-			user, _ := authClient.GetUser(ctx, &authproto.SessionData{
+			user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{
 				SessionID: session.Value,
 			})
 

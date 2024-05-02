@@ -10,7 +10,7 @@ service Auth {
     rpc Login(ExistedUserData) returns (LoggedUser);
     rpc Signup(NewUserData) returns (LoggedUser);
     rpc Logout(SessionData) returns (google.protobuf.Empty);
-    rpc GetUser(SessionData) returns (UserOnly);
+    rpc GetCurrentUser(SessionData) returns (AuthUser);
     rpc EditEmail(EditEmailRequest) returns (User);
 }
 
@@ -29,11 +29,9 @@ message User {
     uint64 ID = 1;
     string Email = 2;
     string PasswordHash = 3;
-    string Avatar = 4;
-    bool IsAuth = 5;
 }
 
-message UserOnly {
+message AuthUser {
     uint64 ID = 1;
     string Email = 2;
     string PasswordHash = 3;
@@ -55,8 +53,4 @@ message SessionData {
 message EditEmailRequest {
     string SessionID = 1;
     string Email = 2;
-}
-
-message BoolResponse {
-    bool Ok = 1;
 }

@@ -22,11 +22,11 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Auth_Login_FullMethodName     = "/Auth/Login"
-	Auth_Signup_FullMethodName    = "/Auth/Signup"
-	Auth_Logout_FullMethodName    = "/Auth/Logout"
-	Auth_GetUser_FullMethodName   = "/Auth/GetUser"
-	Auth_EditEmail_FullMethodName = "/Auth/EditEmail"
+	Auth_Login_FullMethodName          = "/Auth/Login"
+	Auth_Signup_FullMethodName         = "/Auth/Signup"
+	Auth_Logout_FullMethodName         = "/Auth/Logout"
+	Auth_GetCurrentUser_FullMethodName = "/Auth/GetCurrentUser"
+	Auth_EditEmail_FullMethodName      = "/Auth/EditEmail"
 )
 
 // AuthClient is the client API for Auth service.
@@ -36,7 +36,7 @@ type AuthClient interface {
 	Login(ctx context.Context, in *ExistedUserData, opts ...grpc.CallOption) (*LoggedUser, error)
 	Signup(ctx context.Context, in *NewUserData, opts ...grpc.CallOption) (*LoggedUser, error)
 	Logout(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetUser(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*UserOnly, error)
+	GetCurrentUser(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*AuthUser, error)
 	EditEmail(ctx context.Context, in *EditEmailRequest, opts ...grpc.CallOption) (*User, error)
 }
 
@@ -75,9 +75,9 @@ func (c *authClient) Logout(ctx context.Context, in *SessionData, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) GetUser(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*UserOnly, error) {
-	out := new(UserOnly)
-	err := c.cc.Invoke(ctx, Auth_GetUser_FullMethodName, in, out, opts...)
+func (c *authClient) GetCurrentUser(ctx context.Context, in *SessionData, opts ...grpc.CallOption) (*AuthUser, error) {
+	out := new(AuthUser)
+	err := c.cc.Invoke(ctx, Auth_GetCurrentUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ type AuthServer interface {
 	Login(context.Context, *ExistedUserData) (*LoggedUser, error)
 	Signup(context.Context, *NewUserData) (*LoggedUser, error)
 	Logout(context.Context, *SessionData) (*emptypb.Empty, error)
-	GetUser(context.Context, *SessionData) (*UserOnly, error)
+	GetCurrentUser(context.Context, *SessionData) (*AuthUser, error)
 	EditEmail(context.Context, *EditEmailRequest) (*User, error)
 	mustEmbedUnimplementedAuthServer()
 }
@@ -118,8 +118,8 @@ func (UnimplementedAuthServer) Signup(context.Context, *NewUserData) (*LoggedUse
 func (UnimplementedAuthServer) Logout(context.Context, *SessionData) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
-func (UnimplementedAuthServer) GetUser(context.Context, *SessionData) (*UserOnly, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
+func (UnimplementedAuthServer) GetCurrentUser(context.Context, *SessionData) (*AuthUser, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentUser not implemented")
 }
 func (UnimplementedAuthServer) EditEmail(context.Context, *EditEmailRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EditEmail not implemented")
@@ -191,20 +191,20 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Auth_GetCurrentUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SessionData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServer).GetUser(ctx, in)
+		return srv.(AuthServer).GetCurrentUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Auth_GetUser_FullMethodName,
+		FullMethod: Auth_GetCurrentUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).GetUser(ctx, req.(*SessionData))
+		return srv.(AuthServer).GetCurrentUser(ctx, req.(*SessionData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -247,8 +247,8 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Auth_Logout_Handler,
 		},
 		{
-			MethodName: "GetUser",
-			Handler:    _Auth_GetUser_Handler,
+			MethodName: "GetCurrentUser",
+			Handler:    _Auth_GetCurrentUser_Handler,
 		},
 		{
 			MethodName: "EditEmail",

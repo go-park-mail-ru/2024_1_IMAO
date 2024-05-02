@@ -8,8 +8,9 @@ import (
 )
 
 type OrderStorageInterface interface {
-	GetOrdersByUserID(userID uint, advertsList usecases.AdvertsStorageInterface) ([]*models.OrderItem, error)
-	GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList usecases.AdvertsStorageInterface) ([]*models.ReturningOrder, error)
-	//DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error
-	CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem, advertsList usecases.AdvertsStorageInterface) error
+	GetOrdersByUserID(userID uint) ([]*models.OrderItem, error)
+	GetReturningOrderByUserID(ctx context.Context, userID uint,
+		advertsList usecases.AdvertsStorageInterface) ([]*models.ReturningOrder, error)
+	// DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error
+	CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem) error
 }

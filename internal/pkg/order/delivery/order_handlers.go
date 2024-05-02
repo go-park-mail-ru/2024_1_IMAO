@@ -2,8 +2,9 @@ package delivery
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"log"
 	"net/http"
 
@@ -11,30 +12,27 @@ import (
 	"go.uber.org/zap"
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	authresp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
-	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 )
 
 type OrderHandler struct {
 	storage       orderusecases.OrderStorageInterface
 	cartStorage   cartusecases.CartStorageInterface
+	authClient    authproto.AuthClient
 	advertStorage advertusecases.AdvertsStorageInterface
-	userStorage   userusecases.UsersStorageInterface
 }
 
 func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage cartusecases.CartStorageInterface,
-	advertStorage advertusecases.AdvertsStorageInterface,
-	userStorage userusecases.UsersStorageInterface) *OrderHandler {
+	authClient authproto.AuthClient,
+	advertStorage advertusecases.AdvertsStorageInterface) *OrderHandler {
 	return &OrderHandler{
 		storage:       storage,
 		cartStorage:   cartStorage,
 		advertStorage: advertStorage,
-		userStorage:   userStorage,
+		authClient:    authClient,
 	}
 }
 
@@ -59,22 +57,11 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	storage := orderHandler.storage
-	userStorage := orderHandler.userStorage
+	authClient := orderHandler.authClient
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
-
-		return
-	}
-
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	var ordersList []*models.ReturningOrder
 
@@ -100,7 +87,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	storage := orderHandler.storage
 	cartStorage := orderHandler.cartStorage
-	userStorage := orderHandler.userStorage
+	authClient := orderHandler.authClient
 
 	var data models.ReceivedOrderItems
 
@@ -114,22 +101,11 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
-
-		return
-	}
-
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY
 	for _, receivedOrderItem := range data.Adverts {
-		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID, userStorage, orderHandler.advertStorage)
+		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID)
 
 		if isDeleted != nil {
 			log.Println("Can not create an order", receivedOrderItem.AdvertID, "for user", user.ID)
@@ -140,7 +116,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			return
 		}
 
-		storage.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.advertStorage)
+		storage.CreateOrderByID(uint(user.ID), receivedOrderItem)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
 

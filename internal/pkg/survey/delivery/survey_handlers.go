@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,21 +11,20 @@ import (
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	surveyusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/usecases"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 type SurveyHandler struct {
-	userStorage   userusecases.UsersStorageInterface
+	authClient    authproto.AuthClient
 	surveyStorage surveyusecases.SurveyStorageInterface
 }
 
-func NewSurveyHandler(userStorage userusecases.UsersStorageInterface,
+func NewSurveyHandler(authClient authproto.AuthClient,
 	surveyStorage surveyusecases.SurveyStorageInterface) *SurveyHandler {
 	return &SurveyHandler{
-		userStorage:   userStorage,
+		authClient:    authClient,
 		surveyStorage: surveyStorage,
 	}
 }
@@ -63,13 +63,13 @@ func (surveyHandler *SurveyHandler) CheckIfAnswered(writer http.ResponseWriter, 
 	surveyID, _ := strconv.Atoi(vars["survey_id"])
 
 	storage := surveyHandler.surveyStorage
-	userStorage := surveyHandler.userStorage
+	authClient := surveyHandler.authClient
 
 	session, _ := request.Cookie("session_id")
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	isChecked, err := storage.GetResults(ctx, user.ID, uint(surveyID))
+	isChecked, err := storage.GetResults(ctx, uint(user.ID), uint(surveyID))
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)

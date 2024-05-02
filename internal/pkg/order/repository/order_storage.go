@@ -27,7 +27,7 @@ func NewOrderStorage(pool *pgxpool.Pool) *OrderStorage {
 	}
 }
 
-func (ol *OrderStorage) GetOrdersByUserID(userID uint, advertsList advuc.AdvertsStorageInterface) ([]*models.OrderItem, error) {
+func (ol *OrderStorage) GetOrdersByUserID(userID uint) ([]*models.OrderItem, error) {
 	cart := []*models.OrderItem{}
 
 	for i := range ol.OrderList.Items {
@@ -45,7 +45,8 @@ func (ol *OrderStorage) GetOrdersByUserID(userID uint, advertsList advuc.Adverts
 	return cart, nil
 }
 
-func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningOrder, error) {
+func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID uint,
+	advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningOrder, error) {
 	order := []*models.ReturningOrder{}
 
 	for i := range ol.OrderList.Items {
@@ -89,7 +90,7 @@ func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID ui
 // 	return errNotInCart
 // }
 
-func (ol *OrderStorage) CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem, advertsList advuc.AdvertsStorageInterface) error {
+func (ol *OrderStorage) CreateOrderByID(userID uint, orderItem *models.ReceivedOrderItem) error {
 
 	newOrderItem := models.OrderItem{
 		ID:            0,

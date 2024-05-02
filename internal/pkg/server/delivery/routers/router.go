@@ -21,8 +21,6 @@ import (
 	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
 	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	surveyusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/usecases"
-	authusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
-
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
@@ -33,7 +31,6 @@ func NewRouter(logger *zap.SugaredLogger,
 	cityStorage cityusecases.CityStorageInterface,
 	orderStorage orderusecases.OrderStorageInterface,
 	profileStorage profusecases.ProfileStorageInterface,
-	userStorage authusecases.UsersStorageInterface,
 	surveyStorage surveyusecases.SurveyStorageInterface,
 	authClient authproto.AuthClient) *mux.Router {
 
@@ -47,19 +44,19 @@ func NewRouter(logger *zap.SugaredLogger,
 	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(authClient)
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
-	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage)
+	cartHandler := cartdel.NewCartHandler(cartStorage, authClient)
 	authHandler := authdel.NewAuthHandler(authClient, profileStorage)
-	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage)
-	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage)
+	profileHandler := profdel.NewProfileHandler(profileStorage, authClient)
+	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
-	surveyHandler := surveydel.NewSurveyHandler(userStorage, surveyStorage)
+	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
 
 	rootRouter := router.PathPrefix("/api").Subrouter()
 	ServeAuthRouter(rootRouter, authHandler, authCheckMiddleware)
 	ServeAdvertsRouter(rootRouter, advertsHandler, authCheckMiddleware, csrfMiddleware)
 	ServeProfileRouter(rootRouter, profileHandler, authCheckMiddleware, csrfMiddleware)
-	ServeCartRouter(rootRouter, cartHandler)
-	ServeOrderRouter(rootRouter, orderHandler)
+	ServeCartRouter(rootRouter, cartHandler, authCheckMiddleware)
+	ServeOrderRouter(rootRouter, orderHandler, authCheckMiddleware)
 	ServeSurveyRouter(rootRouter, surveyHandler, authCheckMiddleware)
 
 	rootRouter.HandleFunc("/city", cityHandler.GetCityList)

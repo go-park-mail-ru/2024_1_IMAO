@@ -5,8 +5,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func ServeOrderRouter(router *mux.Router, orderHandler *delivery.OrderHandler) {
+func ServeOrderRouter(router *mux.Router, orderHandler *delivery.OrderHandler,
+	authCheckMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/order").Subrouter()
+	subrouter.Use(authCheckMiddleware)
 
 	subrouter.HandleFunc("/list", orderHandler.GetOrderList).Methods("GET")
 	subrouter.HandleFunc("/create", orderHandler.CreateOrder).Methods("POST")

@@ -5,8 +5,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func ServeCartRouter(router *mux.Router, cartHandler *delivery.CartHandler) {
+func ServeCartRouter(router *mux.Router, cartHandler *delivery.CartHandler, authCheckMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/cart").Subrouter()
+	subrouter.Use(authCheckMiddleware)
 
 	subrouter.HandleFunc("/list", cartHandler.GetCartList).Methods("GET")
 	subrouter.HandleFunc("/change", cartHandler.ChangeCart).Methods("POST")

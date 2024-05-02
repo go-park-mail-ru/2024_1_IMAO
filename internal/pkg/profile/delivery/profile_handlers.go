@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,20 +15,19 @@ import (
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	profileusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
 type ProfileHandler struct {
-	storage     profileusecases.ProfileStorageInterface
-	userStorage userusecases.UsersStorageInterface
+	storage    profileusecases.ProfileStorageInterface
+	authClient authproto.AuthClient
 }
 
 func NewProfileHandler(storage profileusecases.ProfileStorageInterface,
-	userStorage userusecases.UsersStorageInterface) *ProfileHandler {
+	authClient authproto.AuthClient) *ProfileHandler {
 	return &ProfileHandler{
-		storage:     storage,
-		userStorage: userStorage,
+		storage:    storage,
+		authClient: authClient,
 	}
 }
 
@@ -57,16 +57,14 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	userStorage := h.userStorage
+	authClient := h.authClient
 	storage := h.storage
 
-	session, err := request.Cookie("session_id")
-
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	session, _ := request.Cookie("session_id")
 
 	var data models.City
 
-	err = json.NewDecoder(request.Body).Decode(&data)
+	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -74,7 +72,9 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 			responses.ErrInternalServer))
 	}
 
-	p, err := storage.SetProfileCity(ctx, user.ID, data)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	p, err := storage.SetProfileCity(ctx, uint(user.ID), data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -138,16 +138,16 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	userStorage := h.userStorage
+	authClient := h.authClient
 	storage := h.storage
 
-	session, err := request.Cookie("session_id")
+	session, _ := request.Cookie("session_id")
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	var data models.SetProfilePhoneNec
 
-	err = json.NewDecoder(request.Body).Decode(&data)
+	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -155,7 +155,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 			responses.ErrInternalServer))
 	}
 
-	p, err := storage.SetProfilePhone(ctx, user.ID, data)
+	p, err := storage.SetProfilePhone(ctx, uint(user.ID), data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -179,12 +179,12 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	userStorage := h.userStorage
+	authClient := h.authClient
 	storage := h.storage
 
 	session, err := request.Cookie("session_id")
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	err = request.ParseMultipartForm(2 << 20)
 	if err != nil {
@@ -202,9 +202,9 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	var pl *models.Profile
 	if len(avatar) != 0 {
-		pl, err = storage.SetProfileInfo(ctx, user.ID, avatar[0], data)
+		pl, err = storage.SetProfileInfo(ctx, uint(user.ID), avatar[0], data)
 	} else {
-		pl, err = storage.SetProfileInfo(ctx, user.ID, nil, data)
+		pl, err = storage.SetProfileInfo(ctx, uint(user.ID), nil, data)
 	}
 
 	if err != nil {
