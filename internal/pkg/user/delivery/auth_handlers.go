@@ -231,7 +231,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	if user.IsAuth {
 		profile, _ := profileStorage.GetProfileByUserID(ctx, uint(user.ID))
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
-		avatar = profile.Avatar
+		avatar = profile.AvatarIMG
 	} else {
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
 	}

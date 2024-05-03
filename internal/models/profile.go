@@ -16,8 +16,8 @@ type Profile struct {
 	Phone           string    `json:"phoneNumber"`
 	Avatar          string    `json:"avatar"`
 	RegisterTime    time.Time `json:"regTime"`
-	Rating          float64   `json:"rating"`
-	ReactionsCount  float64   `json:"reactionsCount"`
+	Rating          float32   `json:"rating"`
+	ReactionsCount  float32   `json:"reactionsCount"`
 	Approved        bool      `json:"approved"`
 	MerchantsName   string    `json:"merchantsName"`
 	SubersCount     int       `json:"subersCount"`

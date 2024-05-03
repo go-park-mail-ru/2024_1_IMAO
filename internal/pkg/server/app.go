@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"google.golang.org/grpc"
@@ -71,8 +72,20 @@ func (srv *Server) Run() error {
 	defer grpcConnAuth.Close()
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
+	profileAddr := cfg.Server.Host + cfg.Server.ProfileServicePort
+	grpcConnProfile, err := grpc.Dial(
+		profileAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Println("Error occurred while starting grpc connection on profile service", err)
+		return err
+	}
+	defer grpcConnProfile.Close()
+	profileClient := profileproto.NewProfileClient(grpcConnProfile)
+
 	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
-		profileStorage, surveyStorage, authClient)
+		profileStorage, surveyStorage, authClient, profileClient)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

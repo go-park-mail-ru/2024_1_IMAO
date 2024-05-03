@@ -1,0 +1,60 @@
+//protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative *.proto
+
+syntax = "proto3";
+
+option go_package = "./internal/pkg/profile/delivery/grpc";
+
+import "google/protobuf/timestamp.proto";
+
+service Profile {
+    rpc GetProfile(ProfileIDRequest) returns (ProfileData);
+    rpc CreateProfile(ProfileIDRequest) returns (ProfileData);
+    rpc SetProfileCity(SetCityRequest) returns (ProfileData);
+    rpc SetProfilePhone(SetPhoneRequest) returns (ProfileData);
+    rpc EditProfile(EditProfileRequest) returns (ProfileData);
+}
+
+message ProfileIDRequest {
+    uint64 ID = 1;
+}
+
+message ProfileData {
+    uint64 ID = 1;
+    uint64 UserID = 2;
+    string Name = 3;
+    string Surname = 4;
+    uint64 CityID = 5;
+    string CityName = 6;
+    string Translation = 7;
+    string Phone = 8;
+    string Avatar = 9;
+    google.protobuf.Timestamp RegisterTime = 10;
+    float Rating = 11;
+    float ReactionsCount = 12;
+    bool Approved = 13;
+    string MerchantsName = 14;
+    int64 SubersCount = 15;
+    int64 SubonsCount = 16;
+    string AvatarIMG = 17;
+    int64 ActiveAddsCount = 18;
+    int64 SoldAddsCount = 19;
+}
+
+message SetCityRequest {
+    uint64 ID = 1;
+    uint64 CityID = 2;
+    string CityName = 3;
+    string Translation = 4;
+}
+
+message SetPhoneRequest {
+    uint64 ID = 1;
+    string Phone = 2;
+}
+
+message EditProfileRequest {
+    uint64 ID = 1;
+    string Name = 2;
+    string Avatar = 3;
+    string Surname = 4;
+}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"mime/multipart"
 	"os"
 	"time"
 
@@ -163,7 +162,7 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
-	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	//profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
@@ -255,7 +254,7 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
-	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
@@ -347,7 +346,7 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
-	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
@@ -436,8 +435,7 @@ func (pl *ProfileStorage) deleteAvatar(ctx context.Context, tx pgx.Tx, userID ui
 	return nil
 }
 
-func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, file *multipart.FileHeader, folderName string,
-	userID uint) (string, error) {
+func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, fullPath string, userID uint) (string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
@@ -451,13 +449,6 @@ func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, file *multipa
 	}
 
 	var url string
-	fullPath, err := utils.WriteFile(file, folderName)
-
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image , err=%v", err))
-
-		return "", errProfileNotExists
-	}
 
 	err = pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		urlInner, err := pl.setProfileAvatarUrl(ctx, tx, userID, fullPath)
@@ -534,7 +525,7 @@ func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID 
 	profile.City = city
 
 	rand.Seed(time.Now().UnixNano())
-	profile.Rating = math.Round((rand.Float64()*4+1)*100) / 100
+	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
@@ -544,7 +535,7 @@ func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID 
 	return &profile, nil
 }
 
-func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader,
+func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint,
 	data models.EditProfileNec) (*models.Profile, error) {
 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -552,8 +543,8 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint, file 
 	var profile *models.Profile
 	var err error
 
-	if file != nil {
-		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, file, "avatars", userID)
+	if data.Avatar != "" {
+		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, data.Avatar, userID)
 		if err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", err))
 

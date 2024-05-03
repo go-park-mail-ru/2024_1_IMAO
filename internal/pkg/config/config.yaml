@@ -5,3 +5,4 @@ server:
     host: 127.0.0.1
     port: :8080
     auth_service_port: :8081
+    profile_service_port: :8082

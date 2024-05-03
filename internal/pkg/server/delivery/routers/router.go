@@ -5,6 +5,7 @@ import (
 	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
@@ -32,7 +33,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	orderStorage orderusecases.OrderStorageInterface,
 	profileStorage profusecases.ProfileStorageInterface,
 	surveyStorage surveyusecases.SurveyStorageInterface,
-	authClient authproto.AuthClient) *mux.Router {
+	authClient authproto.AuthClient,
+	profileClient profileproto.ProfileClient) *mux.Router {
 
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
@@ -46,7 +48,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
 	cartHandler := cartdel.NewCartHandler(cartStorage, authClient)
 	authHandler := authdel.NewAuthHandler(authClient, profileStorage)
-	profileHandler := profdel.NewProfileHandler(profileStorage, authClient)
+	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
