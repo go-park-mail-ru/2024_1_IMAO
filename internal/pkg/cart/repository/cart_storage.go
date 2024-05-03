@@ -50,7 +50,9 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 			a.created_time, 
 			a.closed_time, 
 			a.is_used,
-			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url
+			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
+			CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
+         		THEN 1 ELSE 0 END AS bool) AS in_favourites
 		FROM 
 			public.advert a
 		LEFT JOIN 
@@ -81,7 +83,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 
 		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo, &advertModel.InFavourites); err != nil {
 
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
 

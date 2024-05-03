@@ -181,7 +181,8 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 		a.closed_time, 
 		a.is_used,
 		a.views,
-		a.advert_status
+		a.advert_status,
+		a.favourites_number
 		FROM 
 		public.advert a
 		LEFT JOIN 
@@ -201,7 +202,7 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 		&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views, &advertStatus); err != nil {
+		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views, &advertStatus, &advertModel.FavouritesNum); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
 
@@ -247,7 +248,8 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          	THEN 1 ELSE 0 END AS bool) AS in_favourites,
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
-			THEN 1 ELSE 0 END AS bool) AS in_cart
+			THEN 1 ELSE 0 END AS bool) AS in_cart,
+		a.favourites_number	
 		FROM 
 		public.advert a
 		LEFT JOIN 
@@ -268,7 +270,7 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 		&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
 		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views, &advertStatus,
-		&advertModel.InFavourites, &advertModel.InCart); err != nil {
+		&advertModel.InFavourites, &advertModel.InCart, &advertModel.FavouritesNum); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
 

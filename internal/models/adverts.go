@@ -31,21 +31,22 @@ type Category struct {
 }
 
 type Advert struct {
-	ID           uint      `json:"id"`
-	UserID       uint      `json:"userId"`
-	CityID       uint      `json:"cityId"`
-	CategoryID   uint      `json:"categoryId"`
-	Title        string    `json:"title"`
-	Description  string    `json:"description"`
-	Price        uint      `json:"price"`
-	CreatedTime  time.Time `json:"created"`
-	ClosedTime   time.Time `json:"closed"`
-	Active       bool      `json:"active"`
-	IsUsed       bool      `json:"isUsed"`
-	Views        uint      `json:"views"`
-	InFavourites bool      `json:"inFavourites"`
-	InCart       bool      `json:"inCart"`
-	Deleted      bool      `json:"-"`
+	ID            uint      `json:"id"`
+	UserID        uint      `json:"userId"`
+	CityID        uint      `json:"cityId"`
+	CategoryID    uint      `json:"categoryId"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	Price         uint      `json:"price"`
+	CreatedTime   time.Time `json:"created"`
+	ClosedTime    time.Time `json:"closed"`
+	Active        bool      `json:"active"`
+	IsUsed        bool      `json:"isUsed"`
+	Views         uint      `json:"views"`
+	InFavourites  bool      `json:"inFavourites"`
+	InCart        bool      `json:"inCart"`
+	FavouritesNum uint      `json:"favouritesNum"`
+	Deleted       bool      `json:"-"`
 }
 
 type ReturningAdvert struct {
