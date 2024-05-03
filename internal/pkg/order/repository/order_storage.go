@@ -58,7 +58,7 @@ func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID ui
 		if item.UserID != userID {
 			continue
 		}
-		advert, err := advertsList.GetAdvertByOnlyByID(ctx, item.AdvertID)
+		advert, err := advertsList.GetAdvertOnlyByID(ctx, item.AdvertID)
 
 		if err != nil {
 			return order, err

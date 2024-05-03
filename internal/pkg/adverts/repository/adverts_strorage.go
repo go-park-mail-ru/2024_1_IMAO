@@ -39,23 +39,85 @@ func NewAdvertStorage(pool *pgxpool.Pool, logger *zap.SugaredLogger) *AdvertStor
 	}
 }
 
-func (ads *AdvertStorage) GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) getAdvertOnlyByID(ctx context.Context, tx pgx.Tx, advertID uint) (*models.ReturningAdvert, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLAdvertById := `
+		SELECT 
+		a.id, 
+		a.user_id,
+		a.city_id, 
+		c.name AS city_name, 
+		c.translation AS city_translation, 
+		a.category_id, 
+		cat.name AS category_name, 
+		cat.translation AS category_translation, 
+		a.title, 
+		a.description, 
+		a.price, 
+		a.created_time, 
+		a.closed_time, 
+		a.is_used,
+		a.views,
+		a.advert_status,
+		a.favourites_number,
+		a.phone
+		FROM 
+		public.advert a
+		LEFT JOIN 
+		public.city c ON a.city_id = c.id
+		LEFT JOIN 
+		public.category cat ON a.category_id = cat.id
+		WHERE a.id = $1;`
+
+	logging.LogInfo(logger, "SELECT FROM advert, city, category")
+
+	advertLine := tx.QueryRow(ctx, SQLAdvertById, advertID)
+
+	categoryModel := models.Category{}
+	cityModel := models.City{}
+	advertModel := models.Advert{}
+	var advertStatus string
+
+	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
+		&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
+		&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views, &advertStatus, &advertModel.FavouritesNum,
+		&advertModel.Phone); err != nil {
+
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+
+		return nil, err
+	}
+
+	if advertStatus == "Активно" {
+		advertModel.Active = true
+	} else {
+		advertModel.Active = false
+	}
+	advertModel.CityID = cityModel.ID
+	advertModel.CategoryID = categoryModel.ID
+
+	return &models.ReturningAdvert{
+		Advert:   advertModel,
+		City:     cityModel,
+		Category: categoryModel,
+	}, nil
+}
+
+func (ads *AdvertStorage) GetAdvertOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var advertsList *models.ReturningAdvert
 
-	city := ""     // ЗАГЛУШКИ
-	category := "" // ЗАГЛУШКИ
-
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-		advertsListInner, err := ads.getAdvert(ctx, tx, advertID, city, category)
+		advertsListInner, err := ads.getAdvertOnlyByID(ctx, tx, advertID)
 		advertsList = advertsListInner
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert by id only, err=%v", err))
 
 		return nil, err
 	}
@@ -911,7 +973,7 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx, data mode
 
 	SQLCreateAdvert :=
 		`WITH ins AS (
-		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used)
+		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used, phone)
 		SELECT
 			$1,
 			city.id,
@@ -919,7 +981,8 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx, data mode
 			$2,
 			$3,
 			$4,
-			$5
+			$5,
+			$8
 		FROM
 			city
 		JOIN
@@ -943,7 +1006,7 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx, data mode
 
 	logging.LogInfo(logger, "INSERT INTO advert")
 
-	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category)
+	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category, data.Phone)
 
 	categoryModel := models.Category{}
 	cityModel := models.City{}
@@ -1160,7 +1223,8 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx, data models
 				title = $1,
 				description = $2,
 				price = $3,
-				is_used = $4
+				is_used = $4,
+				phone = $8
 			 FROM
 				city
 			JOIN
@@ -1194,7 +1258,7 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx, data models
 
 	logging.LogInfo(logger, "UPDATE advert")
 
-	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category, data.ID)
+	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed, data.City, data.Category, data.ID, data.Phone)
 
 	categoryModel := models.Category{}
 	cityModel := models.City{}

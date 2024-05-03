@@ -283,7 +283,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 
 	storage := advertsHandler.storage
 
-	ad, err := storage.GetAdvertByOnlyByID(ctx, uint(id))
+	ad, err := storage.GetAdvertOnlyByID(ctx, uint(id))
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -333,6 +333,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 		Description: request.PostFormValue("description"),
 		Price:       uint(price),
 		IsUsed:      isUsed,
+		Phone:       request.PostFormValue("phone"),
 	}
 
 	var advert *models.ReturningAdvert
@@ -389,6 +390,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 		Description: request.PostFormValue("description"),
 		Price:       uint(price),
 		IsUsed:      isUsed,
+		Phone:       request.PostFormValue("phone"),
 	}
 
 	var advert *models.ReturningAdvert

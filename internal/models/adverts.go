@@ -22,6 +22,7 @@ type ReceivedAdData struct {
 	Description string `json:"description"`
 	Price       uint   `json:"price"`
 	IsUsed      bool   `json:"isUsed"`
+	Phone       string `json:"phone"`
 }
 
 type Category struct {
@@ -37,6 +38,7 @@ type Advert struct {
 	CategoryID    uint      `json:"categoryId"`
 	Title         string    `json:"title"`
 	Description   string    `json:"description"`
+	Phone         string    `json:"phone"`
 	Price         uint      `json:"price"`
 	CreatedTime   time.Time `json:"created"`
 	ClosedTime    time.Time `json:"closed"`
