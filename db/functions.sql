@@ -47,3 +47,13 @@ BEGIN
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION set_advert_status_to_sold()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE advert
+    SET adverts_status = 'Продано'
+    WHERE id = NEW.advert_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;

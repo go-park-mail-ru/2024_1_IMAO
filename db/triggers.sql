@@ -22,3 +22,8 @@ CREATE OR REPLACE TRIGGER fav_delete_trigger
 AFTER DELETE ON favourite
 FOR EACH ROW
 EXECUTE PROCEDURE decrement_fav_adverts_number();
+
+CREATE OR REPLACE TRIGGER advert_status_update_trigger
+AFTER INSERT ON "order"
+FOR EACH ROW
+EXECUTE PROCEDURE set_advert_status_to_sold();

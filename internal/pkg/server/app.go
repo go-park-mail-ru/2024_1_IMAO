@@ -53,7 +53,7 @@ func (srv *Server) Run() error {
 	advertStorage := advertrepo.NewAdvertStorage(connPool, logger)
 	cartStorage := cartrepo.NewCartStorage(connPool, logger)
 	cityStorage := cityrepo.NewCityStorage(connPool, logger)
-	orderStorage := orderrepo.NewOrderStorage(connPool, logger)
+	orderStorage := orderrepo.NewOrderStorage(connPool)
 	profileStorage := profilerepo.NewProfileStorage(connPool, logger)
 	userStorage := authrepo.NewUserStorage(connPool, logger)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)

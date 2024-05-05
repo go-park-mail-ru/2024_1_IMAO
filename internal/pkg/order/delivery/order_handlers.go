@@ -59,51 +59,51 @@ func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage ca
 // @Failure 405 {object} responses.AdvertsErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
 // @Router /api/adverts/list [get]
-func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, request *http.Request) {
-	ctx := request.Context()
-	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+// func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, request *http.Request) {
+// 	ctx := request.Context()
+// 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+// 	if request.Method != http.MethodGet {
+// 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
 
-		return
-	}
+// 		return
+// 	}
 
-	storage := orderHandler.storage
-	userStorage := orderHandler.userStorage
+// 	storage := orderHandler.storage
+// 	userStorage := orderHandler.userStorage
 
-	session, err := request.Cookie("session_id")
+// 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
+// 	if err != nil || !userStorage.SessionExists(session.Value) {
+// 		if err == nil {
+// 			err = errors.New("no such cookie in userStorage")
+// 		}
+// 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
+// 		log.Println("User not authorized")
+// 		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
 
-		return
-	}
+// 		return
+// 	}
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+// 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
-	var ordersList []*models.ReturningOrder
+// 	var ordersList []*models.ReturningOrder
 
-	ordersList, err = storage.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.advertStorage)
+// 	ordersList, err = storage.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.advertStorage)
 
-	if err != nil {
-		log.Println(err, responses.StatusBadRequest)
-		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewOrderErrResponse(responses.StatusBadRequest,
-			responses.ErrBadRequest))
+// 	if err != nil {
+// 		log.Println(err, responses.StatusBadRequest)
+// 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+// 		responses.SendErrResponse(writer, NewOrderErrResponse(responses.StatusBadRequest,
+// 			responses.ErrBadRequest))
 
-		return
-	}
+// 		return
+// 	}
 
-	log.Println("Get orders for user", user.ID)
-	logging.LogHandlerInfo(logger, fmt.Sprintf("Get orders for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
-	responses.SendOkResponse(writer, NewOrderOkResponse(ordersList))
-}
+// 	log.Println("Get orders for user", user.ID)
+// 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get orders for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
+// 	responses.SendOkResponse(writer, NewOrderOkResponse(ordersList))
+// }
 
 func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
@@ -144,7 +144,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	user, _ := userStorage.GetUserBySession(ctx, session.Value)
 
-	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY
+	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY, А ТОЧНЕЕ В USECASE
 	for _, receivedOrderItem := range data.Adverts {
 		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID, userStorage, orderHandler.advertStorage)
 
@@ -157,17 +157,9 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			return
 		}
 
-		storage.CreateOrderByID(uint(user.ID), receivedOrderItem, orderHandler.advertStorage)
+		storage.CreateOrderByID(ctx, uint(user.ID), receivedOrderItem)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
-
-	// isAppended := list.AppendAdvByIDs(user.ID, data.AdvertID, cartHandler.ListUsers, cartHandler.ListAdverts)
-
-	// if isAppended {
-	// 	log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
-	// } else {
-	// 	log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
-	// }
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewOrderCreateResponse(true))
