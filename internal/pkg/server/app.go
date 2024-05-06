@@ -20,7 +20,6 @@ import (
 	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
 	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
-	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
 	"github.com/gorilla/handlers"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -55,7 +54,6 @@ func (srv *Server) Run() error {
 	cartStorage := cartrepo.NewCartStorage(connPool)
 	cityStorage := cityrepo.NewCityStorage(connPool)
 	orderStorage := orderrepo.NewOrderStorage(connPool)
-	profileStorage := profilerepo.NewProfileStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
 
 	cfg := config.ReadConfig()
@@ -85,7 +83,7 @@ func (srv *Server) Run() error {
 	profileClient := profileproto.NewProfileClient(grpcConnProfile)
 
 	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
-		profileStorage, surveyStorage, authClient, profileClient)
+		surveyStorage, authClient, profileClient)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	"log"
 	"net/http"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	csrf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
-	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
@@ -24,15 +24,15 @@ const (
 )
 
 type AuthHandler struct {
-	authClient     authproto.AuthClient
-	profileStorage profusecases.ProfileStorageInterface
+	authClient    authproto.AuthClient
+	profileClient profileproto.ProfileClient
 }
 
 func NewAuthHandler(authClient authproto.AuthClient,
-	profileStorage profusecases.ProfileStorageInterface) *AuthHandler {
+	profileClient profileproto.ProfileClient) *AuthHandler {
 	return &AuthHandler{
-		authClient:     authClient,
-		profileStorage: profileStorage,
+		authClient:    authClient,
+		profileClient: profileClient,
 	}
 }
 
@@ -160,7 +160,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	client := authHandler.authClient
-	profileStorage := authHandler.profileStorage
+	profileClient := authHandler.profileClient
 
 	var newUser models.UnauthorizedUser
 	err := json.NewDecoder(request.Body).Decode(&newUser)
@@ -186,7 +186,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	}
 	cookie := createSession(user.SessionID)
 	http.SetCookie(writer, cookie)
-	profileStorage.CreateProfile(ctx, uint(user.ID))
+	profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 
 	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
 		ID:    uint(user.ID),
@@ -211,7 +211,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	client := authHandler.authClient
-	profileStorage := authHandler.profileStorage
+	profileClient := authHandler.profileClient
 
 	session, err := request.Cookie("session_id")
 
@@ -229,7 +229,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	var avatar string
 
 	if user.IsAuth {
-		profile, _ := profileStorage.GetProfileByUserID(ctx, uint(user.ID))
+		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
 		avatar = profile.AvatarIMG
 	} else {

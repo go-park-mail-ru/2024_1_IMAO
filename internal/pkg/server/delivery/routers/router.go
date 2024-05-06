@@ -20,7 +20,6 @@ import (
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
-	profusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
 	surveyusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/usecases"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -31,7 +30,6 @@ func NewRouter(logger *zap.SugaredLogger,
 	cartStorage cartusecases.CartStorageInterface,
 	cityStorage cityusecases.CityStorageInterface,
 	orderStorage orderusecases.OrderStorageInterface,
-	profileStorage profusecases.ProfileStorageInterface,
 	surveyStorage surveyusecases.SurveyStorageInterface,
 	authClient authproto.AuthClient,
 	profileClient profileproto.ProfileClient) *mux.Router {
@@ -47,7 +45,7 @@ func NewRouter(logger *zap.SugaredLogger,
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
 	cartHandler := cartdel.NewCartHandler(cartStorage, authClient)
-	authHandler := authdel.NewAuthHandler(authClient, profileStorage)
+	authHandler := authdel.NewAuthHandler(authClient, profileClient)
 	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
