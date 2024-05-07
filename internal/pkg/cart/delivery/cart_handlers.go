@@ -3,26 +3,27 @@ package delivery
 import (
 	"encoding/json"
 	"fmt"
-	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"log"
 	"net/http"
+
+	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"go.uber.org/zap"
 
-	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
 type CartHandler struct {
-	storage    cartusecases.CartStorageInterface
+	cartClient cartproto.CartClient
 	authClient authproto.AuthClient
 }
 
-func NewCartHandler(storage cartusecases.CartStorageInterface, authClient authproto.AuthClient) *CartHandler {
+func NewCartHandler(cartClient cartproto.CartClient, authClient authproto.AuthClient) *CartHandler {
 	return &CartHandler{
-		storage:    storage,
+		cartClient: cartClient,
 		authClient: authClient,
 	}
 }
@@ -47,13 +48,13 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := cartHandler.storage
+	cartClient := cartHandler.cartClient
 	authClient := cartHandler.authClient
 
 	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
-	adsList, err := storage.GetCartByUserID(ctx, uint(user.ID))
+	adsList, err := cartClient.GetCartByUserID(ctx, &cartproto.UserIdRequest{UserId: uint32(user.ID)})
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -64,7 +65,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 		return
 	}
 	log.Println("Get cart for user", user.ID)
-	responses.SendOkResponse(writer, NewCartOkResponse(adsList))
+	responses.SendOkResponse(writer, NewCartOkResponse(ReturningAdvertItem(adsList)))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
@@ -72,7 +73,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := cartHandler.storage
+	cartClient := cartHandler.cartClient
 	authClient := cartHandler.authClient
 	var data models.ReceivedCartItem
 
@@ -87,11 +88,11 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
-	isAppended := storage.AppendAdvByIDs(ctx, uint(user.ID), data.AdvertID)
+	isAppended, _ := cartClient.AppendAdvByIDs(ctx, &cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(data.AdvertID)})
 
-	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended))
+	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended.IsAppended))
 
-	if isAppended {
+	if isAppended.IsAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
 		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the cart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	} else {
@@ -104,7 +105,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	storage := cartHandler.storage
+	cartClient := cartHandler.cartClient
 	authClient := cartHandler.authClient
 	var data models.ReceivedCartItems
 
@@ -121,9 +122,9 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	for _, item := range data.AdvertIDs {
-		err = storage.DeleteAdvByIDs(ctx, uint(user.ID), item)
+		_, error := cartClient.DeleteAdvByIDs(ctx, &cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(item)})
 
-		if err != nil {
+		if error != nil {
 			log.Println(err, responses.StatusBadRequest)
 			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 			responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,

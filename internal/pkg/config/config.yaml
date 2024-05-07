@@ -6,3 +6,4 @@ server:
     port: :8080
     auth_service_port: :8081
     profile_service_port: :8082
+    cart_service_port: :8083

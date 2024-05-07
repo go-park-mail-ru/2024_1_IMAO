@@ -5,10 +5,10 @@ import (
 	"log"
 	"net"
 
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
+	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
+	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
-	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
-	profilerepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/repository"
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
@@ -17,11 +17,11 @@ import (
 
 func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.Host + cfg.Server.ProfileServicePort
+	addr := cfg.Server.Host + cfg.Server.CartServicePort
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Println("Error occurred while listening profile service", err)
+		log.Println("Error occurred while listening cart service", err)
 		return
 	}
 
@@ -30,7 +30,7 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		log.Println("Error occurred while starting grpc connection on profile service", err)
+		log.Println("Error occurred while starting grpc connection on cart service", err)
 		return
 	}
 	defer grpcConn.Close()
@@ -40,12 +40,12 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	profileStorage := profilerepo.NewProfileStorage(connPool)
-	profileManager := delivery.NewProfileManager(profileStorage)
+	cartStorage := cartrepo.NewCartStorage(connPool)
+	cartManager := delivery.NewCartManager(cartStorage)
 
 	srv := grpc.NewServer()
-	profileproto.RegisterProfileServer(srv, profileManager)
-	log.Println("Profile service is running on port", cfg.Server.ProfileServicePort)
+	cartproto.RegisterCartServer(srv, cartManager)
+	log.Println("Cart service is running on port", cfg.Server.CartServicePort)
 
 	err = srv.Serve(listener)
 	if err != nil {

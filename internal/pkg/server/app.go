@@ -2,16 +2,18 @@ package server
 
 import (
 	"context"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	myrouter "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery/routers"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
-	"net/http"
-	"strings"
-	"time"
 
 	pgxpoolconfig "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	logger "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/usecases"
@@ -82,7 +84,19 @@ func (srv *Server) Run() error {
 	defer grpcConnProfile.Close()
 	profileClient := profileproto.NewProfileClient(grpcConnProfile)
 
-	router := myrouter.NewRouter(logger, advertStorage, cartStorage, cityStorage, orderStorage,
+	cartAddr := cfg.Server.Host + cfg.Server.CartServicePort
+	grpcConnCart, err := grpc.Dial(
+		cartAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Println("Error occurred while starting grpc connection on cart service", err)
+		return err
+	}
+	defer grpcConnCart.Close()
+	cartClient := cartproto.NewCartClient(grpcConnCart)
+
+	router := myrouter.NewRouter(logger, advertStorage, cartClient, cartStorage, cityStorage, orderStorage,
 		surveyStorage, authClient, profileClient)
 
 	credentials := handlers.AllowCredentials()
