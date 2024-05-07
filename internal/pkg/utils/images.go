@@ -1,10 +1,13 @@
 package utils
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -50,11 +53,28 @@ func DecodeImage(filename string) (string, error) {
 		return "", nil
 	}
 
-	reader := bufio.NewReader(file)
-	content, err := io.ReadAll(reader)
+	var image image.Image
+
+	image, err = ScaleImage(file)
+
 	if err != nil {
 		return "", nil
 	}
+
+	// reader := bufio.NewReader(file)
+	// content, err := io.ReadAll(reader)
+	// if err != nil {
+	// 	return "", nil
+	// }
+
+	var buf bytes.Buffer
+
+	err = jpeg.Encode(&buf, image, &jpeg.Options{Quality: 90})
+	if err != nil {
+		log.Fatalf("Ошибка при кодировании изображения: %v", err)
+	}
+
+	content := buf.Bytes()
 
 	encoded := base64.StdEncoding.EncodeToString(content)
 
