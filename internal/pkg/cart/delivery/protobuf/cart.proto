@@ -1,0 +1,68 @@
+//protoc --go_out=. --go-grpc_out=. --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative *.proto
+
+syntax = "proto3";
+
+option go_package = "./internal/pkg/cart/delivery/grpc";
+
+import "google/protobuf/timestamp.proto";
+
+service Cart {
+  rpc GetCartByUserID(UserIdRequest) returns (ReturningAdvertList);
+  rpc DeleteAdvByIDs(UserIdAdvertIdRequest) returns (DeleteAdvResponse);
+  rpc AppendAdvByIDs(UserIdAdvertIdRequest) returns (AppendAdvResponse);
+}
+
+message Category {
+  uint32 id = 1;
+  string name = 2;
+  string translation = 3;
+}
+
+message City {
+  uint32 id = 1;
+  string cityName = 2;
+  string translation = 3;
+}
+
+message Advert {
+  uint32 id = 1;
+  uint32 userId = 2;
+  uint32 cityId = 3;
+  uint32 categoryId = 4;
+  string title = 5;
+  string description = 6;
+  uint32 price = 7;
+  google.protobuf.Timestamp createTime = 8; 
+  google.protobuf.Timestamp closeTime = 9; 
+  bool active = 10;
+  bool isUsed = 11;
+}
+
+message ReturningAdvert {
+  Advert advert = 1;
+  City city = 2;
+  Category category = 3;
+  repeated string photos = 4;
+  repeated string photosIMG = 5;
+}
+
+message UserIdRequest {
+  uint32 userId = 1;
+}
+
+message ReturningAdvertList {
+  repeated ReturningAdvert adverts = 1;
+}
+
+message UserIdAdvertIdRequest {
+  uint32 userId = 1;
+  uint32 advertId = 2;
+}
+
+message DeleteAdvResponse {
+  bool isAppended = 1;
+}
+
+message AppendAdvResponse {
+  bool isAppended = 1;
+}
