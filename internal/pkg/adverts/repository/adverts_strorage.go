@@ -398,7 +398,7 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, 
 
 	for i := 0; i < len(advertsList.Photos); i++ {
 
-		image, err := utils.DecodeImage(advertsList.Photos[i])
+		image, err := utils.DecodeImageWithoutScaling(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
 			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err))

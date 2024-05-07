@@ -1,13 +1,13 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"io"
-	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -32,6 +32,8 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	}
 
 	extension := filepath.Ext(file.Filename)
+	//extension := ".jpg"
+
 	filename := RandString(8) + extension
 	fullpath := dirName + "/" + filename
 	destination, err := os.Create(fullpath)
@@ -50,6 +52,7 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 func DecodeImage(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
+		fmt.Printf("Ошибка при открытии изображения: %v", err)
 		return "", nil
 	}
 
@@ -58,25 +61,42 @@ func DecodeImage(filename string) (string, error) {
 	image, err = ScaleImage(file)
 
 	if err != nil {
+		fmt.Printf("Ошибка при масштабировании изображения: %v", err)
 		return "", nil
 	}
-
-	// reader := bufio.NewReader(file)
-	// content, err := io.ReadAll(reader)
-	// if err != nil {
-	// 	return "", nil
-	// }
 
 	var buf bytes.Buffer
 
 	err = jpeg.Encode(&buf, image, &jpeg.Options{Quality: 90})
 	if err != nil {
-		log.Fatalf("Ошибка при кодировании изображения: %v", err)
+		fmt.Printf("Ошибка при кодировании изображения: %v", err)
 	}
 
 	content := buf.Bytes()
 
 	encoded := base64.StdEncoding.EncodeToString(content)
+
+	fmt.Println(encoded)
+
+	return encoded, nil
+}
+
+func DecodeImageWithoutScaling(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("Ошибка при открытии изображения: %v", err)
+		return "", nil
+	}
+
+	reader := bufio.NewReader(file)
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", nil
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(content)
+
+	fmt.Println(encoded)
 
 	return encoded, nil
 }
