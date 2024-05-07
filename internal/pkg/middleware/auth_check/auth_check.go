@@ -29,7 +29,7 @@ func CreateAuthCheckMiddleware(authClient protobuf.AuthClient) mux.MiddlewareFun
 			if err != nil {
 				err = errors.New("no such cookie in userStorage")
 				logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusUnauthorized,
+				responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusUnauthorized,
 					responses.ErrUnauthorized))
 
 				return
@@ -42,7 +42,7 @@ func CreateAuthCheckMiddleware(authClient protobuf.AuthClient) mux.MiddlewareFun
 			if !user.IsAuth {
 				err = errors.New("user not authorized")
 				logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusUnauthorized,
+				responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusUnauthorized,
 					responses.ErrUnauthorized))
 
 				return

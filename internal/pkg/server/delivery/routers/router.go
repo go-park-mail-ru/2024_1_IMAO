@@ -4,6 +4,7 @@ import (
 	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
 	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
+	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
@@ -38,6 +39,9 @@ func NewRouter(logger *zap.SugaredLogger,
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
 
 	logMiddleware := createLogMiddleware.CreateLogMiddleware(logger)
+	metricsMiddleware := createMetricsMiddleware.CreateMetricsMiddleware()
+
+	router.Use(metricsMiddleware)
 	router.Use(logMiddleware)
 
 	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()

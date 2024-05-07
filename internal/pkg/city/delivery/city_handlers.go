@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
@@ -35,7 +34,7 @@ func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Requ
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return

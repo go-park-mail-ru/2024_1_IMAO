@@ -74,7 +74,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -99,7 +99,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -122,7 +122,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -146,7 +146,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -176,7 +176,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -200,7 +200,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -232,7 +232,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -291,7 +291,7 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return

@@ -1,4 +1,4 @@
-package main
+package auth_service
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"net"
 )
 
-func main() {
+func RunAuth() {
 	cfg := config.ReadConfig()
 	addr := cfg.Server.Host + cfg.Server.AuthServicePort
 

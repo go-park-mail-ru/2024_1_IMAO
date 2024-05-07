@@ -58,7 +58,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -80,7 +80,7 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -112,7 +112,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -126,7 +126,7 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)
 			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-			responses.SendErrResponse(writer, NewCartErrResponse(responses.StatusBadRequest,
+			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 				responses.ErrBadRequest))
 
 			return

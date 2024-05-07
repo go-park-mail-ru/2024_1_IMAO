@@ -73,7 +73,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -84,7 +84,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
 
 		return
@@ -127,7 +127,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 		logging.LogHandlerError(logger, clientErr, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
 		log.Println(clientErr, responses.StatusUnauthorized)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
 
 		return
@@ -167,7 +167,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -179,7 +179,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	if err != nil {
 		logging.LogHandlerError(logger, responses.ErrWrongCredentials, responses.StatusBadRequest)
 		log.Println(err)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrWrongCredentials))
 
 		return
@@ -252,7 +252,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		log.Println(err, responses.StatusUnauthorized)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusUnauthorized,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusUnauthorized,
 			responses.ErrUnauthorized))
 
 		return
@@ -263,7 +263,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -274,7 +274,7 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	if err != nil {
 		logging.LogHandlerInfo(logger, responses.ErrUserAlreadyExists, responses.StatusBadRequest)
 		log.Println("This email is already in use", responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			"This email is already in use"))
 
 		return
@@ -303,7 +303,7 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 		err := errors.New("error while getting sessionInstance from context")
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -313,7 +313,7 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -324,7 +324,7 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewAuthErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 	fmt.Printf("Сгенерированный токен: %s\n", token)

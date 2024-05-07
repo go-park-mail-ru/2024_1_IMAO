@@ -70,7 +70,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewOrderErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -95,7 +95,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewOrderErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -111,7 +111,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			log.Println("Can not create an order", receivedOrderItem.AdvertID, "for user", user.ID)
 			logging.LogHandlerInfo(logger, fmt.Sprintf("Can not create an order %s for user %s", fmt.Sprint(receivedOrderItem.AdvertID), fmt.Sprint(user.ID)),
 				responses.StatusInternalServerError)
-			responses.SendErrResponse(writer, NewOrderErrResponse(responses.StatusInternalServerError,
+			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
 			return
 		}

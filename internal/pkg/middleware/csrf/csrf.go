@@ -76,7 +76,7 @@ func CreateCsrfMiddleware() mux.MiddlewareFunc {
 			if !ok {
 				err := errors.New("error while getting sessionInstance from context")
 				logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusInternalServerError,
+				responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 					responses.ErrInternalServer))
 
 				return
@@ -87,7 +87,7 @@ func CreateCsrfMiddleware() mux.MiddlewareFunc {
 			if err != nil || !isValid {
 				logging.LogInfo(logger, "csrf is not valid")
 				logging.LogHandlerError(logger, err, responses.StatusForbidden)
-				responses.SendErrResponse(writer, responses.NewErrResponse(responses.StatusForbidden,
+				responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusForbidden,
 					responses.ErrForbidden))
 
 				return

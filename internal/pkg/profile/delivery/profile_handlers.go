@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 
-	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
@@ -44,7 +43,7 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, advdel.NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -69,7 +68,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -84,7 +83,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -111,7 +110,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -122,7 +121,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -147,7 +146,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
@@ -167,7 +166,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image, err=%v",
 				err))
 			log.Println(err, responses.StatusInternalServerError)
-			responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
 			return
 		}
@@ -179,7 +178,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.ErrInternalServer)
-		responses.SendErrResponse(writer, NewProfileErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 
 		return

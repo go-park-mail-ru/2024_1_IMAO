@@ -1,4 +1,4 @@
-package main
+package profile_service
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"net"
 )
 
-func main() {
+func RunProfile() {
 	cfg := config.ReadConfig()
 	addr := cfg.Server.Host + cfg.Server.ProfileServicePort
 
