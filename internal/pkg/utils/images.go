@@ -73,10 +73,7 @@ func DecodeImage(filename string) (string, error) {
 	}
 
 	content := buf.Bytes()
-
 	encoded := base64.StdEncoding.EncodeToString(content)
-
-	fmt.Println(encoded)
 
 	return encoded, nil
 }

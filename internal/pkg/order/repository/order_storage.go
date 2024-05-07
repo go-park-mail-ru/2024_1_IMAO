@@ -40,6 +40,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx, 
 		ord.name AS order_name, 
 		ord.email AS order_email, 
 		ord.delivery_price AS order_delivery_price,
+		ord.delivery_address AS order_delivery_address,
 		a.id AS advert_id, 
 		a.user_id,
 		a.city_id, 
@@ -86,7 +87,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx, 
 		orderItem := models.OrderItem{}
 
 		if err := rows.Scan(&orderItem.ID, &orderItem.Status, &orderItem.Created, &orderItem.Updated, &orderItem.Closed,
-			&orderItem.Phone, &orderItem.Name, &orderItem.Email, &orderItem.DeliveryPrice,
+			&orderItem.Phone, &orderItem.Name, &orderItem.Email, &orderItem.DeliveryPrice, &orderItem.Address,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
 			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo); err != nil {
@@ -208,8 +209,8 @@ func (ol *OrderStorage) сreateOrderByID(ctx context.Context, tx pgx.Tx, userID 
 
 	SQLCreateOrder :=
 		`INSERT INTO public."order"(
-			user_id, advert_id, order_status, phone, name, surname, patronymic, email, delivery_price)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
+			user_id, advert_id, order_status, phone, name, surname, patronymic, email, delivery_price, delivery_address)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
 
 	logging.LogInfo(logger, "INSERT INTO user")
 
@@ -219,7 +220,8 @@ func (ol *OrderStorage) сreateOrderByID(ctx context.Context, tx pgx.Tx, userID 
 	const surnamePlug string = "Фамилия"
 	const patronymicPlug string = "Отчество"
 
-	_, err = tx.Exec(ctx, SQLCreateOrder, userID, data.AdvertID, paidStatus, data.Phone, data.Name, surnamePlug, patronymicPlug, data.Email, data.DeliveryPrice)
+	_, err = tx.Exec(ctx, SQLCreateOrder, userID, data.AdvertID, paidStatus, data.Phone, data.Name, surnamePlug, patronymicPlug,
+		data.Email, data.DeliveryPrice, data.DeliveryAddress)
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing create order query, err=%v", err))

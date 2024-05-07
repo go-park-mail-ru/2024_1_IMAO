@@ -13,12 +13,13 @@ const (
 )
 
 type ReceivedOrderItem struct {
-	AdvertID      uint   `json:"advertID"`
-	Phone         string `json:"phone"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	Adress        string `json:"adress"`
-	DeliveryPrice uint   `json:"deliveryPrice"`
+	AdvertID        uint   `json:"advertID"`
+	Phone           string `json:"phone"`
+	Name            string `json:"name"`
+	Email           string `json:"email"`
+	Adress          string `json:"adress"`
+	DeliveryPrice   uint   `json:"deliveryPrice"`
+	DeliveryAddress string `json:"address"`
 }
 
 type ReceivedOrderItems struct {
@@ -48,7 +49,7 @@ type OrderItem struct {
 	Phone         string    `json:"phone"`
 	Name          string    `json:"name"`
 	Email         string    `json:"email"`
-	Adress        string    `json:"adress"`
+	Address       string    `json:"address"`
 	DeliveryPrice uint      `json:"deliveryPrice"`
 }
 
