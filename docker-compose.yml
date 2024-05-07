@@ -31,7 +31,30 @@ services:
     depends_on:
       - postgres
 
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.external-url=prometheus'
+
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres:
   pgadmin:
+  prometheus:
+  grafana:
+  prometheus_data:
  
