@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-type Metrics struct {
+type HTTPMetrics struct {
 	totalHits   *prometheus.CounterVec
 	serviceName string
 	duration    *prometheus.HistogramVec
 }
 
-func CreateMetrics(service string) (*Metrics, error) {
-	var metric Metrics
+func CreateHTTPMetrics(service string) (*HTTPMetrics, error) {
+	var metric HTTPMetrics
 	metric.serviceName = service
 
 	metric.totalHits = prometheus.NewCounterVec(
@@ -38,10 +38,10 @@ func CreateMetrics(service string) (*Metrics, error) {
 	return &metric, nil
 }
 
-func (m *Metrics) IncreaseTotal(path, code string) {
+func (m *HTTPMetrics) IncreaseTotal(path, code string) {
 	m.totalHits.WithLabelValues(m.serviceName, path, code).Inc()
 }
 
-func (m *Metrics) AddDuration(path, code string, duration time.Duration) {
+func (m *HTTPMetrics) AddDuration(path, code string, duration time.Duration) {
 	m.duration.WithLabelValues(m.serviceName, path, code).Observe(duration.Seconds())
 }

@@ -1,11 +1,9 @@
 package routers
 
 import (
-	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
-	"log"
-
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
+	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
 	citydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/delivery"
 	favdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/delivery"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
@@ -21,6 +19,7 @@ import (
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"log"
 
 	advusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
@@ -47,7 +46,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
 
-	metrics, err := mymetrics.CreateMetrics("main")
+	metrics, err := mymetrics.CreateHTTPMetrics("main")
 	if err != nil {
 		log.Println("error occurred while creating metrics", err)
 		return nil

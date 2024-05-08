@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func CreateMetricsMiddleware(metric *metrics.Metrics) mux.MiddlewareFunc {
+func CreateMetricsMiddleware(metric *metrics.HTTPMetrics) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			code := new(int)
