@@ -1,15 +1,16 @@
-package profile_service
+package main
 
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
+	"net/http"
+
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
-	"net"
-	"net/http"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
@@ -21,9 +22,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func RunProfile() {
+func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.Host + cfg.Server.ProfileServicePort
+	addr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -60,21 +61,18 @@ func RunProfile() {
 	profileproto.RegisterProfileServer(srv, profileManager)
 	log.Println("Profile service is running on port", cfg.Server.ProfileServicePort)
 
-	go func() {
-		err = srv.Serve(listener)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}()
-
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-
 	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7072)}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail profile.ListenAndServe")
 		}
 	}()
+
+	err = srv.Serve(listener)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

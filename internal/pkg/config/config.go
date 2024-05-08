@@ -26,6 +26,9 @@ type CsrfConfig struct {
 
 type ServerConfig struct {
 	Host               string `yaml:"host"`
+	AuthIP             string `yaml:"auth_ip"`
+	ProfileIP          string `yaml:"profile_ip"`
+	CartIP             string `yaml:"cart_ip"`
 	Port               string `yaml:"port"`
 	AuthServicePort    string `yaml:"auth_service_port"`
 	ProfileServicePort string `yaml:"profile_service_port"`
