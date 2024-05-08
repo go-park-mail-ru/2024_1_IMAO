@@ -53,9 +53,17 @@ services:
     ports:
       - "3000:3000"
 
+  go-server: 
+    build: ./
+    ports:
+      - "8080:8080"
+    volumes:
+      - go-server:/var/lib/go-server      
+
 volumes:
   postgres:
   pgadmin:
   prometheus:
   grafana:
   prometheus_data:
+  go-server:
