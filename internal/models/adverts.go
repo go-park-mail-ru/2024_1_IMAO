@@ -22,6 +22,7 @@ type ReceivedAdData struct {
 	Description string `json:"description"`
 	Price       uint   `json:"price"`
 	IsUsed      bool   `json:"isUsed"`
+	Phone       string `json:"phone"`
 }
 
 type Category struct {
@@ -31,18 +32,23 @@ type Category struct {
 }
 
 type Advert struct {
-	ID          uint      `json:"id"`
-	UserID      uint      `json:"userId"`
-	CityID      uint      `json:"cityId"`
-	CategoryID  uint      `json:"categoryId"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Price       uint      `json:"price"`
-	CreatedTime time.Time `json:"created"`
-	ClosedTime  time.Time `json:"closed"`
-	Active      bool      `json:"active"`
-	IsUsed      bool      `json:"isUsed"`
-	Deleted     bool      `json:"-"`
+	ID            uint      `json:"id"`
+	UserID        uint      `json:"userId"`
+	CityID        uint      `json:"cityId"`
+	CategoryID    uint      `json:"categoryId"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	Phone         string    `json:"phone"`
+	Price         uint      `json:"price"`
+	CreatedTime   time.Time `json:"created"`
+	ClosedTime    time.Time `json:"closed"`
+	Active        bool      `json:"active"`
+	IsUsed        bool      `json:"isUsed"`
+	Views         uint      `json:"views"`
+	InFavourites  bool      `json:"inFavourites"`
+	InCart        bool      `json:"inCart"`
+	FavouritesNum uint      `json:"favouritesNum"`
+	Deleted       bool      `json:"-"`
 }
 
 type ReturningAdvert struct {
@@ -57,6 +63,10 @@ type PhotoPad struct {
 	Photo []*string `json:"photo"`
 }
 
+type PhotoPadSoloImage struct {
+	Photo *string `json:"photo"`
+}
+
 type AdvertsList struct {
 	Adverts           []*Advert
 	Categories        []*Category
@@ -68,13 +78,15 @@ type AdvertsList struct {
 }
 
 type ReturningAdInList struct {
-	ID        uint     `json:"id"`
-	Title     string   `json:"title"`
-	Price     uint     `json:"price"`
-	City      string   `json:"city"`
-	Category  string   `json:"category"`
-	Photos    []string `json:"photos"`
-	PhotosIMG []string `json:"photosIMG"`
+	ID           uint     `json:"id"`
+	Title        string   `json:"title"`
+	Price        uint     `json:"price"`
+	City         string   `json:"city"`
+	Category     string   `json:"category"`
+	Photos       []string `json:"photos"`
+	PhotosIMG    []string `json:"photosIMG"`
+	InFavourites bool     `json:"inFavourites"`
+	InCart       bool     `json:"inCart"`
 }
 
 type ReturningAdvertList struct {

@@ -5,6 +5,15 @@ import (
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 )
 
+type AuthOkResponseLogged struct {
+	Code    int         `json:"code"`
+	User    models.User `json:"user"`
+	Avatar  string      `json:"avatarImg"`
+	IsAuth  bool        `json:"isAuth"`
+	CartNum uint        `json:"cartNum"`
+	FavNum  uint        `json:"favNum"`
+}
+
 type AuthOkResponse struct {
 	Code   int         `json:"code"`
 	User   models.User `json:"user"`
@@ -25,6 +34,17 @@ type SessionOKResponse struct {
 type ValidationErrResponse struct {
 	Code   int      `json:"code"`
 	Status []string `json:"status"`
+}
+
+func NewAuthOkResponseLogged(user models.User, avatar string, isAuth bool, cartNum, favNum uint) *AuthOkResponseLogged {
+	return &AuthOkResponseLogged{
+		Code:    responses.StatusOk,
+		User:    user,
+		Avatar:  avatar,
+		IsAuth:  isAuth,
+		CartNum: cartNum,
+		FavNum:  favNum,
+	}
 }
 
 func NewAuthOkResponse(user models.User, avatar string, isAuth bool) *AuthOkResponse {

@@ -21,6 +21,7 @@ import (
 	advertrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/repository"
 	cartrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/repository"
 	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
+	favrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
 	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
 	"github.com/gorilla/handlers"
@@ -57,6 +58,7 @@ func (srv *Server) Run() error {
 	cityStorage := cityrepo.NewCityStorage(connPool)
 	orderStorage := orderrepo.NewOrderStorage(connPool)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
+	favouritesStorage := favrepo.NewFavouritesStorage(connPool)
 
 	cfg := config.ReadConfig()
 

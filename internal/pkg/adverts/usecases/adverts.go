@@ -10,13 +10,16 @@ import (
 //go:generate mockgen -source=adverts.go -destination=mocks/mock.go
 
 type AdvertsStorageInterface interface {
-	GetAdvert(ctx context.Context, advertID uint, city, category string) (*models.ReturningAdvert, error)
-	GetAdvertsByCity(ctx context.Context, city string, startID, num uint) ([]*models.ReturningAdInList, error)
-	GetAdvertsByCategory(ctx context.Context, category, city string, startID, num uint) ([]*models.ReturningAdInList, error)
-	GetAdvertByOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
+	GetAdvert(ctx context.Context, userID, advertID uint, city, category string) (*models.ReturningAdvert, error)
+	GetAdvertsByCity(ctx context.Context, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
+	GetAdvertsByCategory(ctx context.Context, category, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
+	GetAdvertOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
+	SearchAdvertByTitle(ctx context.Context, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
+	GetSuggestions(ctx context.Context, title string, num uint) ([]string, error)
 
 	CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
 	EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
-	GetAdvertsForUserWhereStatusIs(ctx context.Context, userId, deleted uint) ([]*models.ReturningAdInList, error)
+	GetAdvertsForUserWhereStatusIs(ctx context.Context, userID, userId, deleted uint) ([]*models.ReturningAdInList, error)
 	CloseAdvert(ctx context.Context, advertID uint) error
+	InsertView(ctx context.Context, userID, advertID uint) error
 }

@@ -1,6 +1,8 @@
 package routers
 
 import (
+	"log"
+
 	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
 	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
@@ -14,6 +16,7 @@ import (
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
 	citydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/delivery"
+	favdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/delivery"
 	orderdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/delivery"
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
 	surveydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/delivery"
@@ -57,6 +60,16 @@ func NewRouter(logger *zap.SugaredLogger,
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
+	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
+	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage, plug, plug, logger)
+	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug)
+	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage, plug, plug, logger)
+	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage, plug, plug, logger)
+	cityHandler := citydel.NewCityHandler(cityStorage, plug, plug, logger)
+	surveyHandler := surveydel.NewSurveyHandler(userStorage, surveyStorage)
+	favouritesHandler := favdel.NewFavouritesHandler(favouritesStorage, advertStorage, userStorage)
+
+	log.Println("Server is running")
 
 	rootRouter := router.PathPrefix("/api").Subrouter()
 	ServeAuthRouter(rootRouter, authHandler, authCheckMiddleware)
@@ -65,6 +78,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	ServeCartRouter(rootRouter, cartHandler, authCheckMiddleware)
 	ServeOrderRouter(rootRouter, orderHandler, authCheckMiddleware)
 	ServeSurveyRouter(rootRouter, surveyHandler, authCheckMiddleware)
+	ServeFavouritesRouter(rootRouter, favouritesHandler, authCheckMiddleware)
 
 	rootRouter.HandleFunc("/city", cityHandler.GetCityList)
 

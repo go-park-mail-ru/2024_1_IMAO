@@ -25,6 +25,8 @@ type Profile struct {
 	AvatarIMG       string    `json:"avatarImg"`
 	ActiveAddsCount int       `json:"activeAddsCount"`
 	SoldAddsCount   int       `json:"soldAddsCount"`
+	CartNum         uint      `json:"cartNum"`
+	FavNum          uint      `json:"favNum"`
 }
 
 type ProfilePad struct {

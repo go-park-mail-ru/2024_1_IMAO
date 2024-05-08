@@ -3,10 +3,11 @@ package delivery
 import (
 	"encoding/json"
 	"fmt"
-	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
-	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"log"
 	"net/http"
+
+	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"go.uber.org/zap"
@@ -52,7 +53,7 @@ func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage ca
 // @Failure 405 {object} responses.AdvertsErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
 // @Router /api/adverts/list [get]
-func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, request *http.Request) {
+func (orderHandler *OrderHandler) GetSoldOrderList(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -65,7 +66,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 
 	var ordersList []*models.ReturningOrder
 
-	ordersList, err = storage.GetReturningOrderByUserID(ctx, uint(user.ID), orderHandler.advertStorage)
+	ordersList, err = storage.GetBoughtOrdersByUserID(ctx, uint(user.ID))
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -103,7 +104,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY
+	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY, А ТОЧНЕЕ В USECASE (для этого внутрь STORAGE функции нужно передавать соответствующий интерфейс другого STORAGE)
 	for _, receivedOrderItem := range data.Adverts {
 		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID)
 
@@ -116,7 +117,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			return
 		}
 
-		storage.CreateOrderByID(uint(user.ID), receivedOrderItem)
+		storage.CreateOrderByID(ctx, uint(user.ID), receivedOrderItem)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
 
