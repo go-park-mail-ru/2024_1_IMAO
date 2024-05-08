@@ -6,6 +6,8 @@ import (
 	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
+
+	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
@@ -28,6 +30,7 @@ import (
 
 func NewRouter(logger *zap.SugaredLogger,
 	advertStorage advusecases.AdvertsStorageInterface,
+	cartClient cartproto.CartClient,
 	cartStorage cartusecases.CartStorageInterface,
 	cityStorage cityusecases.CityStorageInterface,
 	orderStorage orderusecases.OrderStorageInterface,
@@ -48,7 +51,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(authClient)
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
-	cartHandler := cartdel.NewCartHandler(cartStorage, authClient)
+	cartHandler := cartdel.NewCartHandler(cartClient, authClient)
 	authHandler := authdel.NewAuthHandler(authClient, profileClient)
 	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)

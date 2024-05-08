@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/go-park-mail-ru/2024_1_IMAO/cmd/auth_service"
-	"github.com/go-park-mail-ru/2024_1_IMAO/cmd/profile_service"
 	"log"
+
+	"github.com/go-park-mail-ru/2024_1_IMAO/cmd/auth_service"
+	"github.com/go-park-mail-ru/2024_1_IMAO/cmd/cart_service"
+	"github.com/go-park-mail-ru/2024_1_IMAO/cmd/profile_service"
 
 	app "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server"
 )
@@ -19,6 +21,7 @@ func main() {
 
 	go auth_service.RunAuth()
 	go profile_service.RunProfile()
+	go cart_service.RunCart()
 
 	if err := srv.Run(); err != nil {
 		log.Fatal("Error occurred while starting server:", err.Error())

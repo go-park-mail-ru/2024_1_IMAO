@@ -1,10 +1,11 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type RequestUUIDKey string
@@ -28,6 +29,7 @@ type ServerConfig struct {
 	Port               string `yaml:"port"`
 	AuthServicePort    string `yaml:"auth_service_port"`
 	ProfileServicePort string `yaml:"profile_service_port"`
+	CartServicePort    string `yaml:"cart_service_port"`
 }
 
 type Config struct {
