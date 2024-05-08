@@ -1073,9 +1073,9 @@ func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertI
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfileAvatarURL := `
-	INSERT INTO advert_image (url, advert_id)
+	INSERT INTO advert_image (url, advert_id, url_resized)
 	VALUES 
-    ($1, $2)
+    ($1, $2, $1)
 	RETURNING url;`
 
 	logging.LogInfo(logger, "INSERT INTO advert_image")
