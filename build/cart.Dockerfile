@@ -4,6 +4,7 @@ WORKDIR /var/backend
 
 COPY cmd cmd
 COPY internal internal
+COPY uploads uploads
 
 COPY go.mod .
 COPY go.sum .
