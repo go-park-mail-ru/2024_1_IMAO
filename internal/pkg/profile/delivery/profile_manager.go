@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	protobuf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	profileusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/usecases"
@@ -43,6 +44,8 @@ func CleanProfileData(profile *protobuf.ProfileData) *models.Profile {
 		AvatarIMG:       profile.AvatarIMG,
 		ActiveAddsCount: int(profile.ActiveAddsCount),
 		SoldAddsCount:   int(profile.SoldAddsCount),
+		CartNum:         uint(profile.CartNum),
+		FavNum:          uint(profile.FavNum),
 	}
 }
 
@@ -67,6 +70,8 @@ func newProtobufProfile(profile *models.Profile) *protobuf.ProfileData {
 		AvatarIMG:       profile.AvatarIMG,
 		ActiveAddsCount: int64(profile.ActiveAddsCount),
 		SoldAddsCount:   int64(profile.SoldAddsCount),
+		CartNum:         int64(profile.CartNum),
+		FavNum:          int64(profile.FavNum),
 	}
 }
 

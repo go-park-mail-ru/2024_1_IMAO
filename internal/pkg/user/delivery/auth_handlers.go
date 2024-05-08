@@ -228,19 +228,24 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	})
 
 	var avatar string
+	var cartNum uint
+	var favNum uint
 
 	if user.IsAuth {
 		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
 		avatar = profile.AvatarIMG
+		favNum = uint(profile.FavNum)
+		cartNum = uint(profile.CartNum)
+
 	} else {
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
 	}
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+	responses.SendOkResponse(writer, NewAuthOkResponseLogged(models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, avatar, user.IsAuth))
+	}, avatar, user.IsAuth, cartNum, favNum))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {

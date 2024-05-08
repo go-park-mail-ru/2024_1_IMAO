@@ -38,6 +38,8 @@ message ProfileData {
     string AvatarIMG = 17;
     int64 ActiveAddsCount = 18;
     int64 SoldAddsCount = 19;
+    int64 CartNum = 20;         
+	int64 FavNum = 21;          
 }
 
 message SetCityRequest {
