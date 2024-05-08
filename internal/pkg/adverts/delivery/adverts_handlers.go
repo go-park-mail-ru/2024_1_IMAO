@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
@@ -20,12 +21,14 @@ const (
 )
 
 type AdvertsHandler struct {
-	storage advertusecases.AdvertsStorageInterface
+	storage    advertusecases.AdvertsStorageInterface
+	authClient authproto.AuthClient
 }
 
-func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface) *AdvertsHandler {
+func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface, authClient authproto.AuthClient) *AdvertsHandler {
 	return &AdvertsHandler{
-		storage: storage,
+		storage:    storage,
+		authClient: authClient,
 	}
 }
 
@@ -49,7 +52,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	category := vars["category"]
 
 	storage := advertsHandler.storage
-	userStorage := advertsHandler.userStorage
+	authClient := advertsHandler.authClient
 
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
 	startID, errstartID := strconv.Atoi(request.URL.Query().Get("startId"))
@@ -69,8 +72,10 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 
 	var userIdCookie uint = 0
 
-	if cookieErr == nil && userStorage.SessionExists(session.Value) {
-		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	if cookieErr == nil && user.IsAuth {
+		userIdCookie = uint(user.ID)
 
 	}
 
@@ -105,8 +110,7 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	}
 
 	storage := advertsHandler.storage
-	userStorage := advertsHandler.userStorage
-
+	authClient := advertsHandler.authClient
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
 	startID, errStartID := strconv.Atoi(request.URL.Query().Get("startId"))
 	title := request.URL.Query().Get("title")
@@ -123,8 +127,10 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 
 	var userIdCookie uint = 0
 
-	if cookieErr == nil && userStorage.SessionExists(session.Value) {
-		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	if cookieErr == nil && user.IsAuth {
+		userIdCookie = uint(user.ID)
 
 	}
 
@@ -133,7 +139,7 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	} else {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -142,7 +148,7 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -179,7 +185,7 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	} else {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -188,7 +194,7 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
@@ -208,14 +214,16 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	id, _ := strconv.Atoi(vars["id"])
 
 	storage := advertsHandler.storage
-	userStorage := advertsHandler.userStorage
+	authClient := advertsHandler.authClient
 
 	session, cookieErr := request.Cookie("session_id")
 
 	var userIdCookie uint = 0
 
-	if cookieErr == nil && userStorage.SessionExists(session.Value) {
-		userIdCookie = userStorage.MAP_GetUserIDBySession(session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	if cookieErr == nil && user.IsAuth {
+		userIdCookie = uint(user.ID)
 
 	}
 
@@ -229,13 +237,13 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 		return
 	}
 
-	if cookieErr == nil && userStorage.SessionExists(session.Value) {
-		userID := userStorage.MAP_GetUserIDBySession(session.Value)
-		err = storage.InsertView(ctx, userID, uint(id))
+	if cookieErr == nil && user.IsAuth {
+
+		err = storage.InsertView(ctx, uint(user.ID), uint(id))
 		if err != nil {
 			logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 			log.Println(err, responses.StatusInternalServerError)
-			responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusInternalServerError,
+			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
 
 			return

@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,11 +10,11 @@ import (
 	"go.uber.org/zap"
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
-	authresp "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	favouritesusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/usecases"
-	userusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
@@ -23,15 +22,16 @@ import (
 type FavouritesHandler struct {
 	storage       favouritesusecases.FavouritesStorageInterface
 	advertStorage advertusecases.AdvertsStorageInterface
-	userStorage   userusecases.UsersStorageInterface
+	authClient    authproto.AuthClient
 }
 
-func NewFavouritesHandler(storage favouritesusecases.FavouritesStorageInterface, advertStorage advertusecases.AdvertsStorageInterface, userStorage userusecases.UsersStorageInterface,
+func NewFavouritesHandler(storage favouritesusecases.FavouritesStorageInterface, advertStorage advertusecases.AdvertsStorageInterface,
+	authClient authproto.AuthClient,
 ) *FavouritesHandler {
 	return &FavouritesHandler{
 		storage:       storage,
 		advertStorage: advertStorage,
-		userStorage:   userStorage,
+		authClient:    authClient,
 	}
 }
 
@@ -62,22 +62,20 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 	}
 
 	storage := favouritesHandler.storage
-	userStorage := favouritesHandler.userStorage
+	authClient := favouritesHandler.authClient
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
 
 		return
 	}
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	var adsList []*models.ReturningAdInList
 
@@ -86,11 +84,12 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusBadRequest,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 			responses.ErrBadRequest))
 
 		return
 	}
+
 	log.Println("Get favourites for user", user.ID)
 	responses.SendOkResponse(writer, NewFavouritesOkResponse(adsList))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get favourites for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
@@ -107,33 +106,31 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 	}
 
 	storage := favouritesHandler.storage
-	userStorage := favouritesHandler.userStorage
+	authClient := favouritesHandler.authClient
 	var data models.ReceivedCartItem
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		if err == nil {
-			err = errors.New("no such cookie in userStorage")
-		}
-		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
 
 		return
 	}
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	isAppended := storage.AppendAdvByIDs(ctx, user.ID, data.AdvertID, favouritesHandler.userStorage, favouritesHandler.advertStorage)
+	isAppended := storage.AppendAdvByIDs(ctx, uint(user.ID), data.AdvertID)
 
 	responses.SendOkResponse(writer, NewFavouritesChangeResponse(isAppended))
 
@@ -157,35 +154,37 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 	}
 
 	storage := favouritesHandler.storage
-	userStorage := favouritesHandler.userStorage
+	authClient := favouritesHandler.authClient
 	var data models.ReceivedCartItems
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
-		responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusInternalServerError,
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
 
 	session, err := request.Cookie("session_id")
 
-	if err != nil || !userStorage.SessionExists(session.Value) {
-		log.Println("User not authorized")
-		responses.SendOkResponse(writer, authresp.NewAuthOkResponse(models.User{}, "", false))
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
 
 		return
 	}
 
-	user, _ := userStorage.GetUserBySession(ctx, session.Value)
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	for _, item := range data.AdvertIDs {
-		err = storage.DeleteAdvByIDs(ctx, user.ID, item, favouritesHandler.userStorage, favouritesHandler.advertStorage)
+		err = storage.DeleteAdvByIDs(ctx, uint(user.ID), item)
 
 		if err != nil {
 			log.Println(err, responses.StatusBadRequest)
 			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-			responses.SendErrResponse(writer, NewFavouritesErrResponse(responses.StatusBadRequest,
+			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
 				responses.ErrBadRequest))
 
 			return

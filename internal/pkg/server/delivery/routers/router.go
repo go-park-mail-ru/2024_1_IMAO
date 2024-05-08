@@ -25,8 +25,10 @@ import (
 	advusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
+	favusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/usecases"
 	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
 	surveyusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/usecases"
+
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
@@ -39,7 +41,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	orderStorage orderusecases.OrderStorageInterface,
 	surveyStorage surveyusecases.SurveyStorageInterface,
 	authClient authproto.AuthClient,
-	profileClient profileproto.ProfileClient) *mux.Router {
+	profileClient profileproto.ProfileClient,
+	favouritesStorage favusecases.FavouritesStorageInterface) *mux.Router {
 
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
@@ -53,21 +56,14 @@ func NewRouter(logger *zap.SugaredLogger,
 	csrfMiddleware := createCsrfMiddleware.CreateCsrfMiddleware()
 	authCheckMiddleware := createAuthCheckMiddleware.CreateAuthCheckMiddleware(authClient)
 
-	advertsHandler := advdel.NewAdvertsHandler(advertStorage)
+	advertsHandler := advdel.NewAdvertsHandler(advertStorage, authClient)
 	cartHandler := cartdel.NewCartHandler(cartClient, authClient)
 	authHandler := authdel.NewAuthHandler(authClient, profileClient)
 	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
-	advertsHandler := advdel.NewAdvertsHandler(advertStorage, userStorage, plug, plug, logger)
-	cartHandler := cartdel.NewCartHandler(cartStorage, advertStorage, userStorage, plug, plug, logger)
-	authHandler := authdel.NewAuthHandler(userStorage, profileStorage, plug, plug)
-	profileHandler := profdel.NewProfileHandler(profileStorage, userStorage, plug, plug, logger)
-	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, advertStorage, userStorage, plug, plug, logger)
-	cityHandler := citydel.NewCityHandler(cityStorage, plug, plug, logger)
-	surveyHandler := surveydel.NewSurveyHandler(userStorage, surveyStorage)
-	favouritesHandler := favdel.NewFavouritesHandler(favouritesStorage, advertStorage, userStorage)
+	favouritesHandler := favdel.NewFavouritesHandler(favouritesStorage, advertStorage, authClient)
 
 	log.Println("Server is running")
 

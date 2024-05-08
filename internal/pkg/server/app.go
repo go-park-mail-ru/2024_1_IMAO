@@ -99,7 +99,7 @@ func (srv *Server) Run() error {
 	cartClient := cartproto.NewCartClient(grpcConnCart)
 
 	router := myrouter.NewRouter(logger, advertStorage, cartClient, cartStorage, cityStorage, orderStorage,
-		surveyStorage, authClient, profileClient)
+		surveyStorage, authClient, profileClient, favouritesStorage)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})

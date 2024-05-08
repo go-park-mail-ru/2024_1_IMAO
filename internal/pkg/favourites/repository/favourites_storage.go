@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	advuc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
-	useruc "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/usecases"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
@@ -145,7 +143,7 @@ func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, 
 	return nil
 }
 
-func (favouritesStorage *FavouritesStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) error {
+func (favouritesStorage *FavouritesStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, favouritesStorage.pool, func(tx pgx.Tx) error {
@@ -192,7 +190,7 @@ func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, 
 	return added, nil
 }
 
-func (favouritesStorage *FavouritesStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint, userList useruc.UsersStorageInterface, advertsList advuc.AdvertsStorageInterface) bool {
+func (favouritesStorage *FavouritesStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var added bool
