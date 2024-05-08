@@ -73,7 +73,7 @@ func RunAuth() {
 	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7071)}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
-			log.Println("fail httpSrv.ListenAndServe")
+			log.Println("fail auth.ListenAndServe")
 		}
 	}()
 }
