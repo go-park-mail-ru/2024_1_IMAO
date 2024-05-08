@@ -14,5 +14,6 @@ RUN go mod tidy
 RUN go build -o main ./cmd/profile_service/main.go
 
 EXPOSE 8082
+EXPOSE 7072
 
 CMD ["./main"]

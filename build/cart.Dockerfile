@@ -14,5 +14,6 @@ RUN go mod tidy
 RUN go build -o main ./cmd/cart_service/main.go
 
 EXPOSE 8083
+EXPOSE 7073
 
 CMD ["./main"]

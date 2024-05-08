@@ -14,5 +14,6 @@ RUN go mod tidy
 RUN go build -o main ./cmd/auth_service/main.go
 
 EXPOSE 8081
+EXPOSE 7071
 
 CMD ["./main"]
