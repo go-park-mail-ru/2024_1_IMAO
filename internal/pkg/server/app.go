@@ -30,7 +30,7 @@ import (
 
 const (
 	Timeout            = time.Second * 15
-	Address            = ":8080" //"109.120.183.3:8080"
+	Address            = "www.vol-4-ok.ru:8080" //"109.120.183.3:8080"
 	outputLogPath      = "stdout logs.json"
 	errorOutputLogPath = "stderr err_logs.json"
 )
@@ -103,7 +103,7 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://127.0.0.1:8008"}) // "http://109.120.183.3:8008"
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru:8008"}) // "http://109.120.183.3:8008"
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
