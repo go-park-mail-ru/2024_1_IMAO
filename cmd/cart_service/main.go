@@ -1,4 +1,4 @@
-package cart_service
+package main
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func RunCart() {
+func main() {
 	cfg := config.ReadConfig()
 	addr := cfg.Server.Host + cfg.Server.CartServicePort
 
@@ -60,21 +60,18 @@ func RunCart() {
 	cartproto.RegisterCartServer(srv, cartManager)
 	log.Println("Cart service is running on port", cfg.Server.CartServicePort)
 
-	go func() {
-		err = srv.Serve(listener)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}()
-
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-
 	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7073)}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail cart.ListenAndServe")
 		}
 	}()
+
+	err = srv.Serve(listener)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

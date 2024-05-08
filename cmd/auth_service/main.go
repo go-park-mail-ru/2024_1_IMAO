@@ -1,4 +1,4 @@
-package auth_service
+package main
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-func RunAuth() {
+func main() {
 	cfg := config.ReadConfig()
 	addr := cfg.Server.Host + cfg.Server.AuthServicePort
 
@@ -59,21 +59,18 @@ func RunAuth() {
 	authproto.RegisterAuthServer(srv, authManager)
 	log.Println("Auth service is running on port", cfg.Server.AuthServicePort)
 
-	go func() {
-		err = srv.Serve(listener)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}()
-
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-
 	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7071)}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail auth.ListenAndServe")
 		}
 	}()
+
+	err = srv.Serve(listener)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
