@@ -396,7 +396,7 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, 
 
 	for i := 0; i < len(advertsList.Photos); i++ {
 
-		image, err := utils.DecodeImageWithoutScaling(advertsList.Photos[i])
+		image, err := utils.DecodeImage(advertsList.Photos[i])
 		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
 			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", advertsList.Photos[i], err))
@@ -412,7 +412,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -484,7 +484,7 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertsByCityAuth := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-    (SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+    (SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
     CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          THEN 1 ELSE 0 END AS bool) AS in_favourites,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
@@ -595,7 +595,7 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -665,7 +665,7 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAdvertsByCityAuth := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          THEN 1 ELSE 0 END AS bool) AS in_favourites,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
@@ -780,7 +780,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 	}
 
 	SQLGetAdvertsForUserWhereStatusIs := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -858,7 +858,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 	}
 
 	SQLGetAdvertsForUserWhereStatusIsAuth := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          THEN 1 ELSE 0 END AS bool) AS in_favourites,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
@@ -1402,7 +1402,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls
 	FROM public.advert a
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
@@ -1477,7 +1477,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	(SELECT array_agg(url_resized) FROM (SELECT url_resized FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $4 AND f.advert_id = a.id)
          THEN 1 ELSE 0 END AS bool) AS in_favourites,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $4 AND c.advert_id = a.id)

@@ -53,7 +53,7 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	return fullpath, nil
 }
 
-func DecodeImage(filename string) (string, error) {
+func DecodeImageWithScaling(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Printf("Ошибка при открытии изображения: %v", err)
@@ -82,7 +82,7 @@ func DecodeImage(filename string) (string, error) {
 	return encoded, nil
 }
 
-func DecodeImageWithoutScaling(filename string) (string, error) {
+func DecodeImage(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Printf("Ошибка при открытии изображения: %v", err)
