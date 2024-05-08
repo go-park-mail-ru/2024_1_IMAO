@@ -30,7 +30,7 @@ import (
 
 const (
 	Timeout            = time.Second * 15
-	Address            = "www.vol-4-ok.ru:8080" //"109.120.183.3:8080"
+	Address            = ":8080" //"109.120.183.3:8080"
 	outputLogPath      = "stdout logs.json"
 	errorOutputLogPath = "stderr err_logs.json"
 )
