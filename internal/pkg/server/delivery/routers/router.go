@@ -1,26 +1,26 @@
 package routers
 
 import (
-	"log"
-
-	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
-	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
-	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
-	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
-	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
-
 	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
-	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
-	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"log"
 
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
 	citydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/delivery"
 	favdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/delivery"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	createAuthCheckMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/auth_check"
+	createCsrfMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/csrf"
+	createLogMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/log"
+	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
+	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
 	orderdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/delivery"
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	surveydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/delivery"
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	advusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
@@ -47,8 +47,14 @@ func NewRouter(logger *zap.SugaredLogger,
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
 
+	metrics, err := mymetrics.CreateMetrics("main")
+	if err != nil {
+		log.Println("error occurred while creating metrics", err)
+		return nil
+	}
+
 	logMiddleware := createLogMiddleware.CreateLogMiddleware(logger)
-	metricsMiddleware := createMetricsMiddleware.CreateMetricsMiddleware()
+	metricsMiddleware := createMetricsMiddleware.CreateMetricsMiddleware(metrics)
 
 	router.Use(metricsMiddleware)
 	router.Use(logMiddleware)
@@ -65,8 +71,6 @@ func NewRouter(logger *zap.SugaredLogger,
 	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
 	favouritesHandler := favdel.NewFavouritesHandler(favouritesStorage, advertStorage, authClient)
 
-	log.Println("Server is running")
-
 	rootRouter := router.PathPrefix("/api").Subrouter()
 	ServeAuthRouter(rootRouter, authHandler, authCheckMiddleware)
 	ServeAdvertsRouter(rootRouter, advertsHandler, authCheckMiddleware, csrfMiddleware)
@@ -77,6 +81,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	ServeFavouritesRouter(rootRouter, favouritesHandler, authCheckMiddleware)
 
 	rootRouter.HandleFunc("/city", cityHandler.GetCityList)
+	router.PathPrefix("/metrics").Handler(promhttp.Handler())
 
 	return router
 }

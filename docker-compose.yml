@@ -44,6 +44,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.external-url=prometheus'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 
   grafana:
@@ -57,4 +59,3 @@ volumes:
   prometheus:
   grafana:
   prometheus_data:
- 
