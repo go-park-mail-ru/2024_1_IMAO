@@ -1047,7 +1047,7 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 		return nil, err
 	}
 
-	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", advertsList.Advert.ID)
+	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", "advert_images_resized", advertsList.Advert.ID)
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%v", err))
 
@@ -1069,20 +1069,20 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, imageUrl string) (string, error) {
+func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, originalImageUrl, resizedImage string) (string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfileAvatarURL := `
-	INSERT INTO advert_image (url, advert_id)
+	INSERT INTO advert_image (url, advert_id, url_resized)
 	VALUES 
-    ($1, $2)
+    ($1, $2, $3)
 	RETURNING url;`
 
 	logging.LogInfo(logger, "INSERT INTO advert_image")
 
 	var returningUrl string
 
-	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, imageUrl, advertID)
+	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, originalImageUrl, advertID, resizedImage)
 
 	if err := urlLine.Scan(&returningUrl); err != nil {
 
@@ -1154,7 +1154,8 @@ func (ads *AdvertStorage) deleteAllImagesForAdvertFromDatabase(ctx context.Conte
 	return nil
 }
 
-func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, folderName string, advertID uint) ([]string, error) {
+func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipart.FileHeader, originalImageFolderName, resizedImageFolderName string,
+	advertID uint) ([]string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
@@ -1182,16 +1183,24 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 	for i := 0; i < len(files); i++ {
 		var url string
 
-		fullPath, err := utils.WriteFile(files[i], folderName)
+		originalImageFullPath, err := utils.WriteFile(files[i], originalImageFolderName)
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image , err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the original image , err=%v", err))
+
+			return nil, err
+		}
+
+		resizedImageFullPath, err := utils.WriteResizedFile(files[i], resizedImageFolderName)
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the resized image , err=%v", err))
 
 			return nil, err
 		}
 
 		err = pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, fullPath)
+			urlInner, err := ads.setAdvertImage(ctx, tx, advertID, originalImageFullPath, resizedImageFullPath)
 			url = urlInner
 
 			return err
@@ -1298,7 +1307,7 @@ func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.Fil
 		return nil, err
 	}
 
-	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", data.ID)
+	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images", "advert_images_resized", data.ID)
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%v", err))
 

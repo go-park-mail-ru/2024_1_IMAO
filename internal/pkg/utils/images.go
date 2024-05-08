@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/png"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 	"time"
+
+	"golang.org/x/image/draw"
 )
 
 const (
@@ -36,8 +39,6 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	}
 
 	extension := filepath.Ext(file.Filename)
-	//extension := ".jpg"
-
 	filename := RandString(8) + extension
 	fullpath := dirName + "/" + filename
 	destination, err := os.Create(fullpath)
@@ -49,6 +50,57 @@ func WriteFile(file *multipart.FileHeader, folderName string) (string, error) {
 	if _, err := io.Copy(destination, uploadedFile); err != nil {
 		return "", err
 	}
+
+	return fullpath, nil
+}
+
+func WriteResizedFile(file *multipart.FileHeader, folderName string) (string, error) {
+	uploadedFile, err := file.Open()
+	if err != nil {
+		return "", err
+	}
+	defer uploadedFile.Close()
+
+	img, _, err := image.Decode(uploadedFile)
+	if err != nil {
+		fmt.Println("Ошибка при декодировании изображения:", err)
+		return "", err
+	}
+
+	// Создаем новое изображение с нужными размерами
+	resizedImg := image.NewRGBA(image.Rect(0, 0, 215, 295))
+
+	// Рисуем исходное изображение в новом изображении
+	draw.CatmullRom.Scale(resizedImg, resizedImg.Rect, img, img.Bounds(), draw.Over, nil)
+
+	currentTime := time.Now()
+
+	dirName := fmt.Sprintf("%s/%s/%d-%02d-%02d", staticDirectory, folderName,
+		currentTime.Year(), currentTime.Month(), currentTime.Day())
+
+	err = os.MkdirAll(dirName, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	extension := filepath.Ext(file.Filename)
+	filename := RandString(8) + extension
+	fullpath := dirName + "/" + filename
+	destination, err := os.Create(fullpath)
+	if err != nil {
+		return "", err
+	}
+	defer destination.Close()
+
+	err = jpeg.Encode(destination, resizedImg, &jpeg.Options{Quality: 90})
+	if err != nil {
+		fmt.Println("Ошибка при сохранении изображения:", err)
+		return "", err
+	}
+
+	// if _, err := io.Copy(destination, uploadedFile); err != nil {
+	// 	return "", err
+	// }
 
 	return fullpath, nil
 }
@@ -96,8 +148,6 @@ func DecodeImage(filename string) (string, error) {
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(content)
-
-	fmt.Println(encoded)
 
 	return encoded, nil
 }

@@ -67,12 +67,17 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 
 	var adsList []*models.ReturningAdInList
 	var err error
+	var sessionValue string = ""
 
 	session, cookieErr := request.Cookie("session_id")
 
+	if session != nil {
+		sessionValue = session.Value
+	}
+
 	var userIdCookie uint = 0
 
-	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
 		userIdCookie = uint(user.ID)
@@ -122,12 +127,17 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 
 	var adsList []*models.ReturningAdInList
 	var err error
+	var sessionValue string = ""
 
 	session, cookieErr := request.Cookie("session_id")
 
+	if session != nil {
+		sessionValue = session.Value
+	}
+
 	var userIdCookie uint = 0
 
-	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
 		userIdCookie = uint(user.ID)
@@ -216,11 +226,17 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	storage := advertsHandler.storage
 	authClient := advertsHandler.authClient
 
+	var sessionValue string = ""
+
 	session, cookieErr := request.Cookie("session_id")
+
+	if session != nil {
+		sessionValue = session.Value
+	}
 
 	var userIdCookie uint = 0
 
-	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
 		userIdCookie = uint(user.ID)

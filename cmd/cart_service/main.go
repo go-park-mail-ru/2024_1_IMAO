@@ -2,8 +2,14 @@ package cart_service
 
 import (
 	"context"
+	"fmt"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
+	"net/http"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
 	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
@@ -25,6 +31,13 @@ func RunCart() {
 		return
 	}
 
+	metrics, err := mymetrics.CreateGRPCMetrics("cart")
+	if err != nil {
+		log.Println("Error occurred while creating cart metrics", err)
+	}
+
+	interceptor := createMetricsMiddleware.CreateMetricsInterceptor(*metrics)
+
 	grpcConn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -43,13 +56,25 @@ func RunCart() {
 	cartStorage := cartrepo.NewCartStorage(connPool)
 	cartManager := delivery.NewCartManager(cartStorage)
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))
 	cartproto.RegisterCartServer(srv, cartManager)
 	log.Println("Cart service is running on port", cfg.Server.CartServicePort)
 
-	err = srv.Serve(listener)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	go func() {
+		err = srv.Serve(listener)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}()
+
+	router := mux.NewRouter()
+	router.PathPrefix("/metrics").Handler(promhttp.Handler())
+
+	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7073)}
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Println("fail cart.ListenAndServe")
+		}
+	}()
 }
