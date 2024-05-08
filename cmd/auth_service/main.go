@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
+	"net/http"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
@@ -15,14 +19,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
-	"net"
-	"net/http"
 )
 
 func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.Host + cfg.Server.AuthServicePort
+	addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {

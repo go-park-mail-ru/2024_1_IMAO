@@ -53,12 +53,41 @@ services:
     ports:
       - "3000:3000"
 
-  go-server: 
-    build: ./
+  main: 
+    build:
+      context: .
+      dockerfile: ./build/main.Dockerfile
     ports:
       - "8080:8080"
     volumes:
-      - go-server:/var/lib/go-server      
+      - main:/var/lib/main
+
+  auth: 
+    build:
+      context: .
+      dockerfile: ./build/auth.Dockerfile
+    ports:
+      - "8081:8081"
+    volumes:
+      - auth:/var/lib/auth
+
+  profile: 
+    build:
+      context: .
+      dockerfile: ./build/profile.Dockerfile
+    ports:
+      - "8082:8082"
+    volumes:
+      - profile:/var/lib/profile
+
+  cart: 
+    build:
+      context: .
+      dockerfile: ./build/cart.Dockerfile
+    ports:
+      - "8083:8083"
+    volumes:
+      - cart:/var/lib/cart                  
 
 volumes:
   postgres:
@@ -66,4 +95,9 @@ volumes:
   prometheus:
   grafana:
   prometheus_data:
-  go-server:
+  main:
+  auth:
+  profile:
+  cart:
+
+  

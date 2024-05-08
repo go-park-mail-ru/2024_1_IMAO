@@ -62,7 +62,7 @@ func (srv *Server) Run() error {
 
 	cfg := config.ReadConfig()
 
-	authAddr := cfg.Server.Host + cfg.Server.AuthServicePort
+	authAddr := cfg.Server.AuthIP + cfg.Server.AuthServicePort
 	grpcConnAuth, err := grpc.Dial(
 		authAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -74,7 +74,7 @@ func (srv *Server) Run() error {
 	defer grpcConnAuth.Close()
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
-	profileAddr := cfg.Server.Host + cfg.Server.ProfileServicePort
+	profileAddr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
 	grpcConnProfile, err := grpc.Dial(
 		profileAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -86,7 +86,7 @@ func (srv *Server) Run() error {
 	defer grpcConnProfile.Close()
 	profileClient := profileproto.NewProfileClient(grpcConnProfile)
 
-	cartAddr := cfg.Server.Host + cfg.Server.CartServicePort
+	cartAddr := cfg.Server.CartIP + cfg.Server.CartServicePort
 	grpcConnCart, err := grpc.Dial(
 		cartAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

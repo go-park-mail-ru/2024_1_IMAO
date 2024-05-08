@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
+	"net/http"
+
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
-	"net"
-	"net/http"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
@@ -23,7 +24,7 @@ import (
 
 func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.Host + cfg.Server.ProfileServicePort
+	addr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
