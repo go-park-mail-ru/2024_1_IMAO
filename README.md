@@ -18,7 +18,7 @@ https://github.com/frontend-park-mail-ru/2024_1_IMAO
 https://www.figma.com/file/QP3qZTavTZYL8aOlzWzkkl/IMAO-(%D0%AE%D0%BB%D0%B0)
 
 ### Деплой приложения:
-http://www.vol-4-ok.ru:8008
+http://www.vol-4-ok.ru
 
 ### Запуск локально:
 `go run cmd/app/main.go`
