@@ -13,6 +13,6 @@ COPY go.sum .
 RUN go mod tidy
 RUN go build -o main ./cmd/app/main.go
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["./main"]
