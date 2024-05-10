@@ -109,7 +109,7 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru:80", "http://vol-4-ok.ru:80"})
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru", "http://vol-4-ok.ru"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
