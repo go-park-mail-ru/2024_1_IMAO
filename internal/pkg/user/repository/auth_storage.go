@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
@@ -26,23 +28,28 @@ var (
 type UserStorage struct {
 	pool        *pgxpool.Pool
 	sessionList *models.SessionList
+	metrics     *mymetrics.DatabaseMetrics
 }
 
-func NewUserStorage(pool *pgxpool.Pool) *UserStorage {
+func NewUserStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *UserStorage {
 	return &UserStorage{
 		pool:        pool,
 		sessionList: NewSessionList(),
+		metrics:     metrics,
 	}
 }
 
 func (active *UserStorage) userExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."user" WHERE email=$1 );`
 
 	logging.LogInfo(logger, "SELECT FROM user")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLUserExists, email)
+	active.metrics.AddDuration(funcName, time.Since(start))
 
 	var exists bool
 
@@ -95,6 +102,7 @@ func (active *UserStorage) GetLastID(ctx context.Context) uint {
 }
 
 func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *models.User) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
@@ -103,10 +111,13 @@ func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *mode
 
 	var err error
 
+	start := time.Now()
 	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
+	active.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing create user query, err=%v", err))
+		active.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -165,13 +176,16 @@ func (active *UserStorage) CreateUser(ctx context.Context, email,
 }
 
 func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserExists := `UPDATE public."user"	SET email=$1 WHERE id=$2 RETURNING id, email;`
 
 	logging.LogInfo(logger, "UPDATE user")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLUserExists, email, id)
+	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 
@@ -210,13 +224,16 @@ func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email str
 }
 
 func (active *UserStorage) getUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserByEmail := `SELECT id, email, password_hash	FROM public."user" where email = $1 `
 
 	logging.LogInfo(logger, "SELECT FROM user")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLUserByEmail, email)
+	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 
@@ -252,13 +269,16 @@ func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*m
 }
 
 func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) (*models.User, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserById := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
 
 	logging.LogInfo(logger, "SELECT FROM user")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLUserById, id)
+	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 

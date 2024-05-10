@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/repository"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -24,16 +26,19 @@ var (
 )
 
 type ProfileStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewProfileStorage(pool *pgxpool.Pool) *ProfileStorage {
+func NewProfileStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *ProfileStorage {
 	return &ProfileStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
 func (pl *ProfileStorage) createProfile(ctx context.Context, tx pgx.Tx, profile *models.Profile) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateProfile := `INSERT INTO public.profile(user_id) VALUES ($1);`
@@ -42,10 +47,13 @@ func (pl *ProfileStorage) createProfile(ctx context.Context, tx pgx.Tx, profile 
 
 	var err error
 
+	start := time.Now()
 	_, err = tx.Exec(ctx, SQLCreateProfile, profile.UserID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing create profile query, err=%v", err))
+		pl.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -89,6 +97,7 @@ func (pl *ProfileStorage) CreateProfile(ctx context.Context, userID uint) *model
 }
 
 func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id uint) (*models.Profile, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUserById := `
@@ -122,7 +131,9 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 
 	logging.LogInfo(logger, "SELECT FROM profile, city, subscription, review")
 
+	start := time.Now()
 	profileLine := tx.QueryRow(ctx, SQLUserById, id)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	profile := models.Profile{}
 	city := models.City{}
@@ -206,6 +217,7 @@ func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, userID uint) (
 }
 
 func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID uint, data models.City) (*models.Profile, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfileCity := `UPDATE public.profile p
@@ -216,7 +228,9 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 
 	logging.LogInfo(logger, "UPDATE profile")
 
+	start := time.Now()
 	profileLine := tx.QueryRow(ctx, SQLUpdateProfileCity, data.ID, userID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	profile := models.Profile{}
 	city := models.City{}
@@ -298,6 +312,7 @@ func (pl *ProfileStorage) SetProfileCity(ctx context.Context, userID uint, data 
 }
 
 func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfilePhone := `UPDATE public.profile p
@@ -308,7 +323,9 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 
 	logging.LogInfo(logger, "UPDATE profile")
 
+	start := time.Now()
 	profileLine := tx.QueryRow(ctx, SQLUpdateProfilePhone, data.Phone, userID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	profile := models.Profile{}
 	city := models.City{}
@@ -390,6 +407,7 @@ func (pl *ProfileStorage) SetProfilePhone(ctx context.Context, userID uint, data
 }
 
 func (pl *ProfileStorage) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, userID uint, avatar string) (string, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfileAvatarURL := `
@@ -402,7 +420,9 @@ func (pl *ProfileStorage) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, us
 
 	var url string
 
+	start := time.Now()
 	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, avatar, userID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	if err := urlLine.Scan(&url); err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning url line , err=%v", err))
@@ -414,6 +434,7 @@ func (pl *ProfileStorage) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, us
 }
 
 func (pl *ProfileStorage) deleteAvatar(ctx context.Context, tx pgx.Tx, userID uint) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLGetAvatarURL := `
@@ -425,7 +446,10 @@ func (pl *ProfileStorage) deleteAvatar(ctx context.Context, tx pgx.Tx, userID ui
 
 	var oldUrl interface{}
 
+	start := time.Now()
 	urlLine := tx.QueryRow(ctx, SQLGetAvatarURL, userID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
+
 	if err := urlLine.Scan(&oldUrl); err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while deleting url , err=%v", err))
 
@@ -471,7 +495,7 @@ func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, fullPath stri
 
 func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID uint,
 	data models.EditProfileNec) (*models.Profile, error) {
-
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLUpdateProfileInfo := `
@@ -486,7 +510,9 @@ func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID 
 
 	logging.LogInfo(logger, "UPDATE profile")
 
+	start := time.Now()
 	profileLine := tx.QueryRow(ctx, SQLUpdateProfileInfo, data.Name, data.Surname, userID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	profile := models.Profile{}
 	city := models.City{}

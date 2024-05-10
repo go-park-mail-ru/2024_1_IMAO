@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
+
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
@@ -12,16 +15,19 @@ import (
 )
 
 type SurveyStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewSurveyStorage(pool *pgxpool.Pool) *SurveyStorage {
+func NewSurveyStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *SurveyStorage {
 	return &SurveyStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
 func (survey *SurveyStorage) insertUserSurvey(ctx context.Context, tx pgx.Tx, userID, surveyID uint) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLInsertAnswer := `
@@ -33,10 +39,13 @@ func (survey *SurveyStorage) insertUserSurvey(ctx context.Context, tx pgx.Tx, us
 
 	var err error
 
+	start := time.Now()
 	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID)
+	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertUserSurvey query, err=%v", err))
+		survey.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -46,6 +55,7 @@ func (survey *SurveyStorage) insertUserSurvey(ctx context.Context, tx pgx.Tx, us
 
 func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID, surveyID, answerNum,
 	answerValue uint) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLInsertAnswer := `
@@ -57,10 +67,13 @@ func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID
 
 	var err error
 
+	start := time.Now()
 	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID, answerNum, answerValue)
+	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertAnswer query, err=%v", err))
+		survey.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -117,13 +130,16 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 }
 
 func (survey *SurveyStorage) selectFromUserSurvey(ctx context.Context, tx pgx.Tx, userID, surveyID uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLSelectFromUserSurvey := `SELECT EXISTS(SELECT 1 FROM public.user_survey WHERE user_id=$1 AND survey_id = $2);`
 
 	logging.LogInfo(logger, "SELECT FROM user_survey")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLSelectFromUserSurvey, userID, surveyID)
+	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	var exists bool
 
@@ -159,7 +175,7 @@ func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID ui
 
 func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx,
 	surveyInstance *models.Survey) (*models.SurveyResults, error) {
-
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLGetStatics := `
@@ -170,10 +186,13 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx,
 
 	logging.LogInfo(logger, "SELECT FROM answer")
 
+	start := time.Now()
 	rows, err := tx.Query(ctx, SQLGetStatics)
+	survey.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select statistics, err=%v", err))
-
+		survey.metrics.IncreaseErrors(funcName)
 		return nil, err
 	}
 	defer rows.Close()
@@ -226,7 +245,7 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx,
 }
 
 func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyId uint) (*models.Survey, error) {
-
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLSelectFromSurvey := `SELECT title, description, question_number
@@ -234,7 +253,9 @@ func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyId 
 
 	logging.LogInfo(logger, "SELECT FROM survey")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLSelectFromSurvey, surveyId)
+	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	surveyInstance := &models.Survey{}
 
