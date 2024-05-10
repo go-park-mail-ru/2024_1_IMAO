@@ -23,8 +23,10 @@ func CreateMetricsMiddleware(metric *metrics.HTTPMetrics) mux.MiddlewareFunc {
 			route := mux.CurrentRoute(request)
 			path, _ := route.GetPathTemplate()
 
-			metric.AddDuration(path, codeStr, end)
-			metric.IncreaseTotal(path, codeStr)
+			if path != "/metrics" {
+				metric.AddDuration(path, codeStr, end)
+				metric.IncreaseTotal(path, codeStr)
+			}
 		})
 	}
 }
