@@ -54,7 +54,12 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	profileStorage := profilerepo.NewProfileStorage(connPool)
+	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("profile", "postgres")
+	if err != nil {
+		log.Fatal("Error while creating postgres metrics")
+	}
+
+	profileStorage := profilerepo.NewProfileStorage(connPool, postgresMetrics)
 	profileManager := delivery.NewProfileManager(profileStorage)
 
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))

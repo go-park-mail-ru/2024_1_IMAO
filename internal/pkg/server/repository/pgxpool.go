@@ -17,7 +17,7 @@ func PGXPoolConfig() *pgxpool.Config {
 	const defaultHealthCheckPeriod = time.Minute
 	const defaultConnectTimeout = time.Second * 5
 
-	const DATABASE_URL string = "postgres://postgres:postgres@postgres:5432/IMAO_VOL4OK_2024"
+	const DATABASE_URL string = "postgres://postgres:postgres@localhost:5432/IMAO_VOL4OK_2024"
 
 	dbConfig, err := pgxpool.ParseConfig(DATABASE_URL)
 	if err != nil {

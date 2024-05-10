@@ -53,7 +53,12 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	userStorage := authrepo.NewUserStorage(connPool)
+	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("auth", "postgres")
+	if err != nil {
+		log.Fatal("Error while creating postgres metrics for auth service")
+	}
+
+	userStorage := authrepo.NewUserStorage(connPool, postgresMetrics)
 	authManager := delivery.NewAuthManager(userStorage)
 
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))

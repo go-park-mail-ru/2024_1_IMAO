@@ -54,7 +54,12 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
-	cartStorage := cartrepo.NewCartStorage(connPool)
+	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("cart", "postgres")
+	if err != nil {
+		log.Fatal("Error while creating postgres metrics for cart service")
+	}
+
+	cartStorage := cartrepo.NewCartStorage(connPool, postgresMetrics)
 	cartManager := delivery.NewCartManager(cartStorage)
 
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))

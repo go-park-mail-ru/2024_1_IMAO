@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"log"
 	"net/http"
 	"strings"
@@ -45,6 +46,11 @@ func (srv *Server) Run() error {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
+	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("main", "postgres")
+	if err != nil {
+		log.Fatal("Error while creating postgres metrics for main")
+	}
+
 	logger, err := logger.NewLogger(strings.Split(outputLogPath, " "),
 		strings.Split(errorOutputLogPath, " "))
 	if err != nil {
@@ -53,12 +59,12 @@ func (srv *Server) Run() error {
 
 	defer logger.Sync()
 
-	advertStorage := advertrepo.NewAdvertStorage(connPool)
-	cartStorage := cartrepo.NewCartStorage(connPool)
-	cityStorage := cityrepo.NewCityStorage(connPool)
-	orderStorage := orderrepo.NewOrderStorage(connPool)
-	surveyStorage := surveyrepo.NewSurveyStorage(connPool)
-	favouritesStorage := favrepo.NewFavouritesStorage(connPool)
+	advertStorage := advertrepo.NewAdvertStorage(connPool, postgresMetrics)
+	cartStorage := cartrepo.NewCartStorage(connPool, postgresMetrics)
+	cityStorage := cityrepo.NewCityStorage(connPool, postgresMetrics)
+	orderStorage := orderrepo.NewOrderStorage(connPool, postgresMetrics)
+	surveyStorage := surveyrepo.NewSurveyStorage(connPool, postgresMetrics)
+	favouritesStorage := favrepo.NewFavouritesStorage(connPool, postgresMetrics)
 
 	cfg := config.ReadConfig()
 
@@ -103,7 +109,7 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru:80"}) // "http://109.120.183.3:8008"
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru:80", "http://vol-4-ok.ru:80"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
