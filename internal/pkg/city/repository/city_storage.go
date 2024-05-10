@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
@@ -12,31 +13,33 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	errProfileNotExists = errors.New("profile does not exist")
-	NameSeqProfile      = pgx.Identifier{"public", "city_id_seq"} //nolint:gochecknoglobals
-)
-
 type CityStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewCityStorage(pool *pgxpool.Pool) *CityStorage {
+func NewCityStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *CityStorage {
 	return &CityStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
 func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCityList := `SELECT id, name, translation FROM public.city;`
 
 	logging.LogInfo(logger, "SELECT FROM city")
 
+	start := time.Now()
 	rows, err := tx.Query(ctx, SQLCityList)
+	cl.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select city query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select city query, err=%v",
+			err))
+		cl.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}

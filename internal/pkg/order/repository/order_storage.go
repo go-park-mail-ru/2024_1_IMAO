@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -12,21 +14,21 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-// errNotInCart = errors.New("there is no advert in the cart")
-)
-
 type OrderStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewOrderStorage(pool *pgxpool.Pool) *OrderStorage {
+func NewOrderStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *OrderStorage {
 	return &OrderStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
-func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningOrder, error) {
+func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
+	userID uint) ([]*models.ReturningOrder, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLGetBoughtOrdersByUserID := `
@@ -68,9 +70,13 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx, 
 
 	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
 
+	start := time.Now()
 	rows, err := tx.Query(ctx, SQLGetBoughtOrdersByUserID, userID)
+	ol.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+		ol.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
@@ -89,8 +95,9 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx, 
 		if err := rows.Scan(&orderItem.ID, &orderItem.Status, &orderItem.Created, &orderItem.Updated, &orderItem.Closed,
 			&orderItem.Phone, &orderItem.Name, &orderItem.Email, &orderItem.DeliveryPrice, &orderItem.Address,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
-			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
+			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
+			&advertModel.IsUsed, &photoPad.Photo); err != nil {
 
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
 
@@ -160,51 +167,9 @@ func (ol *OrderStorage) GetBoughtOrdersByUserID(ctx context.Context, userID uint
 
 }
 
-// func (ol *OrderStorage) GetReturningOrderByUserID(ctx context.Context, userID uint, advertsList advuc.AdvertsStorageInterface) ([]*models.ReturningOrder, error) {
-// 	order := []*models.ReturningOrder{}
-
-// 	for i := range ol.OrderList.Items {
-// 		ol.OrderList.Mux.Lock()
-// 		item := ol.OrderList.Items[i]
-// 		ol.OrderList.Mux.Unlock()
-
-// 		if item.UserID != userID {
-// 			continue
-// 		}
-// 		advert, err := advertsList.GetAdvertOnlyByID(ctx, item.AdvertID)
-
-// 		if err != nil {
-// 			return order, err
-// 		}
-
-// 		order = append(order, &models.ReturningOrder{
-// 			OrderItem: *item,
-// 			Advert:    advert.Advert,
-// 		})
-// 	}
-
-// 	return order, nil
-// }
-
-// func (cl *CartList) DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error {
-// 	for i := range cl.Items {
-// 		cl.mu.Lock()
-// 		item := cl.Items[i]
-// 		cl.mu.Unlock()
-
-// 		if item.UserID != userID || item.AdvertID != advertID {
-// 			continue
-// 		}
-// 		cl.mu.Lock()
-// 		cl.Items = append(cl.Items[:i], cl.Items[i+1:]...)
-// 		cl.mu.Unlock()
-// 		return nil
-// 	}
-
-// 	return errNotInCart
-// }
-
-func (ol *OrderStorage) сreateOrderByID(ctx context.Context, tx pgx.Tx, userID uint, data *models.ReceivedOrderItem) error {
+func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID uint,
+	data *models.ReceivedOrderItem) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateOrder :=
@@ -220,11 +185,15 @@ func (ol *OrderStorage) сreateOrderByID(ctx context.Context, tx pgx.Tx, userID 
 	const surnamePlug string = "Фамилия"
 	const patronymicPlug string = "Отчество"
 
-	_, err = tx.Exec(ctx, SQLCreateOrder, userID, data.AdvertID, paidStatus, data.Phone, data.Name, surnamePlug, patronymicPlug,
-		data.Email, data.DeliveryPrice, data.DeliveryAddress)
+	start := time.Now()
+	_, err = tx.Exec(ctx, SQLCreateOrder, userID, data.AdvertID, paidStatus, data.Phone, data.Name, surnamePlug,
+		patronymicPlug, data.Email, data.DeliveryPrice, data.DeliveryAddress)
+	ol.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing create order query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create order query, err=%v",
+			err))
+		ol.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -237,7 +206,7 @@ func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
-		err := ol.сreateOrderByID(ctx, tx, userID, data)
+		err := ol.createOrderByID(ctx, tx, userID, data)
 		if err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while creating order, err=%v", err))
 
@@ -255,10 +224,3 @@ func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *
 
 	return nil
 }
-
-// func NewOrderList(pool *pgxpool.Pool, logger *zap.SugaredLogger) *models.OrderList {
-// 	return &models.OrderList{
-// 		Items: make([]*models.OrderItem, 0),
-// 		Mux:   sync.RWMutex{},
-// 	}
-// }

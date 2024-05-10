@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"fmt"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -13,20 +15,28 @@ import (
 )
 
 type FavouritesStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewFavouritesStorage(pool *pgxpool.Pool) *FavouritesStorage {
+func NewFavouritesStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *FavouritesStorage {
 	return &FavouritesStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
-func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdInList, error) {
+func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Context, tx pgx.Tx,
+	userID uint) ([]*models.ReturningAdInList, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLGetFavouritesByUserID := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url) FROM (SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id) AS ordered_images) AS image_urls,
+	(SELECT array_agg(url) FROM 
+	                           (SELECT url 
+	                            FROM advert_image 
+	                            WHERE advert_id = a.id 
+	                            ORDER BY id) AS ordered_images) AS image_urls,
 	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
 		THEN 1 ELSE 0 END AS bool) AS in_cart
 	FROM public.advert a
@@ -39,9 +49,13 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
+	start := time.Now()
 	rows, err := tx.Query(ctx, SQLGetFavouritesByUserID, userID)
+	favouritesStorage.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+			err))
+		favouritesStorage.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
@@ -53,8 +67,9 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 
 		photoPad := models.PhotoPad{}
 
-		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category, &returningAdInList.Title,
-			&returningAdInList.Price, &photoPad.Photo, &returningAdInList.InCart); err != nil {
+		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
+			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo,
+			&returningAdInList.InCart); err != nil {
 			return nil, err
 		}
 
@@ -71,7 +86,8 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
 			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
@@ -97,7 +113,8 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 	return adsList, nil
 }
 
-func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdInList, error) {
+func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Context,
+	userID uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var favourites []*models.ReturningAdInList
@@ -122,7 +139,9 @@ func (favouritesStorage *FavouritesStorage) GetFavouritesByUserID(ctx context.Co
 	return favourites, nil
 }
 
-func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
+func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint,
+	advertID uint) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLDeleteFromCart := `DELETE FROM public.favourite
@@ -132,10 +151,14 @@ func (favouritesStorage *FavouritesStorage) deleteAdvByIDs(ctx context.Context, 
 
 	var err error
 
+	start := time.Now()
 	_, err = tx.Exec(ctx, SQLDeleteFromCart, userID, advertID)
+	favouritesStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing advert delete from the favourite, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing advert delete from the favourite, err=%v", err))
+		favouritesStorage.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -161,7 +184,9 @@ func (favouritesStorage *FavouritesStorage) DeleteAdvByIDs(ctx context.Context, 
 	return nil
 }
 
-func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
+func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint,
+	advertID uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAddToFavourites := `WITH deletion AS (
@@ -177,7 +202,9 @@ func (favouritesStorage *FavouritesStorage) appendAdvByIDs(ctx context.Context, 
 	`
 	logging.LogInfo(logger, "DELETE or SELECT FROM favourite")
 
+	start := time.Now()
 	userLine := tx.QueryRow(ctx, SQLAddToFavourites, userID, advertID)
+	favouritesStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	added := false
 
