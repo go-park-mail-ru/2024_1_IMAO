@@ -44,6 +44,8 @@ func createSession(sessionID string) *http.Cookie {
 		Path:     "/",
 		Expires:  time.Now().Add(sessionTime),
 		HttpOnly: true,
+		SameSite: 4,
+		Secure:   true,
 	}
 }
 

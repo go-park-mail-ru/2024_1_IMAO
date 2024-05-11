@@ -2,11 +2,12 @@ package server
 
 import (
 	"context"
-	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 
 	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
@@ -109,7 +110,7 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru", "http://vol-4-ok.ru"})
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru", "http://vol-4-ok.ru", "http://127.0.0.1:8008"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)

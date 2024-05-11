@@ -10,14 +10,15 @@ import (
 )
 
 func PGXPoolConfig() *pgxpool.Config {
-	const defaultMaxConns = int32(4)
+	const defaultMaxConns = int32(5)
 	const defaultMinConns = int32(0)
 	const defaultMaxConnLifetime = time.Hour
 	const defaultMaxConnIdleTime = time.Minute * 30
 	const defaultHealthCheckPeriod = time.Minute
 	const defaultConnectTimeout = time.Second * 5
 
-	const DATABASE_URL string = "postgres://postgres:postgres@postgres:5432/IMAO_VOL4OK_2024"
+	//const DATABASE_URL string = "postgres://postgres:postgres@postgres:5432/IMAO_VOL4OK_2024"
+	const DATABASE_URL string = "postgres://vol4ok_service_account:vol4ok-Password123!@postgres:5432/IMAO_VOL4OK_2024"
 
 	dbConfig, err := pgxpool.ParseConfig(DATABASE_URL)
 	if err != nil {
