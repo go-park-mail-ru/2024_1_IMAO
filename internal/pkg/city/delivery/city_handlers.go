@@ -24,12 +24,6 @@ func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Requ
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	city, err := h.storage.GetCityList(ctx)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)

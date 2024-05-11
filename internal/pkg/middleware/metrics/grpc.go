@@ -19,7 +19,16 @@ func CreateMetricsInterceptor(metrics metrics.GRPCMetrics) *Interceptor {
 }
 
 func getCode(err string) int {
-	return 200
+	switch err {
+	case "session does not exist":
+		return 401
+	case "no such cookie in userStorage":
+		return 401
+	case "user not authorized":
+		return 401
+	}
+
+	return 400
 }
 
 func (interceptor *Interceptor) ServeMetricsInterceptor(ctx context.Context, req interface{},

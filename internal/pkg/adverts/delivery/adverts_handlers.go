@@ -108,12 +108,6 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	storage := advertsHandler.storage
 	authClient := advertsHandler.authClient
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
@@ -171,12 +165,6 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	storage := advertsHandler.storage
 	num, errCount := strconv.Atoi(request.URL.Query().Get("num"))
@@ -297,12 +285,6 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -351,12 +333,6 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodPost {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	err := request.ParseMultipartForm(2 << 28)
 	if err != nil {

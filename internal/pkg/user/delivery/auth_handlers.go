@@ -296,12 +296,6 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
-
 	sessionInstance, ok := ctx.Value(config.SessionContextKey).(models.Session)
 	if !ok {
 		err := errors.New("error while getting sessionInstance from context")

@@ -27,7 +27,7 @@ func CreateHTTPMetrics(service string) (*HTTPMetrics, error) {
 
 	metric.duration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: service + "_code_count",
+			Name: service + "_code",
 			Help: "Request time",
 		},
 		[]string{"path", "service", "code"})
@@ -39,9 +39,9 @@ func CreateHTTPMetrics(service string) (*HTTPMetrics, error) {
 }
 
 func (m *HTTPMetrics) IncreaseTotal(path, code string) {
-	m.totalHits.WithLabelValues(m.serviceName, path, code).Inc()
+	m.totalHits.WithLabelValues(path, m.serviceName, code).Inc()
 }
 
 func (m *HTTPMetrics) AddDuration(path, code string, duration time.Duration) {
-	m.duration.WithLabelValues(m.serviceName, path, code).Observe(duration.Seconds())
+	m.duration.WithLabelValues(path, m.serviceName, code).Observe(duration.Seconds())
 }

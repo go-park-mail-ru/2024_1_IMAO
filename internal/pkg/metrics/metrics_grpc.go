@@ -27,7 +27,7 @@ func CreateGRPCMetrics(service string) (*GRPCMetrics, error) {
 
 	metric.duration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: service + "_code_count",
+			Name: service + "_code",
 			Help: "Request time",
 		},
 		[]string{"service", "method", "code"})
