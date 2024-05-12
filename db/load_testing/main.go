@@ -118,8 +118,8 @@ func main() {
 
 	startTime := time.Now() // Запоминаем время начала
 
-	for i := 0; i < 1000; i++ {
-		fmt.Println("Iteration ", i)
+	for i := 0; i < 10; i++ {
+		fmt.Printf("Iteration %d, elapsed time since start: %v\n", i, time.Since(startTime))
 		//_ = CreateAdvert(context.Background(), connPool)
 		_ = CreateAdvertWithCopy(context.Background(), connPool)
 	}
