@@ -100,6 +100,7 @@ type DBInsertionAdvert struct {
 	CategoryID  uint   `json:"categoryId"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Price       uint   `json:"price"`
 }
 
 func (adv *Advert) Sanitize() {
