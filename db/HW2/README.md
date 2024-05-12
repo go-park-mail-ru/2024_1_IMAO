@@ -76,6 +76,7 @@ lock_timeout = 30s
 Вот эти параметры из `postgresql.conf` отвечают за логирование (точнее сказать, только эти параметры мы редактировали)
 
 ```
+log_line_prefix = '%t [%p]: '
 logging_collector = on 
 log_directory = 'log'
 log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
