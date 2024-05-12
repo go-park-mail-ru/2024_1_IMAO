@@ -94,6 +94,14 @@ type ReturningAdvertList struct {
 	Mux         sync.RWMutex
 }
 
+type DBInsertionAdvert struct {
+	UserID      uint   `json:"userId"`
+	CityID      uint   `json:"cityId"`
+	CategoryID  uint   `json:"categoryId"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 func (adv *Advert) Sanitize() {
 	sanitizer := bluemonday.UGCPolicy()
 
