@@ -33,3 +33,8 @@ type Session struct {
 	UserID uint32
 	Value  string
 }
+
+type DBInsertionUser struct {
+	Email        string `json:"email"`
+	PasswordHash string `json:"-"`
+}

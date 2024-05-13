@@ -82,6 +82,14 @@ type EditProfileNec struct {
 	SubonsCount   int    `json:"subonsCount"`
 }
 
+type DBInsertionProfile struct {
+	UserID  uint   `json:"userId"`
+	CityID  uint   `json:"cityId"`
+	Phone   string `json:"phone"`
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+}
+
 func (prof *Profile) Sanitize() {
 	sanitizer := bluemonday.UGCPolicy()
 
