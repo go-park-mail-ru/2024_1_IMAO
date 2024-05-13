@@ -70,6 +70,7 @@ func (srv *Server) Run() error {
 	cfg := config.ReadConfig()
 
 	authAddr := cfg.Server.AuthIP + cfg.Server.AuthServicePort
+	//authAddr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 	grpcConnAuth, err := grpc.Dial(
 		authAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -82,6 +83,7 @@ func (srv *Server) Run() error {
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
 	profileAddr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
+	//profileAddr := cfg.Server.Host + cfg.Server.ProfileServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 	grpcConnProfile, err := grpc.Dial(
 		profileAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

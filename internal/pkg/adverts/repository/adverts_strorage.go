@@ -3,11 +3,12 @@ package storage
 import (
 	"context"
 	"fmt"
-	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"mime/multipart"
 	"os"
 	"strings"
 	"time"
+
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
