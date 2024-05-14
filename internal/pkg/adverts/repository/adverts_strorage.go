@@ -119,6 +119,25 @@ func (ads *AdvertStorage) GetAdvertOnlyByID(ctx context.Context, advertID uint) 
 		return nil, err
 	}
 
+	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%v", err))
+
+		return nil, err
+	}
+
+	for i := 0; i < len(advertsList.Photos); i++ {
+
+		image, err := utils.DecodeImage(advertsList.Photos[i])
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				advertsList.Photos[i], err))
+		}
+	}
+
+	advertsList.Advert.Sanitize()
+
 	return advertsList, nil
 }
 
