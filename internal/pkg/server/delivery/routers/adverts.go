@@ -24,6 +24,5 @@ func ServeAdvertsRouter(router *mux.Router, advertsHandler *delivery.AdvertsHand
 	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList)
 	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}/{id:[0-9]+}", advertsHandler.GetAdvert)
 	subrouter.HandleFunc("/{id:[0-9]+}", advertsHandler.GetAdvertByID)
-
-	//subrouter.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
+	subrouter.HandleFunc("/close/{id:[0-9]+}", advertsHandler.CloseAdvert)
 }
