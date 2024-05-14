@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	defaultCity = "Moscow"
+	defaultCity       = "Moscow"
+	defaultAdverCount = 20
 )
 
 type AdvertsHandler struct {
@@ -59,6 +60,10 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	userID, errUser := strconv.Atoi(request.URL.Query().Get("userId"))
 	deleted, errdeleted := strconv.Atoi(request.URL.Query().Get("deleted"))
 
+	if count == 0 {
+		count = defaultAdverCount
+	}
+
 	if city == "" && request.URL.Query().Get("city") != "" {
 		city = request.URL.Query().Get("city")
 	} else if city == "" {
@@ -89,7 +94,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	} else if errCount == nil && errstartID == nil {
 		adsList, err = storage.GetAdvertsByCity(ctx, city, userIdCookie, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
-		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIdCookie, uint(userID), uint(deleted))
+		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIdCookie, uint(userID), uint(deleted), uint(count))
 	}
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)

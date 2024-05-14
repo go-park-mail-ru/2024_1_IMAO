@@ -846,8 +846,7 @@ func (ads *AdvertStorage) GetAdvertsByCategory(ctx context.Context, category, ci
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId,
-	deleted uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -866,13 +865,14 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
 	WHERE a.user_id = $1 AND a.advert_status = $2 
-	ORDER BY id;
+	ORDER BY id
+	LIMIT $3;
 	`
 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus)
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus, advertNum)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -935,7 +935,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 }
 
 func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context, tx pgx.Tx, userID, userId,
-	deleted uint) ([]*models.ReturningAdInList, error) {
+	deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -958,13 +958,14 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 	INNER JOIN city c ON a.city_id = c.id
 	INNER JOIN category ON a.category_id = category.id
 	WHERE a.user_id = $2 AND a.advert_status = $3 
-	ORDER BY id;
+	ORDER BY id
+	LIMIT $4;
 	`
 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIsAuth, userID, userId, advertStatus)
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIsAuth, userID, userId, advertStatus, advertNum)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -1026,14 +1027,14 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 }
 
 func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, userID, userId,
-	deleted uint) ([]*models.ReturningAdInList, error) {
+	deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var advertsList []*models.ReturningAdInList
 
 	if userID == 0 {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted)
+			advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted, advertNum)
 			advertsList = advertsListInner
 
 			return err
@@ -1047,7 +1048,7 @@ func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, us
 
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvertsForUserWhereStatusIsAuth(ctx, tx, userID, userId, deleted)
+			advertsListInner, err := ads.getAdvertsForUserWhereStatusIsAuth(ctx, tx, userID, userId, deleted, advertNum)
 			advertsList = advertsListInner
 
 			return err
