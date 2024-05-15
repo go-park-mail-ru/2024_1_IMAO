@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1091,7 +1092,7 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 
 	SQLCreateAdvert :=
 		`WITH ins AS (
-		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used, phone)
+		INSERT INTO advert (user_id, city_id, category_id, title, description, price, is_used, phone, price_history)
 		SELECT
 			$1,
 			city.id,
@@ -1100,7 +1101,8 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 			$3,
 			$4,
 			$5,
-			$8
+			$8,
+			ARRAY['{"updated_time":"' || $9 || '", "new_price":' || $10 || '}']::jsonb[]
 		FROM
 			city
 		JOIN
@@ -1126,7 +1128,7 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 
 	start := time.Now()
 	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed,
-		data.City, data.Category, data.Phone)
+		data.City, data.Category, data.Phone, time.Now().Format("2006-01-02 15:04:05"), strconv.Itoa(int(data.Price)))
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -1383,7 +1385,8 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 				description = $2,
 				price = $3,
 				is_used = $4,
-				phone = $8
+				phone = $8,
+				price_history = price_history || ARRAY['{"updated_time":"' || $9 || '", "new_price":' || $10 || '}']::jsonb[]
 			 FROM
 				city
 			JOIN
@@ -1419,7 +1422,7 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 
 	start := time.Now()
 	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed,
-		data.City, data.Category, data.ID, data.Phone)
+		data.City, data.Category, data.ID, data.Phone, time.Now().Format("2006-01-02 15:04:05"), strconv.Itoa(int(data.Price)))
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -1874,4 +1877,67 @@ func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title string, num 
 	}
 
 	return suggestions, nil
+}
+
+func (ads *AdvertStorage) getPriceHistory(ctx context.Context, tx pgx.Tx, id uint) ([]*models.PriceHistoryItem, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSelectPriceHistory := `SELECT price_history
+	FROM public.advert
+	WHERE id = $1; `
+
+	logging.LogInfo(logger, "SELECT FROM advert")
+
+	start := time.Now()
+
+	priceHistoryLine := tx.QueryRow(ctx, SQLSelectPriceHistory, id)
+	ads.metrics.AddDuration(funcName, time.Since(start))
+
+	var priceHistory []*models.PriceHistoryItem
+	var myJsonbArray []interface{}
+
+	if err := priceHistoryLine.Scan(&myJsonbArray); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning priceHistory into []interface{} , err=%v", err))
+
+		return nil, err
+	}
+
+	for _, item := range myJsonbArray {
+		var priceHistoryItem models.PriceHistoryItem
+
+		if abobaMap, ok := item.(map[string]interface{}); ok {
+			priceHistoryItem.NewPrice = abobaMap["new_price"].(float64)
+			priceHistoryItem.UpdatedTime = abobaMap["updated_time"].(string)
+		} else {
+			err := fmt.Errorf("item %v is not of type map[string]interface{}", item)
+			logging.LogError(logger, err)
+
+			return nil, err
+		}
+		priceHistory = append(priceHistory, &priceHistoryItem)
+	}
+
+	return priceHistory, nil
+}
+
+func (ads *AdvertStorage) GetPriceHistory(ctx context.Context, userID uint) ([]*models.PriceHistoryItem, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var priceHistoryItem []*models.PriceHistoryItem
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		priceHistoryItemInner, err := ads.getPriceHistory(ctx, tx, userID)
+		priceHistoryItem = priceHistoryItemInner
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting priceHistory, err=%v", err))
+
+		return nil, err
+	}
+
+	return priceHistoryItem, nil
 }

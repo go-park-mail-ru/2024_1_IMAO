@@ -19,6 +19,7 @@ func ServeAdvertsRouter(router *mux.Router, advertsHandler *delivery.AdvertsHand
 
 	subrouter.HandleFunc("/search", advertsHandler.GetAdsListWithSearch)
 	subrouter.HandleFunc("/suggestions", advertsHandler.GetSuggestions)
+	subrouter.HandleFunc("/price_history/{id:[0-9]+}", advertsHandler.GetAdvertPriceHistoryByID)
 	subrouter.HandleFunc("/", advertsHandler.GetAdsList)
 	subrouter.HandleFunc("/{city:[a-zA-Z_]+}", advertsHandler.GetAdsList)
 	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList)

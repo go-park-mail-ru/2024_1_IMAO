@@ -94,6 +94,11 @@ type ReturningAdvertList struct {
 	Mux         sync.RWMutex
 }
 
+type PriceHistoryItem struct {
+	UpdatedTime string  `json:"updatedTime"`
+	NewPrice    float64 `json:"newPrice"` // ПЕРЕПИСАТЬ НА uint
+}
+
 type DBInsertionAdvert struct {
 	UserID      uint   `json:"userId"`
 	CityID      uint   `json:"cityId"`

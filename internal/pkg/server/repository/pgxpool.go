@@ -18,9 +18,9 @@ func PGXPoolConfig() *pgxpool.Config {
 	const defaultConnectTimeout = time.Second * 5
 
 	//const DATABASE_URL string = "postgres://postgres:postgres@postgres:5432/IMAO_VOL4OK_2024"
-	const DATABASE_URL string = "postgres://vol4ok_service_account:vol4ok-Password123!@postgres:5432/IMAO_VOL4OK_2024"
+	//const DATABASE_URL string = "postgres://vol4ok_service_account:vol4ok-Password123!@postgres:5432/IMAO_VOL4OK_2024"
 	//const DATABASE_URL string = "postgres://vol4ok_service_account:vol4ok-Password123!@localhost:5432/IMAO_VOL4OK_2024" // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
-	//const DATABASE_URL string = "postgres://postgres:postgres@localhost:5432/IMAO_VOL4OK_2024" // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
+	const DATABASE_URL string = "postgres://postgres:postgres@localhost:5432/IMAO_VOL4OK_2024" // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 
 	dbConfig, err := pgxpool.ParseConfig(DATABASE_URL)
 	if err != nil {

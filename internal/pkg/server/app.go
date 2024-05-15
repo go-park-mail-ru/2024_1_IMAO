@@ -69,8 +69,8 @@ func (srv *Server) Run() error {
 
 	cfg := config.ReadConfig()
 
-	authAddr := cfg.Server.AuthIP + cfg.Server.AuthServicePort
-	//authAddr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
+	// authAddr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	authAddr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 	grpcConnAuth, err := grpc.Dial(
 		authAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -82,8 +82,8 @@ func (srv *Server) Run() error {
 	defer grpcConnAuth.Close()
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
-	profileAddr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
-	//profileAddr := cfg.Server.Host + cfg.Server.ProfileServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
+	// profileAddr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	profileAddr := cfg.Server.Host + cfg.Server.ProfileServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 	grpcConnProfile, err := grpc.Dial(
 		profileAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -95,7 +95,8 @@ func (srv *Server) Run() error {
 	defer grpcConnProfile.Close()
 	profileClient := profileproto.NewProfileClient(grpcConnProfile)
 
-	cartAddr := cfg.Server.CartIP + cfg.Server.CartServicePort
+	// cartAddr := cfg.Server.CartIP + cfg.Server.CartServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	cartAddr := cfg.Server.Host + cfg.Server.CartServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 	grpcConnCart, err := grpc.Dial(
 		cartAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

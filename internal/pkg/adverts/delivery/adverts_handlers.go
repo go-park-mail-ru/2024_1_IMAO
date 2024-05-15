@@ -286,6 +286,29 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
 }
 
+func (advertsHandler *AdvertsHandler) GetAdvertPriceHistoryByID(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	storage := advertsHandler.storage
+
+	priceHistory, err := storage.GetPriceHistory(ctx, uint(id))
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, NewAdvertsOkResponse(priceHistory))
+}
+
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))

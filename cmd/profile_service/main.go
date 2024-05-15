@@ -24,8 +24,8 @@ import (
 
 func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort
-	// addr := cfg.Server.Host + cfg.Server.ProfileServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
+	//addr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	addr := cfg.Server.Host + cfg.Server.ProfileServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {

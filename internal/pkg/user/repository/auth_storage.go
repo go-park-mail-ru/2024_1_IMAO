@@ -291,7 +291,6 @@ func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) 
 	return &user, nil
 }
 
-// НЕ ПРОТЕСТИРОВАНО
 func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
