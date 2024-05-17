@@ -457,23 +457,68 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url_resized) FROM 
+	var param uint
+
+	param = uint((startID - 1) / 20)
+
+	SQLAdvertsByCityPromoted := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted,
+		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
-	ORDER BY id
-	LIMIT $3;
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2
+		ORDER BY id
+		OFFSET (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) * (1 / (div((SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE), 5)) * $1)
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $2
+		ORDER BY id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, id ASC
+	LIMIT 20;
 	`
+
+	// SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
+	// (SELECT array_agg(url_resized) FROM
+	//                                    (SELECT url_resized
+	//                                     FROM advert_image
+	//                                     WHERE advert_id = a.id
+	//                                     ORDER BY id) AS ordered_images) AS image_urls
+	// FROM public.advert a
+	// INNER JOIN city c ON a.city_id = c.id
+	// INNER JOIN category ON a.category_id = category.id
+	// WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
+	// ORDER BY id
+	// LIMIT $3;
+	// `
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, num)
+	//rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, num)
+	rows, err := tx.Query(ctx, SQLAdvertsByCityPromoted, param, city)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -485,13 +530,14 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+	var boolPlug bool
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &boolPlug, &photoPad.Photo); err != nil {
 			ads.metrics.IncreaseErrors(funcName)
 			return nil, err
 		}
