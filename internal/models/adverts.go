@@ -87,6 +87,7 @@ type ReturningAdInList struct {
 	PhotosIMG    []string `json:"photosIMG"`
 	InFavourites bool     `json:"inFavourites"`
 	InCart       bool     `json:"inCart"`
+	IsPromoted   bool     `json:"isPromoted"`
 }
 
 type ReturningAdvertList struct {

@@ -530,14 +530,14 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
-	var boolPlug bool
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &boolPlug, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &photoPad.Photo); err != nil {
 			ads.metrics.IncreaseErrors(funcName)
 			return nil, err
 		}
