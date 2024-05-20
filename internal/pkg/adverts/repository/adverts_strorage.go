@@ -544,6 +544,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
+		returningAdInList.IsActive = true
 
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
@@ -631,6 +632,8 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 			&returningAdInList.InCart); err != nil {
 			return nil, err
 		}
+
+		returningAdInList.IsActive = true
 
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
@@ -751,6 +754,8 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 			return nil, err
 		}
 
+		returningAdInList.IsActive = true
+
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
@@ -836,6 +841,8 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 			&returningAdInList.InCart); err != nil {
 			return nil, err
 		}
+
+		returningAdInList.IsActive = true
 
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
@@ -960,6 +967,11 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 			return nil, err
 		}
 
+		returningAdInList.IsActive = true
+		if deleted == 1 {
+			returningAdInList.IsActive = false
+		}
+
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
@@ -1052,6 +1064,11 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo, &returningAdInList.InFavourites,
 			&returningAdInList.InCart); err != nil {
 			return nil, err
+		}
+
+		returningAdInList.IsActive = true
+		if deleted == 1 {
+			returningAdInList.IsActive = false
 		}
 
 		if photoPad.Photo != nil {
@@ -1656,6 +1673,8 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 			return nil, err
 		}
 
+		returningAdInList.IsActive = true
+
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
@@ -1744,6 +1763,8 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 			&returningAdInList.InCart); err != nil {
 			return nil, err
 		}
+
+		returningAdInList.IsActive = true
 
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {

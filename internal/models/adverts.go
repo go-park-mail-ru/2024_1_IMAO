@@ -88,6 +88,7 @@ type ReturningAdInList struct {
 	InFavourites bool     `json:"inFavourites"`
 	InCart       bool     `json:"inCart"`
 	IsPromoted   bool     `json:"isPromoted"`
+	IsActive     bool     `json:"isActive"`
 }
 
 type ReturningAdvertList struct {
