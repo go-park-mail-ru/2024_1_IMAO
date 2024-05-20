@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -10,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	"time"
 )
 
 type CartStorage struct {
@@ -45,6 +46,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 			a.created_time, 
 			a.closed_time, 
 			a.is_used,
+			a.advert_status,
 			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
 			CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          		THEN 1 ELSE 0 END AS bool) AS in_favourites
@@ -79,15 +81,22 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 		cityModel := models.City{}
 		advertModel := models.Advert{}
 		photoPad := models.PhotoPadSoloImage{}
+		var isActivePad string
 
 		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
 			&cityModel.Translation, &categoryModel.ID, &categoryModel.Name, &categoryModel.Translation,
 			&advertModel.Title, &advertModel.Description, &advertModel.Price, &advertModel.CreatedTime,
-			&advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo, &advertModel.InFavourites); err != nil {
+			&advertModel.ClosedTime, &advertModel.IsUsed, &isActivePad, &photoPad.Photo, &advertModel.InFavourites); err != nil {
 
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
 
 			return nil, err
+		}
+
+		advertModel.Active = false
+
+		if isActivePad == "Активно" {
+			advertModel.Active = true
 		}
 
 		advertModel.CityID = cityModel.ID

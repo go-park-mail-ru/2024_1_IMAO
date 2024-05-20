@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
-	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"time"
+
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
@@ -74,6 +75,7 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 		}
 
 		returningAdInList.InFavourites = true
+		returningAdInList.IsActive = true
 
 		if photoPad.Photo != nil {
 			for _, ptr := range photoPad.Photo {
