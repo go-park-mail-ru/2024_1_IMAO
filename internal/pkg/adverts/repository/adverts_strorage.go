@@ -467,7 +467,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 
 	SQLAdvertsByCityPromoted := `
 	WITH promoted_adverts AS (
-		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted,
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
 		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
@@ -477,11 +477,11 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		INNER JOIN city c ON a.city_id = c.id
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2
-		ORDER BY id
+		ORDER BY promotion_start DESC, id
 		OFFSET 5 * $1
 		LIMIT 5
 	), non_promoted_adverts AS (
-		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted,
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
 		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
@@ -498,15 +498,15 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
 		END), 5) + (SELECT
 			CASE
-				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 5 
-						THEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
 				ELSE 0
 			END)
 	)
 	SELECT * FROM promoted_adverts
 	UNION ALL
 	SELECT * FROM non_promoted_adverts
-	ORDER BY is_promoted DESC, id ASC
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
 	LIMIT 20;
 	`
 
@@ -544,9 +544,10 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
 			ads.metrics.IncreaseErrors(funcName)
 			return nil, err
 		}
