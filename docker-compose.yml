@@ -59,6 +59,7 @@ services:
       - "8080:8080"
     volumes:
       - main:/var/lib/main
+      - uploads:/root/uploads
 
   auth: 
     build:
@@ -69,6 +70,7 @@ services:
       - "7071:7071"
     volumes:
       - auth:/var/lib/auth
+      - uploads:/root/uploads
 
   profile: 
     build:
@@ -79,6 +81,7 @@ services:
       - "7072:7072"
     volumes:
       - profile:/var/lib/profile
+      - uploads:/root/uploads
 
   cart: 
     build:
@@ -88,7 +91,8 @@ services:
       - "8083:8083"
       - "7073:7073"
     volumes:
-      - cart:/var/lib/cart                  
+      - cart:/var/lib/cart
+      - uploads:/root/uploads                 
 
 volumes:
   postgres:
@@ -100,5 +104,6 @@ volumes:
   auth:
   profile:
   cart:
+  uploads:
 
   
