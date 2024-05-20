@@ -459,6 +459,10 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 
 	var param uint
 
+	if (startID-1)%20 != 0 {
+		return nil, nil
+	}
+
 	param = uint((startID - 1) / 20)
 
 	SQLAdvertsByCityPromoted := `
@@ -474,7 +478,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2
 		ORDER BY id
-		OFFSET (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) * (1 / (div((SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE), 5)) * $1)
+		OFFSET 5 * $1
 		LIMIT 5
 	), non_promoted_adverts AS (
 		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted,
@@ -492,7 +496,12 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		CASE 
 			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
 			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
-		END), 5)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 5 
+						THEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
 	)
 	SELECT * FROM promoted_adverts
 	UNION ALL
