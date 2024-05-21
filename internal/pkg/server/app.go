@@ -8,6 +8,7 @@ import (
 	"time"
 
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 
 	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
@@ -107,6 +108,18 @@ func (srv *Server) Run() error {
 	}
 	defer grpcConnCart.Close()
 	cartClient := cartproto.NewCartClient(grpcConnCart)
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			err := utils.ScheduledUpdate(context.Background(), connPool, postgresMetrics)
+			if err != nil {
+				log.Printf("error while scheduled update of advert table: %v", err)
+			}
+		}
+	}()
 
 	router := myrouter.NewRouter(logger, advertStorage, cartClient, cartStorage, cityStorage, orderStorage,
 		surveyStorage, authClient, profileClient, favouritesStorage)
