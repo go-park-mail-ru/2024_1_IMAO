@@ -23,8 +23,8 @@ import (
 
 func main() {
 	cfg := config.ReadConfig()
-	//addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
-	addr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
+	addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	//addr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
