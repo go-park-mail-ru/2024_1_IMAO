@@ -53,7 +53,7 @@ func NewOrderHandler(storage orderusecases.OrderStorageInterface, cartStorage ca
 // @Failure 405 {object} responses.AdvertsErrResponse "Method not allowed"
 // @Failure 500 {object} responses.AdvertsErrResponse "Internal server error"
 // @Router /api/adverts/list [get]
-func (orderHandler *OrderHandler) GetSoldOrderList(writer http.ResponseWriter, request *http.Request) {
+func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -62,11 +62,26 @@ func (orderHandler *OrderHandler) GetSoldOrderList(writer http.ResponseWriter, r
 
 	session, err := request.Cookie("session_id")
 
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	var ordersList []*models.ReturningOrder
 
-	ordersList, err = storage.GetBoughtOrdersByUserID(ctx, uint(user.ID))
+	fmt.Println("request.URL.Query().Get(type)", request.URL.Query().Get("type"))
+
+	if request.URL.Query().Get("type") == "sold" {
+		ordersList, err = storage.GetSoldOrdersByUserID(ctx, uint(user.ID))
+	} else {
+		ordersList, err = storage.GetBoughtOrdersByUserID(ctx, uint(user.ID))
+	}
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
