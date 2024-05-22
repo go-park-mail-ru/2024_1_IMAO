@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 )
 
@@ -15,4 +16,5 @@ type ProfileStorageInterface interface {
 	SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error)
 	SetProfileInfo(ctx context.Context, userID uint, data models.EditProfileNec) (*models.Profile, error)
 	//SetProfileApproved(userID uint)
+	AppendSubByIDs(ctx context.Context, userID uint, advertID uint) bool
 }

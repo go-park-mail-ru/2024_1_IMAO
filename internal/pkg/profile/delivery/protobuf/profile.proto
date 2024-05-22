@@ -12,6 +12,16 @@ service Profile {
     rpc SetProfileCity(SetCityRequest) returns (ProfileData);
     rpc SetProfilePhone(SetPhoneRequest) returns (ProfileData);
     rpc EditProfile(EditProfileRequest) returns (ProfileData);
+    rpc AppendSubByIDs(UserIdMerchantIdRequest) returns (AppendSubResponse);
+}
+
+message UserIdMerchantIdRequest {
+  uint32 userId = 1;
+  uint32 merchantId = 2;
+}
+
+message AppendSubResponse {
+  bool isAppended = 1;
 }
 
 message ProfileIDRequest {

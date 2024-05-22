@@ -113,8 +113,8 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 			p.avatar_url,
 			c.name AS city_name,
 			c.translation AS city_translation,
-			(SELECT COUNT(*) FROM subscription WHERE user_id_subscriber = $1 ) AS subscriber_count,
-			(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1 ) AS subscription_count,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1) AS subscriber_count,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_subscriber = $1) AS subscription_count,
 			(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
 			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
 			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count,
@@ -604,4 +604,56 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint,
 	profile.Sanitize()
 
 	return profile, nil
+}
+
+func (pl *ProfileStorage) appendSubByIDs(ctx context.Context, tx pgx.Tx, userID uint, merchantID uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLAddToCart := `WITH deletion AS (
+		DELETE FROM public.subscription
+		WHERE user_id_subscriber = $1 AND user_id_merchant = $2
+		RETURNING user_id_subscriber, user_id_merchant
+	)
+	INSERT INTO public.subscription (user_id_subscriber, user_id_merchant)
+	SELECT $1, $2
+	WHERE NOT EXISTS (
+		SELECT 1 FROM deletion
+	) RETURNING true;
+	`
+	logging.LogInfo(logger, "DELETE or SELECT FROM subscription")
+
+	start := time.Now()
+	userLine := tx.QueryRow(ctx, SQLAddToCart, userID, merchantID)
+	pl.metrics.AddDuration(funcName, time.Since(start))
+
+	added := false
+
+	if err := userLine.Scan(&added); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning subscriber added, err=%v", err))
+		pl.metrics.IncreaseErrors(funcName)
+
+		return false, nil
+	}
+
+	return added, nil
+}
+
+func (pl *ProfileStorage) AppendSubByIDs(ctx context.Context, userID uint, advertID uint) bool {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var added bool
+
+	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
+		addedInner, err := pl.appendSubByIDs(ctx, tx, userID, advertID)
+		added = addedInner
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing subscriber add to subscriber list, err=%v", err))
+	}
+
+	return added
 }
