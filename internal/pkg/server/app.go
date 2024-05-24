@@ -26,6 +26,7 @@ import (
 	cityrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/repository"
 	favrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/repository"
 	orderrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/repository"
+	paymentsrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/payments/repository"
 	surveyrepo "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/repository"
 	"github.com/gorilla/handlers"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -67,6 +68,7 @@ func (srv *Server) Run() error {
 	orderStorage := orderrepo.NewOrderStorage(connPool, postgresMetrics)
 	surveyStorage := surveyrepo.NewSurveyStorage(connPool, postgresMetrics)
 	favouritesStorage := favrepo.NewFavouritesStorage(connPool, postgresMetrics)
+	paymentsStorage := paymentsrepo.NewPaymentsStorage(connPool, postgresMetrics)
 
 	cfg := config.ReadConfig()
 
@@ -122,7 +124,7 @@ func (srv *Server) Run() error {
 	}()
 
 	router := myrouter.NewRouter(logger, advertStorage, cartClient, cartStorage, cityStorage, orderStorage,
-		surveyStorage, authClient, profileClient, favouritesStorage)
+		surveyStorage, authClient, profileClient, favouritesStorage, paymentsStorage)
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
