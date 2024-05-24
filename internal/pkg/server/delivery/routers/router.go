@@ -1,6 +1,8 @@
 package routers
 
 import (
+	"log"
+
 	advdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/delivery"
 	cartdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery"
 	cartproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/delivery/protobuf"
@@ -13,19 +15,20 @@ import (
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
 	recoveryMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/recover"
 	orderdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/delivery"
+	paydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/payments/delivery"
 	profdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery"
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 	surveydel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/delivery"
 	authdel "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
 
 	advusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
 	cartusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/cart/usecases"
 	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	favusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/favourites/usecases"
 	orderusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/order/usecases"
+	paymentsusescases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/payments/usecases"
 	surveyusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/survey/usecases"
 
 	"github.com/gorilla/mux"
@@ -41,7 +44,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	surveyStorage surveyusecases.SurveyStorageInterface,
 	authClient authproto.AuthClient,
 	profileClient profileproto.ProfileClient,
-	favouritesStorage favusecases.FavouritesStorageInterface) *mux.Router {
+	favouritesStorage favusecases.FavouritesStorageInterface,
+	paymentsStorage paymentsusescases.PaymentsStorageInterface) *mux.Router {
 
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
@@ -69,6 +73,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	cityHandler := citydel.NewCityHandler(cityStorage)
 	surveyHandler := surveydel.NewSurveyHandler(authClient, surveyStorage)
 	favouritesHandler := favdel.NewFavouritesHandler(favouritesStorage, advertStorage, authClient)
+	paymentsHandler := paydel.NewPaymentsHandler(paymentsStorage, authClient)
 
 	rootRouter := router.PathPrefix("/api").Subrouter()
 	ServeAuthRouter(rootRouter, authHandler, authCheckMiddleware)
@@ -78,6 +83,7 @@ func NewRouter(logger *zap.SugaredLogger,
 	ServeOrderRouter(rootRouter, orderHandler, authCheckMiddleware)
 	ServeSurveyRouter(rootRouter, surveyHandler, authCheckMiddleware)
 	ServeFavouritesRouter(rootRouter, favouritesHandler, authCheckMiddleware)
+	ServePaymentsRouter(rootRouter, paymentsHandler, authCheckMiddleware)
 
 	rootRouter.HandleFunc("/city", cityHandler.GetCityList)
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())

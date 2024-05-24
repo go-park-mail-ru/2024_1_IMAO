@@ -18,6 +18,10 @@ func ServeProfileRouter(router *mux.Router, profileHandler *delivery.ProfileHand
 	//subrouter.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
 	//subrouter.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 
+	subrouterChange := subrouter.PathPrefix("/change").Subrouter()
+	subrouterChange.Use(authCheckMiddleware)
+	subrouterChange.HandleFunc("", profileHandler.ChangeSubscription).Methods("POST")
+
 	subrouterEdit := subrouter.PathPrefix("/edit").Subrouter()
 	subrouterEdit.Use(authCheckMiddleware, csrfMiddleware)
 	subrouterEdit.HandleFunc("", profileHandler.EditProfile).Methods("POST")

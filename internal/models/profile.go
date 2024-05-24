@@ -98,3 +98,7 @@ func (prof *Profile) Sanitize() {
 	prof.MerchantsName = sanitizer.Sanitize(prof.MerchantsName)
 	prof.Phone = sanitizer.Sanitize(prof.Phone)
 }
+
+type ReceivedMerchantItem struct {
+	MerchantID uint `json:"merchantId"`
+}

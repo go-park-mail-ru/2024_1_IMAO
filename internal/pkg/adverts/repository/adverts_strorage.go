@@ -459,11 +459,11 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 
 	var param uint
 
-	if (startID-1)%20 != 0 {
+	if (startID-1)%num != 0 {
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / 20)
+	param = uint((startID - 1) / num)
 
 	SQLAdvertsByCityPromoted := `
 	WITH promoted_adverts AS (
@@ -510,23 +510,9 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	LIMIT 20;
 	`
 
-	// SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	// (SELECT array_agg(url_resized) FROM
-	//                                    (SELECT url_resized
-	//                                     FROM advert_image
-	//                                     WHERE advert_id = a.id
-	//                                     ORDER BY id) AS ordered_images) AS image_urls
-	// FROM public.advert a
-	// INNER JOIN city c ON a.city_id = c.id
-	// INNER JOIN category ON a.category_id = category.id
-	// WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2
-	// ORDER BY id
-	// LIMIT $3;
-	// `
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
-	//rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, num)
 	rows, err := tx.Query(ctx, SQLAdvertsByCityPromoted, param, city)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
@@ -600,27 +586,70 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertsByCityAuth := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-    (SELECT array_agg(url_resized) FROM 
-                                       (SELECT url_resized 
-                                        FROM advert_image 
-                                        WHERE advert_id = a.id 
-                                        ORDER BY id) AS ordered_images) AS image_urls,
-    CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
-         THEN 1 ELSE 0 END AS bool) AS in_favourites,
-	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
-	THEN 1 ELSE 0 END AS bool) AS in_cart	 
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE a.id >= $2 AND a.advert_status = 'Активно' AND c.translation = $3
-	ORDER BY id
-	LIMIT $4;
+	var param uint
+
+	if (startID-1)%num != 0 {
+		return nil, nil
+	}
+
+	param = uint((startID - 1) / num)
+
+	SQLAdvertsByCityAuth := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $3 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart								
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2
+		ORDER BY promotion_start DESC, id
+		OFFSET 5 * $1
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $3 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart								
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $2
+		ORDER BY id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
+	LIMIT 20;
 	`
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, userID, startID, city, num)
+	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, param, city, userID)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -636,10 +665,11 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo, &returningAdInList.InFavourites,
-			&returningAdInList.InCart); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo, &returningAdInList.InFavourites, &returningAdInList.InCart); err != nil {
 			return nil, err
 		}
 
@@ -726,23 +756,63 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertsByCity := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url_resized) FROM 
+	var param uint
+
+	if (startID-1)%num != 0 {
+		return nil, nil
+	}
+
+	param = uint((startID - 1) / num)
+
+	SQLAdvertsByCity := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE a.id >= $1 AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
-	ORDER BY id
-	LIMIT $4;
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
+		ORDER BY promotion_start DESC, id
+		OFFSET 5 * $1
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
+		ORDER BY id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
+	LIMIT 20;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLAdvertsByCity, startID, city, category, num)
+	rows, err := tx.Query(ctx, SQLAdvertsByCity, param, city, category)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -758,9 +828,10 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
 			return nil, err
 		}
 
@@ -809,27 +880,71 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertsByCityAuth := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url_resized) FROM 
+	var param uint
+
+	if (startID-1)%num != 0 {
+		return nil, nil
+	}
+
+	param = uint((startID - 1) / num)
+
+	SQLAdvertsByCityAuth := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls,
-	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
-         THEN 1 ELSE 0 END AS bool) AS in_favourites,
-	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
-	THEN 1 ELSE 0 END AS bool) AS in_cart
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE a.id >= $2 AND a.advert_status = 'Активно' AND c.translation = $3 AND category.translation = $4
-	ORDER BY id
-	LIMIT $5;
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $4 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $4 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart								
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
+		ORDER BY promotion_start DESC, id
+		OFFSET 5 * $1
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $4 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $4 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart								
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $2 AND category.translation = $3
+		ORDER BY id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
+	LIMIT 20;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, userID, startID, city, category, num)
+	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, param, city, category, userID)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -845,10 +960,11 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo, &returningAdInList.InFavourites,
-			&returningAdInList.InCart); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo, &returningAdInList.InFavourites, &returningAdInList.InCart); err != nil {
 			return nil, err
 		}
 
@@ -1643,25 +1759,65 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url_resized) FROM 
+	var param uint
+
+	if (startID-1)%num != 0 {
+		return nil, nil
+	}
+
+	param = uint((startID - 1) / num)
+
+	SQLSearchAdvertByTitle := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
-	                                    FROM advert_image
+	                                    FROM advert_image 
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE 
-	    (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) 
-	  		AND a.advert_status = 'Активно' AND a.id >= $2
-	ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($1 || ':*', ' ', ' | '))) DESC	 
-	LIMIT $3;
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
+		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, promotion_start DESC, id
+		OFFSET 5 * $1
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
+		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
+	LIMIT 20;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, title, startID, num)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -1677,9 +1833,10 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
 			return nil, err
 		}
 
@@ -1729,29 +1886,71 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLSearchAdvertByTitle := `SELECT a.id, c.translation, category.translation, a.title, a.price,
-	(SELECT array_agg(url_resized) FROM 
+	var param uint
+
+	if (startID-1)%num != 0 {
+		return nil, nil
+	}
+
+	SQLSearchAdvertByTitle := `
+	WITH promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
 	                                   (SELECT url_resized 
 	                                    FROM advert_image 
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls,
-	CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $4 AND f.advert_id = a.id)
-         THEN 1 ELSE 0 END AS bool) AS in_favourites,
-	CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $4 AND c.advert_id = a.id)
-	THEN 1 ELSE 0 END AS bool) AS in_cart
-	FROM public.advert a
-	INNER JOIN city c ON a.city_id = c.id
-	INNER JOIN category ON a.category_id = category.id
-	WHERE 
-	    (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) 
-	  		AND a.advert_status = 'Активно' AND a.id >= $2
-	ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($1 || ':*', ' ', ' | '))) DESC	 
-	LIMIT $3;
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $3 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart								
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
+		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, promotion_start DESC, id
+		OFFSET 5 * $1
+		LIMIT 5
+	), non_promoted_adverts AS (
+		SELECT a.id, c.translation, category.translation, a.title, a.price, a.is_promoted, a.promotion_start,
+		(SELECT array_agg(url_resized) FROM 
+	                                   (SELECT url_resized 
+	                                    FROM advert_image 
+	                                    WHERE advert_id = a.id 
+	                                    ORDER BY id) AS ordered_images) AS image_urls,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $3 AND f.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_favourites,
+		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
+			THEN 1 ELSE 0 END AS bool) AS in_cart
+		FROM public.advert a
+		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN category ON a.category_id = category.id
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
+		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
+		OFFSET 15 * $1 + 5 * div((SELECT 
+		CASE 
+			WHEN ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) < 0 THEN 0
+			ELSE ($1 * 5) - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE)
+		END), 5) + (SELECT
+			CASE
+				WHEN (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) - $1 * 5 < 0 
+						THEN 5 - (SELECT COUNT(*) FROM public.advert WHERE is_promoted = TRUE) % 5
+				ELSE 0
+			END)
+	)
+	SELECT * FROM promoted_adverts
+	UNION ALL
+	SELECT * FROM non_promoted_adverts
+	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
+	LIMIT 20;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, title, startID, num, userID)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID)
 	ads.metrics.AddDuration(funcName, time.Since(start))
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
@@ -1767,10 +1966,12 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		returningAdInList := models.ReturningAdInList{}
 
 		photoPad := models.PhotoPad{}
+		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &photoPad.Photo, &returningAdInList.InFavourites,
-			&returningAdInList.InCart); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo, &returningAdInList.InFavourites, &returningAdInList.InCart); err != nil {
+
 			return nil, err
 		}
 

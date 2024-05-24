@@ -12,4 +12,5 @@ type OrderStorageInterface interface {
 	//DeleteAdvByIDs(userID uint, advertID uint, userList UsersInfo, advertsList AdvertsInfo) error
 	CreateOrderByID(ctx context.Context, userID uint, data *models.ReceivedOrderItem) error
 	GetBoughtOrdersByUserID(ctx context.Context, userID uint) ([]*models.ReturningOrder, error)
+	GetSoldOrdersByUserID(ctx context.Context, userID uint) ([]*models.ReturningOrder, error)
 }

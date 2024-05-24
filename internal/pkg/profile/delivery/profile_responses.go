@@ -15,6 +15,11 @@ type ProfileErrResponse struct {
 	Status string `json:"status"`
 }
 
+type SubChangeResponse struct {
+	Code       int  `json:"code"`
+	IsAppended bool `json:"isAppended"`
+}
+
 func NewProfileOkResponse(profile *models.Profile) *ProfileOkResponse {
 	return &ProfileOkResponse{
 		Code:    responses.StatusOk,
@@ -26,5 +31,12 @@ func NewProfileErrResponse(code int, status string) *ProfileErrResponse {
 	return &ProfileErrResponse{
 		Code:   code,
 		Status: status,
+	}
+}
+
+func NewSubChangeResponse(isAppended bool) *SubChangeResponse {
+	return &SubChangeResponse{
+		Code:       responses.StatusOk,
+		IsAppended: isAppended,
 	}
 }

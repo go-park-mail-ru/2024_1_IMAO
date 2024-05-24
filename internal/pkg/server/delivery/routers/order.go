@@ -12,6 +12,6 @@ func ServeOrderRouter(router *mux.Router, orderHandler *delivery.OrderHandler,
 
 	subrouter.Use(authCheckMiddleware)
 
-	subrouter.HandleFunc("/list", orderHandler.GetSoldOrderList)
+	subrouter.HandleFunc("/list", orderHandler.GetOrderList)
 	subrouter.HandleFunc("/create", orderHandler.CreateOrder)
 }

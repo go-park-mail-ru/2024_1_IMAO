@@ -27,6 +27,7 @@ type ProfileClient interface {
 	SetProfileCity(ctx context.Context, in *SetCityRequest, opts ...grpc.CallOption) (*ProfileData, error)
 	SetProfilePhone(ctx context.Context, in *SetPhoneRequest, opts ...grpc.CallOption) (*ProfileData, error)
 	EditProfile(ctx context.Context, in *EditProfileRequest, opts ...grpc.CallOption) (*ProfileData, error)
+	AppendSubByIDs(ctx context.Context, in *UserIdMerchantIdRequest, opts ...grpc.CallOption) (*AppendSubResponse, error)
 }
 
 type profileClient struct {
@@ -82,6 +83,15 @@ func (c *profileClient) EditProfile(ctx context.Context, in *EditProfileRequest,
 	return out, nil
 }
 
+func (c *profileClient) AppendSubByIDs(ctx context.Context, in *UserIdMerchantIdRequest, opts ...grpc.CallOption) (*AppendSubResponse, error) {
+	out := new(AppendSubResponse)
+	err := c.cc.Invoke(ctx, "/Profile/AppendSubByIDs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProfileServer is the server API for Profile service.
 // All implementations must embed UnimplementedProfileServer
 // for forward compatibility
@@ -91,6 +101,7 @@ type ProfileServer interface {
 	SetProfileCity(context.Context, *SetCityRequest) (*ProfileData, error)
 	SetProfilePhone(context.Context, *SetPhoneRequest) (*ProfileData, error)
 	EditProfile(context.Context, *EditProfileRequest) (*ProfileData, error)
+	AppendSubByIDs(context.Context, *UserIdMerchantIdRequest) (*AppendSubResponse, error)
 	mustEmbedUnimplementedProfileServer()
 }
 
@@ -112,6 +123,9 @@ func (UnimplementedProfileServer) SetProfilePhone(context.Context, *SetPhoneRequ
 }
 func (UnimplementedProfileServer) EditProfile(context.Context, *EditProfileRequest) (*ProfileData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EditProfile not implemented")
+}
+func (UnimplementedProfileServer) AppendSubByIDs(context.Context, *UserIdMerchantIdRequest) (*AppendSubResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendSubByIDs not implemented")
 }
 func (UnimplementedProfileServer) mustEmbedUnimplementedProfileServer() {}
 
@@ -216,6 +230,24 @@ func _Profile_EditProfile_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Profile_AppendSubByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserIdMerchantIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfileServer).AppendSubByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Profile/AppendSubByIDs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfileServer).AppendSubByIDs(ctx, req.(*UserIdMerchantIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Profile_ServiceDesc is the grpc.ServiceDesc for Profile service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -242,6 +274,10 @@ var Profile_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EditProfile",
 			Handler:    _Profile_EditProfile_Handler,
+		},
+		{
+			MethodName: "AppendSubByIDs",
+			Handler:    _Profile_AppendSubByIDs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

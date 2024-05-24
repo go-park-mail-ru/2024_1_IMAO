@@ -3,12 +3,13 @@ package delivery
 import (
 	"encoding/json"
 	"fmt"
-	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
-	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	"log"
 	"net/http"
 	"strconv"
+
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -186,4 +187,36 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(pl)))
+}
+
+func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	profileClient := h.profileClient
+	authClient := h.authClient
+	var data models.ReceivedMerchantItem /////////////
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	session, _ := request.Cookie("session_id")
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+	isAppended, _ := profileClient.AppendSubByIDs(ctx, &profileproto.UserIdMerchantIdRequest{UserId: uint32(user.ID), MerchantId: uint32(data.MerchantID)})
+
+	responses.SendOkResponse(writer, NewSubChangeResponse(isAppended.IsAppended))
+
+	if isAppended.IsAppended {
+		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been added to the subscribers of merchant %s", fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+	} else {
+		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been removed from the subscribers of merchant %s", fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+	}
 }
