@@ -70,11 +70,12 @@ func (paymentsStorage *PaymentsStorage) PaymentFormExists(ctx context.Context, e
 	return exists
 }
 
-func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Context, tx pgx.Tx, advertId, rateCode uint) (*models.PriceAndDescription, error) {
+func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Context, tx pgx.Tx, advertId,
+	rateCode uint) (*models.PriceAndDescription, error) {
 	priceMap := map[uint]string{
-		1: "100",
-		2: "250",
-		3: "450",
+		1: "35",
+		2: "100",
+		3: "199",
 	}
 
 	funcName := logging.GetOnlyFunctionName()
@@ -110,7 +111,8 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 
 	if val, ok := priceMap[rateCode]; ok {
 		priceAndDescription.Price = val
-		priceAndDescription.UrlEnding = city_translation + "/" + category_translation + "/" + strconv.FormatUint(uint64(advertId), 10)
+		priceAndDescription.UrlEnding = city_translation + "/" + category_translation +
+			"/" + strconv.FormatUint(uint64(advertId), 10)
 
 		switch key := rateCode; key {
 		case 1:
@@ -135,7 +137,8 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 
 }
 
-func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Context, advertId, rateCode uint) (*models.PriceAndDescription, error) {
+func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Context, advertId,
+	rateCode uint) (*models.PriceAndDescription, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var priceAndDescription *models.PriceAndDescription
@@ -156,11 +159,16 @@ func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Conte
 	return priceAndDescription, nil
 }
 
-func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, advertId, userId uint) (bool, error) {
+func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx,
+	advertId, userId uint) (bool, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLCheckAdvertOwnership := `SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
+	SQLCheckAdvertOwnership := `SELECT 
+    							EXISTS(
+    								SELECT 1 
+    								FROM public.advert 
+    								WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
 
 	logging.LogInfo(logger, "SELECT FROM advert")
 
@@ -205,7 +213,8 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateProfile := `INSERT INTO public.payments(
-		advert_id, payment_uuid, payment_value, payment_description, payment_status, payment_form_url, created_time, idempotency_key, promotion_duration)
+		advert_id, payment_uuid, payment_value, payment_description, payment_status, payment_form_url, 
+                            created_time, idempotency_key, promotion_duration)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
 
 	logging.LogInfo(logger, "INSERT INTO payments")
@@ -214,7 +223,8 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 
 	float64Value, err := strconv.ParseFloat(payment.Amount.Value, 64)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v",
+			err))
 		paymentsStorage.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -228,7 +238,8 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v",
+			err))
 		paymentsStorage.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -237,8 +248,8 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 	return nil
 }
 
-func (paymentsStorage *PaymentsStorage) CreatePayment(ctx context.Context, payment *models.Payment, idempotencyKey string,
-	advertId uint, duration string) error {
+func (paymentsStorage *PaymentsStorage) CreatePayment(ctx context.Context, payment *models.Payment,
+	idempotencyKey string, advertId uint, duration string) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {

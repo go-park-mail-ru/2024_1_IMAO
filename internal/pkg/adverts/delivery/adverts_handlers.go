@@ -238,7 +238,6 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
 
 		if ownership {
-
 			paymentList, err := utils.YuKassaUpdates()
 
 			if err == nil {
@@ -258,7 +257,6 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	}
 
 	if cookieErr == nil && user.IsAuth {
-
 		err = storage.InsertView(ctx, uint(user.ID), uint(id))
 		if err != nil {
 			logging.LogHandlerError(logger, err, responses.StatusInternalServerError)

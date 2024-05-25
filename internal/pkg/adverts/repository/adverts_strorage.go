@@ -344,6 +344,9 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 		a.is_used,
 		a.views,
 		a.advert_status,
+		a.is_promoted,
+		a.promotion_start,
+		a.promotion_duration,
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          	THEN 1 ELSE 0 END AS bool) AS in_favourites,
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
@@ -366,13 +369,15 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	categoryModel := models.Category{}
 	cityModel := models.City{}
 	advertModel := models.Advert{}
+	promotionModel := models.Promotion{}
 	var advertStatus string
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
 		&cityModel.Translation, &categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 		&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
-		&advertModel.IsUsed, &advertModel.Views, &advertStatus, &advertModel.InFavourites, &advertModel.InCart,
-		&advertModel.FavouritesNum); err != nil {
+		&advertModel.IsUsed, &advertModel.Views, &advertStatus, &promotionModel.IsPromoted,
+		&promotionModel.PromotionStart, &promotionModel.PromotionDuration, &advertModel.InFavourites,
+		&advertModel.InCart, &advertModel.FavouritesNum); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
 
@@ -388,9 +393,10 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	advertModel.CategoryID = categoryModel.ID
 
 	return &models.ReturningAdvert{
-		Advert:   advertModel,
-		City:     cityModel,
-		Category: categoryModel,
+		Advert:    advertModel,
+		City:      cityModel,
+		Category:  categoryModel,
+		Promotion: promotionModel,
 	}, nil
 }
 
@@ -1575,7 +1581,8 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 				price = $3,
 				is_used = $4,
 				phone = $8,
-				price_history = price_history || ARRAY['{"updated_time":"' || $9 || '", "new_price":' || $10 || '}']::jsonb[]
+				price_history = price_history || 
+					ARRAY['{"updated_time":"' || $9 || '", "new_price":' || $10 || '}']::jsonb[]
 			 FROM
 				city
 			JOIN
@@ -1611,7 +1618,8 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 
 	start := time.Now()
 	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed,
-		data.City, data.Category, data.ID, data.Phone, time.Now().Format("2006-01-02 15:04:05"), strconv.Itoa(int(data.Price)))
+		data.City, data.Category, data.ID, data.Phone, time.Now().Format("2006-01-02 15:04:05"),
+		strconv.Itoa(int(data.Price)))
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -2377,7 +2385,8 @@ func (ads *AdvertStorage) YuKassaUpdateDb(ctx context.Context, paymentList *mode
 	dbUuidList, err := ads.GetPaymnetUuidList(ctx, advertId)
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("no payments for advert with id=%d or error occured, err=%v", advertId, err))
+		logging.LogError(logger, fmt.Errorf("no payments for advert with id=%d or error occured, err=%v",
+			advertId, err))
 
 		return err
 	}
@@ -2394,7 +2403,8 @@ func (ads *AdvertStorage) YuKassaUpdateDb(ctx context.Context, paymentList *mode
 
 		err = ads.YuKassaUpdateOneRecord(ctx, resultArray[i])
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v",
+				err))
 
 			return err
 		}

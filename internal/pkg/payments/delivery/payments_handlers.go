@@ -26,7 +26,8 @@ type PaymentsHandler struct {
 	authClient authproto.AuthClient
 }
 
-func NewPaymentsHandler(storage paymentsusecases.PaymentsStorageInterface, authClient authproto.AuthClient) *PaymentsHandler {
+func NewPaymentsHandler(storage paymentsusecases.PaymentsStorageInterface,
+	authClient authproto.AuthClient) *PaymentsHandler {
 	return &PaymentsHandler{
 		storage:    storage,
 		authClient: authClient,
@@ -171,16 +172,6 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 	}
 
 	confirmationURL := payment.Confirmation.ConfirmationURL
-
-	// city, err := h.storage.GetPaymentForm(ctx)
-	// if err != nil {
-	// 	logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-	// 	log.Println(err, responses.StatusBadRequest)
-	// 	responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
-	// 		responses.ErrBadRequest))
-
-	// 	return
-	// }
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, NewPaymentFormOkResponse(confirmationURL))

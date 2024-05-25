@@ -9,7 +9,7 @@ import (
 
 type Profile struct {
 	ID              uint      `json:"id"`
-	UserID          uint      `json:"user_id"`
+	UserID          uint      `json:"userId"`
 	Name            string    `json:"name"`
 	Surname         string    `json:"surname"`
 	City            City      `json:"city"`
