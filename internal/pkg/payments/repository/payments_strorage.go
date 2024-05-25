@@ -27,65 +27,6 @@ func NewPaymentsStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) 
 	}
 }
 
-func (paymentsStorage *PaymentsStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.CityList, error) {
-	funcName := logging.GetOnlyFunctionName()
-	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	SQLCityList := `SELECT id, name, translation FROM public.city;`
-
-	logging.LogInfo(logger, "SELECT FROM city")
-
-	start := time.Now()
-	rows, err := tx.Query(ctx, SQLCityList)
-	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select city query, err=%v",
-			err))
-		paymentsStorage.metrics.IncreaseErrors(funcName)
-
-		return nil, err
-	}
-	defer rows.Close()
-
-	cityList := models.CityList{}
-	for rows.Next() {
-		city := models.City{}
-		if err := rows.Scan(&city.ID, &city.CityName, &city.Translation); err != nil {
-			return nil, err
-		}
-		cityList.CityItems = append(cityList.CityItems, &city)
-	}
-
-	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning city rows, err=%v", err))
-
-		return nil, err
-	}
-
-	return &cityList, nil
-}
-
-func (paymentsStorage *PaymentsStorage) GetCityList(ctx context.Context) (*models.CityList, error) {
-	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	var cityList *models.CityList
-
-	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {
-		cityListInner, err := paymentsStorage.getCityList(ctx, tx)
-		cityList = cityListInner
-
-		return err
-	})
-
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting city list, err=%v", err))
-
-		return nil, err
-	}
-
-	return cityList, nil
-}
-
 func (paymentsStorage *PaymentsStorage) paymentFormExists(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -139,7 +80,7 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLCheckAdvertOwnership := `SELECT title, c.translation, cat.translation
+	SQLSelectPriceAndDescription := `SELECT title, c.translation, cat.translation
 	FROM public.advert a
 	LEFT JOIN 
 	public.city c ON a.city_id = c.id
@@ -151,7 +92,7 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 	logging.LogInfo(logger, "SELECT FROM advert")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertId)
+	userLine := tx.QueryRow(ctx, SQLSelectPriceAndDescription, advertId)
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	var (
@@ -174,10 +115,13 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 		switch key := rateCode; key {
 		case 1:
 			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 1 день`
+			priceAndDescription.Duration = "1 day"
 		case 2:
 			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 3 дня`
+			priceAndDescription.Duration = "3 days"
 		case 3:
 			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 7 дней`
+			priceAndDescription.Duration = "7 days"
 		default:
 			fmt.Println("no such key in the map")
 		}
@@ -216,7 +160,7 @@ func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLCheckAdvertOwnership := `SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 );`
+	SQLCheckAdvertOwnership := `SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
 
 	logging.LogInfo(logger, "SELECT FROM advert")
 
@@ -256,13 +200,13 @@ func (paymentsStorage *PaymentsStorage) CheckAdvertOwnership(ctx context.Context
 }
 
 func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pgx.Tx, payment *models.Payment,
-	idempotencyKey string, advertId uint) error {
+	idempotencyKey string, advertId uint, duration string) error {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLCreateProfile := `INSERT INTO public.payments(
-		advert_id, payment_uuid, payment_value, payment_description, payment_status, payment_form_url, created_time, idempotency_key)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
+		advert_id, payment_uuid, payment_value, payment_description, payment_status, payment_form_url, created_time, idempotency_key, promotion_duration)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
 
 	logging.LogInfo(logger, "INSERT INTO payments")
 
@@ -280,7 +224,7 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 
 	start := time.Now()
 	_, err = tx.Exec(ctx, SQLCreateProfile, advertId, payment.ID, uintValue, payment.Description,
-		payment.Status, payment.Confirmation.ConfirmationURL, payment.CreatedAt, idempotencyKey)
+		payment.Status, payment.Confirmation.ConfirmationURL, payment.CreatedAt, idempotencyKey, duration)
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
@@ -294,11 +238,11 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 }
 
 func (paymentsStorage *PaymentsStorage) CreatePayment(ctx context.Context, payment *models.Payment, idempotencyKey string,
-	advertId uint) error {
+	advertId uint, duration string) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {
-		err := paymentsStorage.createPayment(ctx, tx, payment, idempotencyKey, advertId)
+		err := paymentsStorage.createPayment(ctx, tx, payment, idempotencyKey, advertId, duration)
 
 		return err
 	})

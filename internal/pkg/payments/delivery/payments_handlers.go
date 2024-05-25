@@ -159,7 +159,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	err = storage.CreatePayment(ctx, &payment, idempotencyKey, frontendData.AdvertId)
+	err = storage.CreatePayment(ctx, &payment, idempotencyKey, frontendData.AdvertId, priceAndDescription.Duration)
 
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)

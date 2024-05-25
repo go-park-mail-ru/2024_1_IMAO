@@ -27,3 +27,9 @@ CREATE OR REPLACE TRIGGER advert_status_update_trigger
 AFTER INSERT ON "order"
 FOR EACH ROW
 EXECUTE PROCEDURE set_advert_status_to_sold();
+
+--============= RK4 ===========================
+CREATE TRIGGER update_advert_promotion
+AFTER UPDATE ON payments
+FOR EACH ROW
+EXECUTE PROCEDURE update_advert_promotion_func()

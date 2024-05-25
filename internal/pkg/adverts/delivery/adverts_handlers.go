@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
@@ -234,6 +235,16 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	if cookieErr == nil && user.IsAuth {
 		userIdCookie = uint(user.ID)
 
+		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
+
+		if ownership {
+
+			paymentList, err := utils.YuKassaUpdates()
+
+			if err == nil {
+				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+			}
+		}
 	}
 
 	ad, err := storage.GetAdvert(ctx, userIdCookie, uint(id), city, category)

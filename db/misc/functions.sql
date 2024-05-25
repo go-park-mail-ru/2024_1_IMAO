@@ -57,3 +57,17 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+--============= RK4 =================
+
+CREATE OR REPLACE FUNCTION update_advert_promotion_func()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE advert
+    SET is_promoted = true, promotion_start = now(), promotion_duration = NEW.promotion_duration
+    WHERE id = NEW.advert_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+

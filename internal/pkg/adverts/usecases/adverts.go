@@ -17,6 +17,9 @@ type AdvertsStorageInterface interface {
 	SearchAdvertByTitle(ctx context.Context, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error)
 	GetSuggestions(ctx context.Context, title string, num uint) ([]string, error)
 	GetPriceHistory(ctx context.Context, userID uint) ([]*models.PriceHistoryItem, error)
+	CheckAdvertOwnership(ctx context.Context, advertId, userId uint) bool
+	GetPaymnetUuidList(ctx context.Context, advertId uint) (*models.PaymnetUuidList, error)
+	YuKassaUpdateDb(ctx context.Context, paymentList *models.PaymentList, advertId uint) error
 
 	CreateAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)
 	EditAdvert(ctx context.Context, files []*multipart.FileHeader, data models.ReceivedAdData) (*models.ReturningAdvert, error)

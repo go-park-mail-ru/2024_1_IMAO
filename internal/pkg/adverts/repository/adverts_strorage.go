@@ -2219,3 +2219,186 @@ func (ads *AdvertStorage) GetPriceHistory(ctx context.Context, userID uint) ([]*
 
 	return priceHistoryItem, nil
 }
+
+func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, advertId, userId uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLCheckAdvertOwnership := `SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
+
+	logging.LogInfo(logger, "SELECT FROM advert")
+
+	start := time.Now()
+	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertId, userId)
+	ads.metrics.AddDuration(funcName, time.Since(start))
+
+	var ownership bool
+
+	if err := userLine.Scan(&ownership); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning advert ownership exists, err=%v", err))
+
+		return false, err
+	}
+
+	return ownership, nil
+}
+
+func (ads *AdvertStorage) CheckAdvertOwnership(ctx context.Context, advertId, userId uint) bool {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var ownership bool
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		ownershipExists, err := ads.checkAdvertOwnership(ctx, tx, advertId, userId)
+		ownership = ownershipExists
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%v", err))
+
+	}
+
+	return ownership
+}
+
+func (ads *AdvertStorage) getPaymnetUuidList(ctx context.Context, tx pgx.Tx, advertId uint) (*models.PaymnetUuidList, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLSelectPaymnetUuidList := `SELECT 
+	(SELECT array_agg(payment_uuid) 
+	 FROM (SELECT payment_uuid FROM payments 
+		   WHERE advert_id = $1 AND payment_status='pending' ORDER BY id)
+	 AS ordered_uuids)
+	 AS uuid_list;`
+
+	logging.LogInfo(logger, "SELECT FROM payments")
+
+	start := time.Now()
+	userLine := tx.QueryRow(ctx, SQLSelectPaymnetUuidList, advertId)
+	ads.metrics.AddDuration(funcName, time.Since(start))
+
+	paymnetUuidList := models.PaymnetUuidList{}
+	uuidListPad := models.PaymnetUuidListPad{}
+
+	if err := userLine.Scan(&uuidListPad.Pad); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning payments uuids, err=%v", err))
+
+		return nil, err
+	}
+
+	if uuidListPad.Pad != nil {
+		for _, ptr := range uuidListPad.Pad {
+			paymnetUuidList.UuidList = append(paymnetUuidList.UuidList, *ptr)
+		}
+	}
+
+	return &paymnetUuidList, nil
+}
+
+func (ads *AdvertStorage) GetPaymnetUuidList(ctx context.Context, advertId uint) (*models.PaymnetUuidList, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var paymnetUuidList *models.PaymnetUuidList
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		paymnetUuidListInner, err := ads.getPaymnetUuidList(ctx, tx, advertId)
+		paymnetUuidList = paymnetUuidListInner
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%v", err))
+
+		return nil, err
+	}
+
+	return paymnetUuidList, nil
+}
+
+// ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+func (ads *AdvertStorage) yuKassaUpdateOneRecord(ctx context.Context, tx pgx.Tx, uuid string) error {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLCloseAdvert := `UPDATE public.payments
+	SET  payment_status='waiting_for_capture'
+	WHERE payment_uuid=$1;`
+
+	logging.LogInfo(logger, "UPDATE advert")
+
+	var err error
+
+	start := time.Now()
+	_, err = tx.Exec(ctx, SQLCloseAdvert, uuid)
+	ads.metrics.AddDuration(funcName, time.Since(start))
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing updating payment query, err=%v", err))
+		ads.metrics.IncreaseErrors(funcName)
+
+		return err
+	}
+
+	return nil
+}
+
+// ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+func (ads *AdvertStorage) YuKassaUpdateOneRecord(ctx context.Context, uuid string) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		err := ads.yuKassaUpdateOneRecord(ctx, tx, uuid)
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v", err))
+
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while closing advert, err=%v", err))
+
+		return err
+	}
+
+	return nil
+}
+
+// ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+func (ads *AdvertStorage) YuKassaUpdateDb(ctx context.Context, paymentList *models.PaymentList, advertId uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	dbUuidList, err := ads.GetPaymnetUuidList(ctx, advertId)
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("no payments for advert with id=%d or error occured, err=%v", advertId, err))
+
+		return err
+	}
+	yukassaUuidArray := []string{}
+
+	for i := 0; i < len(paymentList.Items); i++ {
+
+		yukassaUuidArray = append(yukassaUuidArray, paymentList.Items[i].ID)
+	}
+
+	resultArray := utils.FindIntersection(dbUuidList.UuidList, yukassaUuidArray)
+
+	for i := 0; i < len(resultArray); i++ {
+
+		err = ads.YuKassaUpdateOneRecord(ctx, resultArray[i])
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v", err))
+
+			return err
+		}
+	}
+
+	return nil
+}
