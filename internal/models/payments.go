@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Payment "pending"
 type PaymentList struct {
 	Type  string                     `json:"type"`
@@ -85,6 +87,10 @@ type PaymnetUuidList struct {
 
 type PaymnetUuidListPad struct {
 	Pad []*string `json:"pad"`
+}
+
+type PaymentsDatesList struct {
+	List []*time.Time
 }
 
 // Payment "waiting_for_capture"

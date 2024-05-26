@@ -53,6 +53,7 @@ type Advert struct {
 }
 
 type Promotion struct {
+	NeedPing          bool             `json:"needPing"`
 	IsPromoted        bool             `json:"isPromoted"`
 	PromotionStart    pgtype.Timestamp `json:"promotionStart"`
 	PromotionDuration pgtype.Interval  `json:"promotionDuration"`

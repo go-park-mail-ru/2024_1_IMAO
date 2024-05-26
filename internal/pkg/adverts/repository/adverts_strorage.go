@@ -351,14 +351,21 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
          	THEN 1 ELSE 0 END AS bool) AS in_favourites,
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $1 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart,
-		a.favourites_number	
+		a.favourites_number,
+		ARRAY_AGG(pay.created_time ORDER BY pay.created_time DESC) FILTER (WHERE pay.payment_status = 'pending')
 		FROM 
 		public.advert a
 		LEFT JOIN 
 		public.city c ON a.city_id = c.id
 		LEFT JOIN 
 		public.category cat ON a.category_id = cat.id
-		WHERE a.id = $2;`
+		LEFT JOIN 
+		public.payments pay ON pay.advert_id = a.id
+		WHERE a.id = $2
+		GROUP BY 
+		     a.id, a.user_id, a.city_id, c.name, c.translation, a.category_id, cat.name, cat.translation, a.title, 
+		     a.description, a.price, a.created_time, a.closed_time, a.is_used, a.views, a.advert_status, a.is_promoted, 
+		     a.promotion_start, a.promotion_duration, a.favourites_number;`
 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category")
 
@@ -370,6 +377,8 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	cityModel := models.City{}
 	advertModel := models.Advert{}
 	promotionModel := models.Promotion{}
+	paymentsDates := models.PaymentsDatesList{}
+
 	var advertStatus string
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
@@ -377,11 +386,18 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 		&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
 		&advertModel.IsUsed, &advertModel.Views, &advertStatus, &promotionModel.IsPromoted,
 		&promotionModel.PromotionStart, &promotionModel.PromotionDuration, &advertModel.InFavourites,
-		&advertModel.InCart, &advertModel.FavouritesNum); err != nil {
+		&advertModel.InCart, &advertModel.FavouritesNum, &paymentsDates.List); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
 
 		return nil, err
+	}
+
+	for _, date := range paymentsDates.List {
+		if time.Since(*date).Minutes() < 10 {
+			promotionModel.NeedPing = true
+			break
+		}
 	}
 
 	if advertStatus == "Активно" {
@@ -438,7 +454,8 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, 
 
 	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%v",
+			err))
 
 		return nil, err
 	}
@@ -837,7 +854,8 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo); err != nil {
 			return nil, err
 		}
 
@@ -854,7 +872,8 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
 			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+					returningAdInList.Photos[i], err))
 			}
 		}
 
@@ -1051,7 +1070,8 @@ func (ads *AdvertStorage) GetAdvertsByCategory(ctx context.Context, category, ci
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
+func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted,
+	advertNum uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -1314,7 +1334,8 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 			advert.price, 
 			advert.is_used
 	)
-	SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, cat.translation AS category_translation
+	SELECT ins.*, c.name AS city_name, c.translation AS city_translation, cat.name AS category_name, 
+			cat.translation AS category_translation
 	FROM ins
 	LEFT JOIN public.city c ON ins.city_id = c.id
 	LEFT JOIN public.category cat ON ins.category_id = cat.id;`
@@ -1844,7 +1865,8 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		var isPromotedPlug interface{}
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo); err != nil {
 			return nil, err
 		}
 
@@ -1917,7 +1939,8 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
-		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, promotion_start DESC, id
+		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, 
+				promotion_start DESC, id
 		OFFSET 5 * $1
 		LIMIT 5
 	), non_promoted_adverts AS (
@@ -2081,13 +2104,15 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 
 	SQLSelectSuggestionsManyWords := `WITH one_word_titles AS (
 		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
-									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), '<b>|</b>', '', 'g')) AS title
+									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
+										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
 		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	),
 	two_word_titles AS (
 		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
-									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), '<b>|</b>', '', 'g')) AS title
+									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), 
+										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
 		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	)
@@ -2232,7 +2257,8 @@ func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, a
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLCheckAdvertOwnership := `SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
+	SQLCheckAdvertOwnership :=
+		`SELECT EXISTS(SELECT 1 FROM public.advert WHERE id=$1 AND user_id=$2 AND is_promoted=false);`
 
 	logging.LogInfo(logger, "SELECT FROM advert")
 
@@ -2271,7 +2297,8 @@ func (ads *AdvertStorage) CheckAdvertOwnership(ctx context.Context, advertId, us
 	return ownership
 }
 
-func (ads *AdvertStorage) getPaymnetUuidList(ctx context.Context, tx pgx.Tx, advertId uint) (*models.PaymnetUuidList, error) {
+func (ads *AdvertStorage) getPaymnetUuidList(ctx context.Context, tx pgx.Tx,
+	advertId uint) (*models.PaymnetUuidList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2345,7 +2372,8 @@ func (ads *AdvertStorage) yuKassaUpdateOneRecord(ctx context.Context, tx pgx.Tx,
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing updating payment query, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing updating payment query, err=%v", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -2411,4 +2439,56 @@ func (ads *AdvertStorage) YuKassaUpdateDb(ctx context.Context, paymentList *mode
 	}
 
 	return nil
+}
+
+func (ads *AdvertStorage) getPromotionData(ctx context.Context, tx pgx.Tx, advertID uint) (*models.Promotion, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	getPromotionDataQuery := `
+		SELECT 
+		a.is_promoted,
+		a.promotion_start,
+		a.promotion_duration
+		FROM 
+		public.advert a
+		WHERE a.id = $1;`
+
+	logging.LogInfo(logger, "SELECT promotion FROM advert")
+
+	start := time.Now()
+	line := tx.QueryRow(ctx, getPromotionDataQuery, advertID)
+	ads.metrics.AddDuration(funcName, time.Since(start))
+
+	var promotionData models.Promotion
+
+	if err := line.Scan(&promotionData.IsPromoted, &promotionData.PromotionStart,
+		&promotionData.PromotionDuration); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning promotion data, err=%v", err))
+
+		return nil, err
+	}
+
+	return &promotionData, nil
+}
+
+func (ads *AdvertStorage) GetPromotionData(ctx context.Context, advertID uint) (*models.Promotion, error) {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var promotionData *models.Promotion
+
+	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
+		promotionDataInner, err := ads.getPromotionData(ctx, tx, advertID)
+		promotionData = promotionDataInner
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while promotion data advert, err=%v", err))
+
+		return nil, err
+	}
+
+	return promotionData, nil
 }
