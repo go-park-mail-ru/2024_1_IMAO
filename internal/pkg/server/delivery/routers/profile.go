@@ -10,13 +10,6 @@ func ServeProfileRouter(router *mux.Router, profileHandler *delivery.ProfileHand
 	subrouter := router.PathPrefix("/profile").Subrouter()
 
 	subrouter.HandleFunc("/{id:[0-9]+}", profileHandler.GetProfile).Methods("GET")
-	//subrouter.HandleFunc("/{id:[0-9]+}/adverts", profileHandler.SetProfileCity)
-	//subrouter.HandleFunc("/api/profile/{id:[0-9]+}/rating", profileHandler.SetProfileRating)
-	//subrouter.HandleFunc("/api/profile/approved", profileHandler.SetProfileApproved)
-	//subrouter.HandleFunc("/api/profile/edit", profileHandler.EditProfile)
-	//subrouter.HandleFunc("/api/profile/set", profileHandler.SetProfile)
-	//subrouter.HandleFunc("/api/profile/phone", profileHandler.SetProfilePhone)
-	//subrouter.HandleFunc("/api/profile/city", profileHandler.SetProfileCity)
 
 	subrouterChange := subrouter.PathPrefix("/change").Subrouter()
 	subrouterChange.Use(authCheckMiddleware)

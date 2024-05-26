@@ -3,9 +3,9 @@ csrf:
     csrf_lifetime: 36h0m0s
 server:
     host: 127.0.0.1
-    auth_ip: auth
-    profile_ip: profile
-    cart_ip: cart
+    auth_ip: #auth
+    profile_ip: #profile
+    cart_ip: #cart
     port: :8080
     auth_service_port: :8081
     profile_service_port: :8082

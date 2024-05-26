@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/jackc/pgx/v5/pgtype"
 	"sync"
 	"time"
 
@@ -51,12 +52,20 @@ type Advert struct {
 	Deleted       bool      `json:"-"`
 }
 
+type Promotion struct {
+	NeedPing          bool             `json:"needPing"`
+	IsPromoted        bool             `json:"isPromoted"`
+	PromotionStart    pgtype.Timestamp `json:"promotionStart"`
+	PromotionDuration pgtype.Interval  `json:"promotionDuration"`
+}
+
 type ReturningAdvert struct {
-	Advert    Advert   `json:"advert"`
-	City      City     `json:"city"`
-	Category  Category `json:"category"`
-	Photos    []string `json:"photos"`
-	PhotosIMG []string `json:"photosIMG"`
+	Advert    Advert    `json:"advert"`
+	Promotion Promotion `json:"promotion"`
+	City      City      `json:"city"`
+	Category  Category  `json:"category"`
+	Photos    []string  `json:"photos"`
+	PhotosIMG []string  `json:"photosIMG"`
 }
 
 type PhotoPad struct {

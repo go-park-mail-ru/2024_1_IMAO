@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 
 	advertusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/adverts/usecases"
@@ -234,6 +235,15 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	if cookieErr == nil && user.IsAuth {
 		userIdCookie = uint(user.ID)
 
+		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
+
+		if ownership {
+			paymentList, err := utils.YuKassaUpdates()
+
+			if err == nil {
+				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+			}
+		}
 	}
 
 	ad, err := storage.GetAdvert(ctx, userIdCookie, uint(id), city, category)
@@ -247,7 +257,6 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	}
 
 	if cookieErr == nil && user.IsAuth {
-
 		err = storage.InsertView(ctx, uint(user.ID), uint(id))
 		if err != nil {
 			logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -409,42 +418,6 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
 }
 
-// func (advertsHandler *AdvertsHandler) DeleteAdvert(writer http.ResponseWriter, request *http.Request) {
-// 	if request.Method != http.MethodPost {
-// 		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-// 		return
-// 	}
-
-// 	ctx := request.Context()
-// 	requestUUID := uuid.New().String()
-
-// 	ctx = context.WithValue(ctx, "requestUUID", requestUUID)
-
-// 	childLogger := advertsHandler.logger.With(
-// 		zap.String("requestUUID", requestUUID),
-// 	)
-
-// 	vars := mux.Vars(request)
-// 	id, _ := strconv.Atoi(vars["id"])
-
-// 	storage := advertsHandler.storage
-
-// 	err := storage.DeleteAdvert(uint(id))
-// 	if err != nil {
-// 		childLogger.Error(err, responses.StatusBadRequest)
-// 		log.Println(err, responses.StatusBadRequest)
-// 		responses.SendErrResponse(writer, NewAdvertsErrResponse(responses.StatusBadRequest,
-// 			responses.ErrBadRequest))
-
-// 		return
-// 	}
-
-// 	adResponse := NewAdvertsOkResponse(nil)
-
-// 	responses.SendOkResponse(writer, adResponse)
-// }
-
 func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -468,4 +441,26 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, adResponse)
+}
+
+func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	vars := mux.Vars(request)
+	id, _ := strconv.Atoi(vars["id"])
+
+	storage := advertsHandler.storage
+	promotionData, err := storage.GetPromotionData(ctx, uint(id))
+	if err != nil {
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		log.Println(err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, promotionData)
 }
