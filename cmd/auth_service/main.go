@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
@@ -22,6 +24,11 @@ import (
 )
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Println("Error loading env file", err)
+	}
+
 	cfg := config.ReadConfig()
 	//addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
 	addr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
@@ -54,12 +61,15 @@ func main() {
 		log.Fatal("Error while creating connection to the database!!")
 	}
 
+	redisConnPool := pgxpoolconfig.NewRedisPool(os.Getenv("REDIS_HOST")+":"+os.Getenv("REDIS_PORT_ENV"),
+		os.Getenv("REDIS_PASSWORD"))
+
 	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("auth", "postgres")
 	if err != nil {
 		log.Fatal("Error while creating postgres metrics for auth service")
 	}
 
-	userStorage := authrepo.NewUserStorage(connPool, postgresMetrics)
+	userStorage := authrepo.NewUserStorage(connPool, redisConnPool, postgresMetrics)
 	authManager := delivery.NewAuthManager(userStorage)
 
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))

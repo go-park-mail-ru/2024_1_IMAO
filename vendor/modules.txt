@@ -42,6 +42,9 @@ github.com/go-openapi/swag
 # github.com/golang/mock v1.6.0
 ## explicit; go 1.11
 github.com/golang/mock/gomock
+# github.com/gomodule/redigo v1.9.2
+## explicit; go 1.17
+github.com/gomodule/redigo/redis
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
@@ -126,8 +129,6 @@ github.com/stretchr/testify/assert
 # github.com/swaggo/swag v1.16.3
 ## explicit; go 1.18
 github.com/swaggo/swag
-# github.com/tcolar/easyjson v0.0.0-20160707233707-336574682959
-## explicit
 # github.com/tsenart/vegeta v12.7.0+incompatible
 ## explicit
 github.com/tsenart/vegeta/lib

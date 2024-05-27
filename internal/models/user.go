@@ -1,9 +1,5 @@
 package models
 
-import (
-	"sync"
-)
-
 const (
 	SessionIDLen = 32
 )
@@ -18,11 +14,6 @@ type User struct {
 	ID           uint   `json:"id"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
-}
-
-type SessionList struct {
-	Sessions map[string]uint
-	Mux      sync.RWMutex
 }
 
 type CSRFToken struct {

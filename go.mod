@@ -21,6 +21,8 @@ require (
 	google.golang.org/protobuf v1.34.1
 )
 
+require github.com/gomodule/redigo v1.9.2
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
