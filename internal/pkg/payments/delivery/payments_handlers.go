@@ -12,7 +12,6 @@ import (
 	paymentsusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/payments/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
-	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -76,8 +75,6 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 		return
 	}
-
-	utils.LoadEnv()
 
 	returnURL := os.Getenv("RETURN_URL")
 	username := os.Getenv("YUKASSA_USERNAME")

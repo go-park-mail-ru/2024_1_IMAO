@@ -10,7 +10,6 @@ import (
 )
 
 func YuKassaUpdates() (*models.PaymentList, error) {
-	LoadEnv()
 	username := os.Getenv("YUKASSA_USERNAME")
 	password := os.Getenv("YUKASSA_PASSWORD")
 
