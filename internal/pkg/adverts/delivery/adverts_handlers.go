@@ -450,7 +450,29 @@ func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWrite
 	vars := mux.Vars(request)
 	id, _ := strconv.Atoi(vars["id"])
 
+	session, cookieErr := request.Cookie("session_id")
+
+	var userIdCookie uint = 0
+
+	authClient := advertsHandler.authClient
 	storage := advertsHandler.storage
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	if cookieErr == nil && user.IsAuth {
+		userIdCookie = uint(user.ID)
+
+		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
+
+		if ownership {
+			paymentList, err := utils.YuKassaUpdates()
+
+			if err == nil {
+				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+			}
+		}
+	}
+
 	promotionData, err := storage.GetPromotionData(ctx, uint(id))
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)

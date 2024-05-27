@@ -17,6 +17,10 @@ func ServeAdvertsRouter(router *mux.Router, advertsHandler *delivery.AdvertsHand
 	subrouterEdit.Use(authCheckMiddleware, csrfMiddleware)
 	subrouterEdit.HandleFunc("", advertsHandler.EditAdvert).Methods("POST")
 
+	subrouterPromotion := subrouter.PathPrefix("/promotion").Subrouter()
+	subrouterPromotion.Use(authCheckMiddleware)
+	subrouterPromotion.HandleFunc("/{id:[0-9]+}", advertsHandler.GetPromotionData).Methods("GET")
+
 	subrouter.HandleFunc("/search", advertsHandler.GetAdsListWithSearch).Methods("GET")
 	subrouter.HandleFunc("/suggestions", advertsHandler.GetSuggestions).Methods("GET")
 	subrouter.HandleFunc("/price_history/{id:[0-9]+}", advertsHandler.GetAdvertPriceHistoryByID).
@@ -29,5 +33,4 @@ func ServeAdvertsRouter(router *mux.Router, advertsHandler *delivery.AdvertsHand
 		Methods("GET")
 	subrouter.HandleFunc("/{id:[0-9]+}", advertsHandler.GetAdvertByID).Methods("GET")
 	subrouter.HandleFunc("/close/{id:[0-9]+}", advertsHandler.CloseAdvert).Methods("POST")
-	subrouter.HandleFunc("/promotion/{id:[0-9]+}", advertsHandler.GetPromotionData).Methods("GET")
 }
