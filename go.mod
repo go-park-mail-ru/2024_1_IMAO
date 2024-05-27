@@ -49,7 +49,7 @@ require (
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/influxdata/tdigest v0.0.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mailru/easyjson v0.7.7
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect

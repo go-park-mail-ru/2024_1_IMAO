@@ -3,6 +3,7 @@ package delivery
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -43,7 +44,8 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	var frontendData models.ReceivedPaymentFormItem
 
-	err := json.NewDecoder(request.Body).Decode(&frontendData)
+	data, _ := io.ReadAll(request.Body)
+	err := frontendData.UnmarshalJSON(data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -149,8 +151,8 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	var payment models.Payment
 
-	err = json.NewDecoder(resp.Body).Decode(&payment)
-
+	respData, _ := io.ReadAll(resp.Body)
+	err = payment.UnmarshalJSON(respData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -174,5 +176,6 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 	confirmationURL := payment.Confirmation.ConfirmationURL
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewPaymentFormOkResponse(confirmationURL))
+	responses.SendOkResponse(writer,
+		responses.NewOkResponse(models.PaymentFormResponse{PaymentFormUrl: confirmationURL}))
 }

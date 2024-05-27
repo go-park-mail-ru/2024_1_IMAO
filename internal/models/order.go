@@ -5,13 +5,6 @@ import (
 	"time"
 )
 
-const (
-	_ = iota
-	StatusCreated
-	StatusInDelivery
-	StatusDelivered
-)
-
 type ReceivedOrderItem struct {
 	AdvertID        uint   `json:"advertID"`
 	Phone           string `json:"phone"`
@@ -26,12 +19,9 @@ type ReceivedOrderItems struct {
 	Adverts []*ReceivedOrderItem `json:"adverts"`
 }
 
-// type ReturningOrderItem struct {
-// 	AdvertID      uint
-// 	StatusID      uint
-// 	Adress        string
-// 	DeliveryPrice uint
-// }
+type OrderCreated struct {
+	IsCreated bool `json:"isCreated"`
+}
 
 type ReturningOrder struct {
 	OrderItem       OrderItem       `json:"orderItem"`

@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -51,7 +51,7 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *http.Request) {
@@ -65,7 +65,8 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	var data models.City
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -91,7 +92,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *http.Request) {
@@ -107,7 +108,8 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	var data models.SetProfilePhoneNec
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -129,7 +131,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.Request) {
@@ -186,7 +188,7 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(pl)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(pl)))
 }
 
 func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request *http.Request) {
@@ -195,9 +197,10 @@ func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request 
 
 	profileClient := h.profileClient
 	authClient := h.authClient
-	var data models.ReceivedMerchantItem /////////////
+	var data models.ReceivedMerchantItem
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -208,15 +211,19 @@ func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request 
 	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
-	isAppended, _ := profileClient.AppendSubByIDs(ctx, &profileproto.UserIdMerchantIdRequest{UserId: uint32(user.ID), MerchantId: uint32(data.MerchantID)})
+	isAppended, _ := profileClient.AppendSubByIDs(ctx, &profileproto.UserIdMerchantIdRequest{UserId: uint32(user.ID),
+		MerchantId: uint32(data.MerchantID)})
 
-	responses.SendOkResponse(writer, NewSubChangeResponse(isAppended.IsAppended))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.ProfileAppended{IsAppended: isAppended.IsAppended}))
 
 	if isAppended.IsAppended {
 		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been added to the subscribers of merchant %s", fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been added to the subscribers of merchant %s",
+			fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
 	} else {
 		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been removed from the subscribers of merchant %s", fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger,
+			fmt.Sprintf("User %s has been removed from the subscribers of merchant %s",
+				fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
 	}
 }

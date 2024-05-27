@@ -89,6 +89,7 @@ github.com/joho/godotenv
 github.com/josharian/intern
 # github.com/mailru/easyjson v0.7.7
 ## explicit; go 1.12
+github.com/mailru/easyjson
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
@@ -125,6 +126,8 @@ github.com/stretchr/testify/assert
 # github.com/swaggo/swag v1.16.3
 ## explicit; go 1.18
 github.com/swaggo/swag
+# github.com/tcolar/easyjson v0.0.0-20160707233707-336574682959
+## explicit
 # github.com/tsenart/vegeta v12.7.0+incompatible
 ## explicit
 github.com/tsenart/vegeta/lib

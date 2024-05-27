@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -91,7 +91,7 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 	}
 
 	log.Println("Get favourites for user", user.ID)
-	responses.SendOkResponse(writer, NewFavouritesOkResponse(adsList))
+	responses.SendOkResponse(writer, responses.NewOkResponse(adsList))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get favourites for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
@@ -109,7 +109,8 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 	authClient := favouritesHandler.authClient
 	var data models.ReceivedCartItem
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -132,7 +133,7 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 
 	isAppended := storage.AppendAdvByIDs(ctx, uint(user.ID), data.AdvertID)
 
-	responses.SendOkResponse(writer, NewFavouritesChangeResponse(isAppended))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.Appended{IsAppended: isAppended}))
 
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to favourites of user", user.ID)
@@ -157,7 +158,8 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 	authClient := favouritesHandler.authClient
 	var data models.ReceivedCartItems
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -193,7 +195,7 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 
 	log.Println("Adverts", data.AdvertIDs, "has been removed from favourites of user", user.ID)
 
-	responses.SendOkResponse(writer, NewFavouritesChangeResponse(false))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.Appended{IsAppended: false}))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from favourites of user %s", fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
 }

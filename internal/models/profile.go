@@ -102,3 +102,7 @@ func (prof *Profile) Sanitize() {
 type ReceivedMerchantItem struct {
 	MerchantID uint `json:"merchantId"`
 }
+
+type ProfileAppended struct {
+	IsAppended bool `json:"isAppended"`
+}

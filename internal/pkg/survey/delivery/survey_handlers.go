@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"encoding/json"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -35,7 +35,8 @@ func (surveyHandler *SurveyHandler) CreateAnswer(writer http.ResponseWriter, req
 
 	var survey models.SurveyAnswersList
 
-	err := json.NewDecoder(request.Body).Decode(&survey)
+	data, _ := io.ReadAll(request.Body)
+	err := survey.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -51,7 +52,7 @@ func (surveyHandler *SurveyHandler) CreateAnswer(writer http.ResponseWriter, req
 			responses.ErrInternalServer))
 	}
 
-	responses.SendOkResponse(writer, NewSurveyOkResponse(survey))
+	responses.SendOkResponse(writer, responses.NewOkResponse(survey))
 }
 
 func (surveyHandler *SurveyHandler) CheckIfAnswered(writer http.ResponseWriter, request *http.Request) {
@@ -78,7 +79,7 @@ func (surveyHandler *SurveyHandler) CheckIfAnswered(writer http.ResponseWriter, 
 		return
 	}
 
-	responses.SendOkResponse(writer, NewSurveyCheckResponse(isChecked))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.SurveyCheckResponse{IsChecked: isChecked}))
 }
 
 func (surveyHandler *SurveyHandler) GetStatistics(writer http.ResponseWriter, request *http.Request) {
@@ -97,5 +98,5 @@ func (surveyHandler *SurveyHandler) GetStatistics(writer http.ResponseWriter, re
 		return
 	}
 
-	responses.SendOkResponse(writer, NewSurveyOkResponse(surveyResults))
+	responses.SendOkResponse(writer, responses.NewOkResponse(surveyResults))
 }

@@ -1,9 +1,9 @@
 package delivery
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -70,7 +70,9 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	client := authHandler.authClient
 
 	user := new(models.UnauthorizedUser)
-	err := json.NewDecoder(request.Body).Decode(&user)
+
+	data, _ := io.ReadAll(request.Body)
+	err := user.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -97,7 +99,7 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 		ID:    uint(authUser.ID),
 		Email: authUser.Email,
 	}, authUser.SessionID, true)
-	responses.SendOkResponse(writer, userData)
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
 		user.Email, authUser.SessionID), responses.StatusOk)
@@ -138,7 +140,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	http.SetCookie(writer, session)
 
 	userData := NewAuthOkResponse(models.User{}, "", false)
-	responses.SendOkResponse(writer, userData)
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	// ПО-ХОРОШЕМУ НУЖНО ПЕРЕПИСАТЬ ХЭНДЛЕР, ЧТОБЫ В ЛОГЕ МОЖНО БЫЛО ВЫВОДИТЬ КАКОЙ ИМЕННО ПОЛЬЗОВАТЕЛЬ РАЗЛОГИНИЛСЯ
 	logging.LogHandlerInfo(logger, "User have been logged out", responses.StatusOk)
@@ -164,7 +166,10 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	profileClient := authHandler.profileClient
 
 	var newUser models.UnauthorizedUser
-	err := json.NewDecoder(request.Body).Decode(&newUser)
+
+	data, _ := io.ReadAll(request.Body)
+
+	err := newUser.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -189,10 +194,10 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	http.SetCookie(writer, cookie)
 	profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponse(models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, user.SessionID, true))
+	}, user.SessionID, true)))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
 		user.Email, user.SessionID), responses.StatusOk)
@@ -218,7 +223,8 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		responses.SendOkResponse(writer, NewAuthOkResponse(models.User{}, "", false))
+		responses.SendOkResponse(writer,
+			responses.NewOkResponse(NewAuthOkResponse(models.User{}, "", false)))
 
 		return
 	}
@@ -242,10 +248,10 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
 	}
 
-	responses.SendOkResponse(writer, NewAuthOkResponseLogged(models.User{
+	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponseLogged(models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, avatar, user.IsAuth, cartNum, favNum))
+	}, avatar, user.IsAuth, cartNum, favNum)))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
@@ -265,7 +271,9 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	}
 
 	var newUser models.UnauthorizedUser
-	err = json.NewDecoder(request.Body).Decode(&newUser)
+
+	data, _ := io.ReadAll(request.Body)
+	err = newUser.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -288,10 +296,10 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s successfully changed his authorization data",
 		user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
+	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponse(models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, "", true))
+	}, "", true)))
 }
 
 func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request *http.Request) {
@@ -330,5 +338,5 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 	fmt.Printf("Сгенерированный токен: %s\n", token)
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewSessionOkResponse(token))
+	responses.SendOkResponse(writer, responses.NewOkResponse(token))
 }

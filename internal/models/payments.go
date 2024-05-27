@@ -154,3 +154,7 @@ type ThreeDSecure struct {
 	MethodCompleted    bool   `json:"method_completed"`
 	ChallengeCompleted bool   `json:"challenge_completed"`
 }
+
+type PaymentFormResponse struct {
+	PaymentFormUrl string `json:"paymentFormUrl"`
+}
