@@ -3,6 +3,7 @@ package delivery
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,7 +12,6 @@ import (
 	paymentsusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/payments/usecases"
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
-	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -43,7 +43,8 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	var frontendData models.ReceivedPaymentFormItem
 
-	err := json.NewDecoder(request.Body).Decode(&frontendData)
+	data, _ := io.ReadAll(request.Body)
+	err := frontendData.UnmarshalJSON(data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -74,8 +75,6 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 		return
 	}
-
-	utils.LoadEnv()
 
 	returnURL := os.Getenv("RETURN_URL")
 	username := os.Getenv("YUKASSA_USERNAME")
@@ -149,8 +148,8 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	var payment models.Payment
 
-	err = json.NewDecoder(resp.Body).Decode(&payment)
-
+	respData, _ := io.ReadAll(resp.Body)
+	err = payment.UnmarshalJSON(respData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -174,5 +173,6 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 	confirmationURL := payment.Confirmation.ConfirmationURL
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewPaymentFormOkResponse(confirmationURL))
+	responses.SendOkResponse(writer,
+		responses.NewOkResponse(models.PaymentFormResponse{PaymentFormUrl: confirmationURL}))
 }

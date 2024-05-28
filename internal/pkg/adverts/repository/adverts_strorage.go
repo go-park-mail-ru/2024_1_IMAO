@@ -137,7 +137,7 @@ func (ads *AdvertStorage) GetAdvertOnlyByID(ctx context.Context, advertID uint) 
 		}
 	}
 
-	advertsList.Advert.Sanitize()
+	//advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -470,7 +470,7 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, 
 		}
 	}
 
-	advertsList.Advert.Sanitize()
+	//advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -589,7 +589,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 			return nil, err
 		}
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -722,7 +722,7 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 			return nil, err
 		}
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -886,7 +886,7 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -1017,7 +1017,7 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 			return nil, err
 		}
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -1150,7 +1150,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -1247,7 +1247,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 			return nil, err
 		}
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -1411,7 +1411,7 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 		}
 	}
 
-	advertsList.Advert.Sanitize()
+	//advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -1707,7 +1707,7 @@ func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.Fil
 		}
 	}
 
-	advertsList.Advert.Sanitize()
+	//advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -1897,7 +1897,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -2032,7 +2032,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 			return nil, err
 		}
 
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}

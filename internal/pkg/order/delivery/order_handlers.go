@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -94,7 +94,7 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 
 	log.Println("Get orders for user", user.ID)
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get orders for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
-	responses.SendOkResponse(writer, NewOrderOkResponse(ordersList))
+	responses.SendOkResponse(writer, responses.NewOkResponse(ordersList))
 }
 
 func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, request *http.Request) {
@@ -107,7 +107,8 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	var data models.ReceivedOrderItems
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -119,13 +120,15 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY, А ТОЧНЕЕ В USECASE (для этого внутрь STORAGE функции нужно передавать соответствующий интерфейс другого STORAGE)
+	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY, А ТОЧНЕЕ В USECASE
+	//(для этого внутрь STORAGE функции нужно передавать соответствующий интерфейс другого STORAGE)
 	for _, receivedOrderItem := range data.Adverts {
 		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID)
 
 		if isDeleted != nil {
 			log.Println("Can not create an order", receivedOrderItem.AdvertID, "for user", user.ID)
-			logging.LogHandlerInfo(logger, fmt.Sprintf("Can not create an order %s for user %s", fmt.Sprint(receivedOrderItem.AdvertID), fmt.Sprint(user.ID)),
+			logging.LogHandlerInfo(logger, fmt.Sprintf("Can not create an order %s for user %s",
+				fmt.Sprint(receivedOrderItem.AdvertID), fmt.Sprint(user.ID)),
 				responses.StatusInternalServerError)
 			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
@@ -137,6 +140,6 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewOrderCreateResponse(true))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.OrderCreated{IsCreated: true}))
 
 }

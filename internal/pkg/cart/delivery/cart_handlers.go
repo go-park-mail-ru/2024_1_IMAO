@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -27,11 +27,6 @@ func NewCartHandler(cartClient cartproto.CartClient, authClient authproto.AuthCl
 		authClient: authClient,
 	}
 }
-
-// const (
-// 	advertsPerPage = 30
-// 	defaultCity    = "Moskva"
-// )
 
 // GetAdsList godoc
 // @Summary Retrieve a list of adverts
@@ -65,7 +60,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 		return
 	}
 	log.Println("Get cart for user", user.ID)
-	responses.SendOkResponse(writer, NewCartOkResponse(ReturningAdvertItem(adsList)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(ReturningAdvertItem(adsList)))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 }
 
@@ -77,7 +72,8 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	authClient := cartHandler.authClient
 	var data models.ReceivedCartItem
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -88,16 +84,19 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
-	isAppended, _ := cartClient.AppendAdvByIDs(ctx, &cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(data.AdvertID)})
+	isAppended, _ := cartClient.AppendAdvByIDs(ctx,
+		&cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(data.AdvertID)})
 
-	responses.SendOkResponse(writer, NewCartChangeResponse(isAppended.IsAppended))
+	responses.SendOkResponse(writer, responses.NewOkResponse(isAppended.IsAppended))
 
 	if isAppended.IsAppended {
 		log.Println("Advert", data.AdvertID, "has been added to cart of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the cart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the cart of user %s",
+			fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	} else {
 		log.Println("Advert", data.AdvertID, "has been removed from cart of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from thecart of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from thecart of user %s",
+			fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	}
 }
 
@@ -109,7 +108,8 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	authClient := cartHandler.authClient
 	var data models.ReceivedCartItems
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -122,9 +122,10 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	for _, item := range data.AdvertIDs {
-		_, error := cartClient.DeleteAdvByIDs(ctx, &cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(item)})
+		_, err := cartClient.DeleteAdvByIDs(ctx,
+			&cartproto.UserIdAdvertIdRequest{UserId: uint32(user.ID), AdvertId: uint32(item)})
 
-		if error != nil {
+		if err != nil {
 			log.Println(err, responses.StatusBadRequest)
 			logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
@@ -136,7 +137,8 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 	log.Println("Adverts", data.AdvertIDs, "has been removed from cart of user", user.ID)
 
-	responses.SendOkResponse(writer, NewCartChangeResponse(false))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.Appended{IsAppended: false}))
 
-	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from cart of user %s", fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from cart of user %s",
+		fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
 }

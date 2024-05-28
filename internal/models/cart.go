@@ -23,3 +23,7 @@ type CartList struct {
 	Items []*CartItem
 	Mux   sync.RWMutex
 }
+
+type Appended struct {
+	IsAppended bool `json:"isAppended"`
+}

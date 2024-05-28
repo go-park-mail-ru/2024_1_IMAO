@@ -73,7 +73,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 
 	var adsList []*models.ReturningAdInList
 	var err error
-	var sessionValue string = ""
+	sessionValue := ""
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -107,7 +107,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
+	responses.SendOkResponse(writer, responses.NewOkResponse(adsList))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseWriter, request *http.Request) {
@@ -165,7 +165,7 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(adsList))
+	responses.SendOkResponse(writer, responses.NewOkResponse(adsList))
 }
 
 func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter, request *http.Request) {
@@ -205,7 +205,7 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(suggestions))
+	responses.SendOkResponse(writer, responses.NewOkResponse(suggestions))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, request *http.Request) {
@@ -220,7 +220,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	storage := advertsHandler.storage
 	authClient := advertsHandler.authClient
 
-	var sessionValue string = ""
+	sessionValue := ""
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -269,7 +269,7 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
+	responses.SendOkResponse(writer, responses.NewOkResponse(ad))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, request *http.Request) {
@@ -292,7 +292,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertByID(writer http.ResponseWriter, 
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(ad))
+	responses.SendOkResponse(writer, responses.NewOkResponse(ad))
 }
 
 func (advertsHandler *AdvertsHandler) GetAdvertPriceHistoryByID(writer http.ResponseWriter, request *http.Request) {
@@ -315,7 +315,7 @@ func (advertsHandler *AdvertsHandler) GetAdvertPriceHistoryByID(writer http.Resp
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(priceHistory))
+	responses.SendOkResponse(writer, responses.NewOkResponse(priceHistory))
 }
 
 func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, request *http.Request) {
@@ -364,7 +364,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
+	responses.SendOkResponse(writer, responses.NewOkResponse(advert))
 }
 
 func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, request *http.Request) {
@@ -415,7 +415,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewAdvertsOkResponse(advert))
+	responses.SendOkResponse(writer, responses.NewOkResponse(advert))
 }
 
 func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, request *http.Request) {
@@ -437,10 +437,8 @@ func (advertsHandler *AdvertsHandler) CloseAdvert(writer http.ResponseWriter, re
 		return
 	}
 
-	adResponse := NewAdvertsOkResponse(nil)
-
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, adResponse)
+	responses.SendOkResponse(writer, responses.NewOkResponse(nil))
 }
 
 func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWriter, request *http.Request) {
@@ -468,7 +466,7 @@ func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWrite
 			paymentList, err := utils.YuKassaUpdates()
 
 			if err == nil {
-				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id))
 			}
 		}
 	}
@@ -484,5 +482,5 @@ func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWrite
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, promotionData)
+	responses.SendOkResponse(writer, responses.NewOkResponse(promotionData))
 }

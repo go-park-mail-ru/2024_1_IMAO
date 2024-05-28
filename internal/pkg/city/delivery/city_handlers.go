@@ -35,5 +35,5 @@ func (h *CityHandler) GetCityList(writer http.ResponseWriter, request *http.Requ
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewCityListOkResponse(city))
+	responses.SendOkResponse(writer, responses.NewOkResponse(city))
 }
