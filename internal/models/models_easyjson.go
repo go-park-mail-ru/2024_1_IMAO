@@ -2720,7 +2720,7 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels28(in *jl
 			continue
 		}
 		switch key {
-		case "advertID":
+		case "advertId":
 			out.AdvertID = uint(in.Uint())
 		default:
 			in.SkipRecursive()
@@ -2737,7 +2737,7 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels28(out *j
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"advertID\":"
+		const prefix string = ",\"advertId\":"
 		out.RawString(prefix[1:])
 		out.Uint(uint(in.AdvertID))
 	}

@@ -92,7 +92,8 @@ func (favouritesHandler *FavouritesHandler) GetFavouritesList(writer http.Respon
 
 	log.Println("Get favourites for user", user.ID)
 	responses.SendOkResponse(writer, responses.NewOkResponse(adsList))
-	logging.LogHandlerInfo(logger, fmt.Sprintf("Get favourites for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Get favourites for user %s", fmt.Sprint(user.ID)),
+		responses.StatusOk)
 }
 
 func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.ResponseWriter, request *http.Request) {
@@ -137,10 +138,12 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 
 	if isAppended {
 		log.Println("Advert", data.AdvertID, "has been added to favourites of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the favourites of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been added to the favourites of user %s",
+			fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	} else {
 		log.Println("Advert", data.AdvertID, "has been removed from favourites of user", user.ID)
-		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from the favourites of user %s", fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("Advert %s has been removed from the favourites of user %s",
+			fmt.Sprint(data.AdvertID), fmt.Sprint(user.ID)), responses.StatusOk)
 	}
 }
 
@@ -195,7 +198,7 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 
 	log.Println("Adverts", data.AdvertIDs, "has been removed from favourites of user", user.ID)
 
-	responses.SendOkResponse(writer, responses.NewOkResponse(models.Appended{IsAppended: true}))
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.Appended{IsAppended: false}))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from favourites of user %s",
 		fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
