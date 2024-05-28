@@ -95,10 +95,13 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	cookie := createSession(authUser.SessionID)
 	http.SetCookie(writer, cookie)
 
-	userData := NewAuthOkResponse(models.User{
-		ID:    uint(authUser.ID),
-		Email: authUser.Email,
-	}, authUser.SessionID, true)
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(authUser.ID),
+			Email: authUser.Email,
+		},
+		IsAuth: true,
+	}
 	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
@@ -139,7 +142,9 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(writer, session)
 
-	userData := NewAuthOkResponse(models.User{}, "", false)
+	userData := models.AuthResponse{
+		IsAuth: false,
+	}
 	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	// ПО-ХОРОШЕМУ НУЖНО ПЕРЕПИСАТЬ ХЭНДЛЕР, ЧТОБЫ В ЛОГЕ МОЖНО БЫЛО ВЫВОДИТЬ КАКОЙ ИМЕННО ПОЛЬЗОВАТЕЛЬ РАЗЛОГИНИЛСЯ
@@ -194,10 +199,14 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	http.SetCookie(writer, cookie)
 	profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 
-	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponse(models.User{
-		ID:    uint(user.ID),
-		Email: user.Email,
-	}, user.SessionID, true)))
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(user.ID),
+			Email: user.Email,
+		},
+		IsAuth: true,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
 		user.Email, user.SessionID), responses.StatusOk)
@@ -224,7 +233,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		responses.SendOkResponse(writer,
-			responses.NewOkResponse(NewAuthOkResponse(models.User{}, "", false)))
+			responses.NewOkResponse(models.AuthResponse{IsAuth: false}))
 
 		return
 	}
@@ -233,25 +242,27 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		SessionID: session.Value,
 	})
 
-	var avatar string
-	var cartNum uint
-	var favNum uint
+	var responseData models.AdditionalUserData
 
 	if user.IsAuth {
 		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
-		avatar = profile.AvatarIMG
-		favNum = uint(profile.FavNum)
-		cartNum = uint(profile.CartNum)
+		responseData.Avatar = profile.AvatarIMG
+		responseData.PhoneNumber = profile.Phone
+		responseData.FavNum = uint(profile.FavNum)
+		responseData.CartNum = uint(profile.CartNum)
 
 	} else {
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
 	}
 
-	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponseLogged(models.User{
+	responseData.User = models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, avatar, user.IsAuth, cartNum, favNum)))
+	}
+	responseData.IsAuth = user.IsAuth
+
+	responses.SendOkResponse(writer, responses.NewOkResponse(responseData))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
@@ -296,10 +307,15 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s successfully changed his authorization data",
 		user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, responses.NewOkResponse(NewAuthOkResponse(models.User{
-		ID:    uint(user.ID),
-		Email: user.Email,
-	}, "", true)))
+
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(user.ID),
+			Email: user.Email,
+		},
+		IsAuth: true,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 }
 
 func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request *http.Request) {

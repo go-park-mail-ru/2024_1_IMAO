@@ -29,3 +29,18 @@ type DBInsertionUser struct {
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
 }
+
+type AdditionalUserData struct {
+	User        User   `json:"user"`
+	Avatar      string `json:"avatarImg"`
+	IsAuth      bool   `json:"isAuth"`
+	CartNum     uint   `json:"cartNum"`
+	FavNum      uint   `json:"favNum"`
+	PhoneNumber string `json:"phoneNumber"`
+}
+
+type AuthResponse struct {
+	User   User   `json:"user"`
+	Avatar string `json:"avatarImg"`
+	IsAuth bool   `json:"isAuth"`
+}
