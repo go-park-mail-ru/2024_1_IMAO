@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,17 +70,12 @@ func TestGetCityList(t *testing.T) {
 
 			h.GetCityList(w, req)
 
-			bodyBytes, _ := ioutil.ReadAll(w.Body)
-			bodyString := string(bodyBytes)
-
 			var testResponse models.ErrResponse
-
 			_ = json.NewDecoder(w.Body).Decode(&testResponse)
 
-			fmt.Println(bodyString)
 			fmt.Println(testResponse)
 
-			assert.Equal(t, tt.expectedStatus, w.Body)
+			assert.Equal(t, tt.expectedStatus, testResponse.Code)
 		})
 	}
 }
