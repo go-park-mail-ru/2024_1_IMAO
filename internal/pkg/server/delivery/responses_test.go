@@ -1,3 +1,4 @@
+//nolint:all
 package responses_test
 
 import (
