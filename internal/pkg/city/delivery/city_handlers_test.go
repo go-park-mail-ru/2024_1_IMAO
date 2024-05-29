@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -70,9 +69,6 @@ func TestGetCityList(t *testing.T) {
 			// }
 
 			h.GetCityList(w, req)
-
-			bodyBytes, _ := io.ReadAll(w.Body)
-			bodyString := string(bodyBytes)
 
 			var testResponse models.ErrResponse
 			_ = json.NewDecoder(w.Body).Decode(&testResponse)
