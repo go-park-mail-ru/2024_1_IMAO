@@ -12,5 +12,4 @@ func ServePaymentsRouter(router *mux.Router, favouritesHandler *delivery.Payment
 	subrouter.Use(authCheckMiddleware)
 
 	subrouter.HandleFunc("/form", favouritesHandler.GetPaymentForm).Methods("POST")
-
 }

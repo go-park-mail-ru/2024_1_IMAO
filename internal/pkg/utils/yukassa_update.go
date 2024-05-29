@@ -1,8 +1,9 @@
+//nolint:noctx
 package utils
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -19,7 +20,8 @@ func YuKassaUpdates() (*models.PaymentList, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
+
 		return nil, err
 	}
 
@@ -27,15 +29,19 @@ func YuKassaUpdates() (*models.PaymentList, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
+
 		return nil, err
 	}
+
 	defer resp.Body.Close()
 
 	paymentList := models.PaymentList{}
+
 	err = json.NewDecoder(resp.Body).Decode(&paymentList)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error:", err)
+
 		return nil, err
 	}
 

@@ -15,6 +15,7 @@ import (
 // @host  109.120.183.3:8008
 func main() {
 	srv := new(app.Server)
+
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Println("Error loading env file", err)

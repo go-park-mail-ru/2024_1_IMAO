@@ -108,6 +108,7 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	var data models.ReceivedOrderItems
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
@@ -116,12 +117,10 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 			responses.ErrInternalServer))
 	}
 
-	session, err := request.Cookie("session_id")
+	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	// НИЖЕ БИЗНЕС ЛОГИКА, ЕЁ НУЖНО ВЫТЕСТИ В REPOSITORY, А ТОЧНЕЕ В USECASE
-	//(для этого внутрь STORAGE функции нужно передавать соответствующий интерфейс другого STORAGE)
 	for _, receivedOrderItem := range data.Adverts {
 		isDeleted := cartStorage.DeleteAdvByIDs(ctx, uint(user.ID), receivedOrderItem.AdvertID)
 
@@ -132,14 +131,14 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 				responses.StatusInternalServerError)
 			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
+
 			return
 		}
 
-		storage.CreateOrderByID(ctx, uint(user.ID), receivedOrderItem)
+		_ = storage.CreateOrderByID(ctx, uint(user.ID), receivedOrderItem)
 		log.Println("An order", receivedOrderItem.AdvertID, "for user", user.ID, "successfully created")
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, responses.NewOkResponse(models.OrderCreated{IsCreated: true}))
-
 }

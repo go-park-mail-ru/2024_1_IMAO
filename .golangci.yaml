@@ -9,7 +9,6 @@ linters:
     - cyclop
     - decorder
     - dogsled
-    - dupl
     - dupword
     - durationcheck
     - errcheck
@@ -20,8 +19,6 @@ linters:
     - exhaustive
     - exportloopref
     - forcetypeassert
-    - funlen
-    - gci
     - ginkgolinter
     - gocheckcompilerdirectives
     - gochecknoglobals
@@ -31,12 +28,8 @@ linters:
     - gocritic
     - gocyclo
     - godox
-    - goerr113
     - gofmt
-    - gofumpt
     - goheader
-    - goimports
-    - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -54,15 +47,11 @@ linters:
     - maintidx
     - makezero
     - mirror
-    - misspell
     - musttag
     - nakedret
     - nestif
-    - nilerr
-    - nilnil
     - nlreturn
     - noctx
-    - nolintlint
     - nonamedreturns
     - nosprintfhostport
     - paralleltest
@@ -85,11 +74,8 @@ linters:
     - unconvert
     - unparam
     - unused
-    - usestdlibvars
-    - varnamelen
     - wastedassign
     - whitespace
-    - wrapcheck
     - wsl
     - zerologlint
 
@@ -106,3 +92,17 @@ linters:
     - deadcode
     - ifshort
     - depguard
+    - wrapcheck
+    - varnamelen
+    - usestdlibvars
+    - nilerr
+    - nilnil
+    - goerr113
+    - dupl
+    - funlen
+    - nolintlint
+    - misspell
+    - gomnd
+    - gofumpt
+    - gci
+    - goimports

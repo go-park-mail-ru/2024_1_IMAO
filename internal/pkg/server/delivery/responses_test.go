@@ -14,7 +14,7 @@ import (
 func TestSendOkResponse(t *testing.T) {
 	t.Parallel()
 
-	w := httptest.NewRecorder()
+	w := httptest.NewRecorder() //nolint:varnamelen
 
 	testVar := []int{1, 2, 3}
 
@@ -22,6 +22,7 @@ func TestSendOkResponse(t *testing.T) {
 		Code:  200,
 		Items: []int{1, 2, 3},
 	}
+
 	responses.SendOkResponse(w, responses.NewOkResponse(testVar))
 
 	if status := w.Code; status != responses.StatusOk {

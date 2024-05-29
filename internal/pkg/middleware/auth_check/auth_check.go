@@ -3,7 +3,6 @@ package authcheck
 import (
 	"context"
 	"errors"
-	protobuf "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
 
 	"net/http"
 
@@ -18,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateAuthCheckMiddleware(authClient protobuf.AuthClient) mux.MiddlewareFunc {
+func CreateAuthCheckMiddleware(authClient authproto.AuthClient) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			ctx := request.Context()

@@ -1,3 +1,4 @@
+//nolint:tagliatelle
 package config
 
 import (
@@ -45,6 +46,7 @@ func ReadConfig() *Config {
 	file, err := os.Open(cfgPath)
 	if err != nil {
 		log.Println("Something went wrong while opening config file:", err)
+
 		return nil
 	}
 	defer file.Close()
@@ -52,9 +54,11 @@ func ReadConfig() *Config {
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(cfg); err != nil {
 		log.Println("Something went wrong while reading config file:", err)
+
 		return nil
 	}
 
 	log.Println("Successfully opened config")
+
 	return cfg
 }

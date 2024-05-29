@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
@@ -23,6 +24,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	timeout = 10 * time.Second
+	port    = 7071
+)
+
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -30,12 +36,13 @@ func main() {
 	}
 
 	cfg := config.ReadConfig()
-	//addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	// addr := cfg.Server.AuthIP + cfg.Server.AuthServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
 	addr := cfg.Server.Host + cfg.Server.AuthServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Println("Error occurred while listening auth service", err)
+
 		return
 	}
 
@@ -52,13 +59,14 @@ func main() {
 	)
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on auth service", err)
+
 		return
 	}
 	defer grpcConn.Close()
 
 	connPool, err := pgxpool.NewWithConfig(context.Background(), pgxpoolconfig.PGXPoolConfig())
 	if err != nil {
-		log.Fatal("Error while creating connection to the database!!")
+		log.Println("Error while creating connection to the database!!")
 	}
 
 	redisConnPool := pgxpoolconfig.NewRedisPool(os.Getenv("REDIS_HOST")+":"+os.Getenv("REDIS_PORT_ENV"),
@@ -66,7 +74,7 @@ func main() {
 
 	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("auth", "postgres")
 	if err != nil {
-		log.Fatal("Error while creating postgres metrics for auth service")
+		log.Println("Error while creating postgres metrics for auth service")
 	}
 
 	userStorage := authrepo.NewUserStorage(connPool, redisConnPool, postgresMetrics)
@@ -78,7 +86,8 @@ func main() {
 
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7071)}
+	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", port), ReadHeaderTimeout: timeout}
+
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail auth.ListenAndServe")
@@ -88,6 +97,7 @@ func main() {
 	err = srv.Serve(listener)
 	if err != nil {
 		log.Println(err)
+
 		return
 	}
 }

@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	questionsNum = 5
+)
+
 type SurveyStorage struct {
 	pool    *pgxpool.Pool
 	metrics *mymetrics.DatabaseMetrics
@@ -40,11 +44,14 @@ func (survey *SurveyStorage) insertUserSurvey(ctx context.Context, tx pgx.Tx, us
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID)
+
 	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertUserSurvey query, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing insertUserSurvey query, err=%w", err))
 		survey.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -68,11 +75,14 @@ func (survey *SurveyStorage) insertAnswer(ctx context.Context, tx pgx.Tx, userID
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLInsertAnswer, userID, surveyID, answerNum, answerValue)
+
 	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertAnswer query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insertAnswer query, err=%w",
+			err))
 		survey.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -91,7 +101,7 @@ func (survey *SurveyStorage) InsertUserSurvey(ctx context.Context, surveyAnswers
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while inserting user_survey, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting user_survey, err=%w", err))
 
 		return err
 	}
@@ -105,13 +115,12 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 	fail := survey.InsertUserSurvey(ctx, surveyAnswersList)
 
 	if fail != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while inserting UserSurvey, err=%v", fail))
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting UserSurvey, err=%w", fail))
 
 		return fail
 	}
 
 	for i := 0; i < len(surveyAnswersList.Survey); i++ {
-
 		err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
 			err := survey.insertAnswer(ctx, tx, surveyAnswersList.UserID, surveyAnswersList.SurveyID,
 				surveyAnswersList.Survey[i].AnswerNum, surveyAnswersList.Survey[i].AnswerValue)
@@ -120,7 +129,7 @@ func (survey *SurveyStorage) SaveSurveyResults(ctx context.Context, surveyAnswer
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while inserting answers, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while inserting answers, err=%w", err))
 
 			return err
 		}
@@ -138,13 +147,15 @@ func (survey *SurveyStorage) selectFromUserSurvey(ctx context.Context, tx pgx.Tx
 	logging.LogInfo(logger, "SELECT FROM user_survey")
 
 	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLSelectFromUserSurvey, userID, surveyID)
+
 	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	var exists bool
 
 	if err := userLine.Scan(&exists); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning UserSurvey exists, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning UserSurvey exists, err=%w", err))
 
 		return false, err
 	}
@@ -165,7 +176,7 @@ func (survey *SurveyStorage) GetResults(ctx context.Context, userID, surveyID ui
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w", err))
 
 		return true, err
 	}
@@ -187,64 +198,52 @@ func (survey *SurveyStorage) getStatics(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "SELECT FROM answer")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLGetStatics)
+
 	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select statistics, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select statistics, err=%w", err))
 		survey.metrics.IncreaseErrors(funcName)
+
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	surveyResults := &models.SurveyResults{
 		SurveyTitle:       surveyInstance.SurveyTitle,
 		SurveyDescription: surveyInstance.SurveyTitle,
 		Results:           make([]*models.QuestionResults, surveyInstance.QuestionNumber),
-	} // ПОТЕНЦИАЛЬНАЯ ПРОБЛЕМА
+	}
 
 	for i := 0; i < len(surveyResults.Results); i++ {
 		surveyResults.Results[i] = &models.QuestionResults{
-			QuestionResults: make([]uint, 5),
+			QuestionResults: make([]uint, questionsNum),
 		}
 	}
 
-	// var questionNumber uint = 1
-
-	// questionResults := &models.QuestionResults{
-	// 	QuestionResults: nil,
-	// }
-
 	for rows.Next() {
-		var answerNumber uint
-		var answerValue uint
-		var answerCount uint
+		var (
+			answerNumber uint
+			answerValue  uint
+			answerCount  uint
+		)
 
 		if err := rows.Scan(&answerNumber, &answerValue, &answerCount); err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while scanning rows of answers, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while scanning rows of answers, err=%w", err))
 
 			return nil, err
 		}
 
 		surveyResults.Results[answerNumber-1].QuestionResults[answerValue-1] = answerCount
-
-		// if answerNumber == questionNumber {
-		// 	questionResults.QuestionResults = append(questionResults.QuestionResults, answerCount)
-		// } else {
-		// 	surveyResults.Results = append(surveyResults.Results, questionResults)
-
-		// 	questionResults = &models.QuestionResults{
-		// 		QuestionResults: nil,
-		// 	}
-		// 	questionNumber++
-		// }
-
 	}
 
 	return surveyResults, nil
 }
 
-func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyId uint) (*models.Survey, error) {
+func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyID uint) (*models.Survey, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -254,26 +253,30 @@ func (survey *SurveyStorage) getSurvey(ctx context.Context, tx pgx.Tx, surveyId 
 	logging.LogInfo(logger, "SELECT FROM survey")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLSelectFromSurvey, surveyId)
+
+	userLine := tx.QueryRow(ctx, SQLSelectFromSurvey, surveyID)
+
 	survey.metrics.AddDuration(funcName, time.Since(start))
 
 	surveyInstance := &models.Survey{}
 
-	if err := userLine.Scan(&surveyInstance.SurveyTitle, &surveyInstance.SurveyDescription, &surveyInstance.QuestionNumber); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning survey, err=%v", err))
+	if err := userLine.Scan(&surveyInstance.SurveyTitle, &surveyInstance.SurveyDescription,
+		&surveyInstance.QuestionNumber); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning survey, err=%w", err))
 
 		return nil, err
 	}
 
 	return surveyInstance, nil
-
 }
 
 func (survey *SurveyStorage) GetStatics(ctx context.Context) (*models.SurveyResults, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var surveyResults *models.SurveyResults
-	var surveyInstance *models.Survey
+	var (
+		surveyResults  *models.SurveyResults
+		surveyInstance *models.Survey
+	)
 
 	err := pgx.BeginFunc(ctx, survey.pool, func(tx pgx.Tx) error {
 		surveyInstanceInternal, err := survey.getSurvey(ctx, tx, 1)
@@ -283,7 +286,7 @@ func (survey *SurveyStorage) GetStatics(ctx context.Context) (*models.SurveyResu
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w", err))
 
 		return nil, err
 	}
@@ -296,11 +299,10 @@ func (survey *SurveyStorage) GetStatics(ctx context.Context) (*models.SurveyResu
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w", err))
 
 		return nil, err
 	}
 
 	return surveyResults, nil
-
 }

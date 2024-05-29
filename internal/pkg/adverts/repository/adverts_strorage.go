@@ -1,3 +1,4 @@
+//nolint:forcetypeassert,cyclop,prealloc
 package storage
 
 import (
@@ -20,6 +21,11 @@ import (
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
+const (
+	waitingMinutes = 10
+	activeStatus   = "Активно"
+)
+
 type AdvertStorage struct {
 	pool    *pgxpool.Pool
 	metrics *mymetrics.DatabaseMetrics
@@ -37,7 +43,7 @@ func (ads *AdvertStorage) getAdvertOnlyByID(ctx context.Context, tx pgx.Tx,
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertById := `
+	SQLAdvertByID := `
 		SELECT 
 		a.id, 
 		a.user_id,
@@ -68,30 +74,34 @@ func (ads *AdvertStorage) getAdvertOnlyByID(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "SELECT FROM advert, city, category")
 
 	start := time.Now()
-	advertLine := tx.QueryRow(ctx, SQLAdvertById, advertID)
+
+	advertLine := tx.QueryRow(ctx, SQLAdvertByID, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
-	categoryModel := models.Category{}
-	cityModel := models.City{}
-	advertModel := models.Advert{}
-	var advertStatus string
+	var (
+		categoryModel models.Category
+		cityModel     models.City
+		advertModel   models.Advert
+		advertStatus  string
+	)
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
 		&cityModel.Translation, &categoryModel.ID, &categoryModel.Name, &categoryModel.Translation,
 		&advertModel.Title, &advertModel.Description, &advertModel.Price, &advertModel.CreatedTime,
 		&advertModel.ClosedTime, &advertModel.IsUsed, &advertModel.Views, &advertStatus, &advertModel.FavouritesNum,
 		&advertModel.Phone); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%w", err))
 
 		return nil, err
 	}
 
-	if advertStatus == "Активно" {
+	if advertStatus == activeStatus {
 		advertModel.Active = true
 	} else {
 		advertModel.Active = false
 	}
+
 	advertModel.CityID = cityModel.ID
 	advertModel.CategoryID = categoryModel.ID
 
@@ -115,29 +125,30 @@ func (ads *AdvertStorage) GetAdvertOnlyByID(ctx context.Context, advertID uint) 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert by id only, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert by id only, err=%w", err))
 
 		return nil, err
 	}
 
 	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%w",
+			err))
 
 		return nil, err
 	}
 
 	for i := 0; i < len(advertsList.Photos); i++ {
-
 		image, err := utils.DecodeImage(advertsList.Photos[i])
-		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 				advertsList.Photos[i], err))
 		}
+
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 	}
 
-	//advertsList.Advert.Sanitize()
+	// advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -154,31 +165,35 @@ func (ads *AdvertStorage) getAdvertImagesURLs(ctx context.Context, tx pgx.Tx, ad
 	logging.LogInfo(logger, "SELECT FROM advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts urls, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts urls, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var urlArray []string
 
 	for rows.Next() {
-		var returningUrl string
+		var returningURL string
 
-		if err := rows.Scan(&returningUrl); err != nil {
+		if err := rows.Scan(&returningURL); err != nil {
 			logging.LogError(logger,
-				fmt.Errorf("something went wrong while scanning rows of advert images for advert %v, err=%v",
+				fmt.Errorf("something went wrong while scanning rows of advert images for advert %v, err=%w",
 					advertID, err))
 
 			return nil, err
 		}
 
-		urlArray = append(urlArray, returningUrl)
+		urlArray = append(urlArray, returningURL)
 	}
 
 	return urlArray, nil
@@ -197,7 +212,7 @@ func (ads *AdvertStorage) GetAdvertImagesURLs(ctx context.Context, advertID uint
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong getting image urls for advertID=%v , err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong getting image urls for advertID=%v , err=%w",
 			advertID, err))
 
 		return nil, err
@@ -221,12 +236,14 @@ func (ads *AdvertStorage) insertView(ctx context.Context, tx pgx.Tx, userID, adv
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLInsertView, userID, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while executing insertInsertView query, err=%v", err))
+			fmt.Errorf("something went wrong while executing insertInsertView query, err=%w", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -245,7 +262,7 @@ func (ads *AdvertStorage) InsertView(ctx context.Context, userID, advertID uint)
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while inserting view, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting view, err=%w", err))
 
 		return err
 	}
@@ -253,12 +270,11 @@ func (ads *AdvertStorage) InsertView(ctx context.Context, userID, advertID uint)
 	return nil
 }
 
-func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint, city,
-	category string) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uint) (*models.ReturningAdvert, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertById := `
+	SQLAdvertByID := `
 		SELECT 
 		a.id, 
 		a.user_id,
@@ -288,29 +304,33 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 	logging.LogInfo(logger, "SELECT FROM advert, city, category")
 
 	start := time.Now()
-	advertLine := tx.QueryRow(ctx, SQLAdvertById, advertID)
+
+	advertLine := tx.QueryRow(ctx, SQLAdvertByID, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
-	categoryModel := models.Category{}
-	cityModel := models.City{}
-	advertModel := models.Advert{}
-	var advertStatus string
+	var (
+		categoryModel models.Category
+		cityModel     models.City
+		advertModel   models.Advert
+		advertStatus  string
+	)
 
 	if err := advertLine.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
 		&cityModel.Translation, &categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 		&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
 		&advertModel.IsUsed, &advertModel.Views, &advertStatus, &advertModel.FavouritesNum); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%w", err))
 
 		return nil, err
 	}
 
-	if advertStatus == "Активно" {
+	if advertStatus == activeStatus {
 		advertModel.Active = true
 	} else {
 		advertModel.Active = false
 	}
+
 	advertModel.CityID = cityModel.ID
 	advertModel.CategoryID = categoryModel.ID
 
@@ -321,12 +341,12 @@ func (ads *AdvertStorage) getAdvert(ctx context.Context, tx pgx.Tx, advertID uin
 	}, nil
 }
 
-func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, advertID uint, city,
-	category string) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID,
+	advertID uint) (*models.ReturningAdvert, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertById := `
+	SQLAdvertByID := `
 		SELECT 
 		a.id, 
 		a.user_id,
@@ -370,7 +390,9 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category")
 
 	start := time.Now()
-	advertLine := tx.QueryRow(ctx, SQLAdvertById, userID, advertID)
+
+	advertLine := tx.QueryRow(ctx, SQLAdvertByID, userID, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -387,24 +409,25 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 		&advertModel.IsUsed, &advertModel.Views, &advertStatus, &promotionModel.IsPromoted,
 		&promotionModel.PromotionStart, &promotionModel.PromotionDuration, &advertModel.InFavourites,
 		&advertModel.InCart, &advertModel.FavouritesNum, &paymentsDates.List); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%w", err))
 
 		return nil, err
 	}
 
 	for _, date := range paymentsDates.List {
-		if time.Since(*date).Minutes() < 10 {
+		if time.Since(*date).Minutes() < waitingMinutes {
 			promotionModel.NeedPing = true
+
 			break
 		}
 	}
 
-	if advertStatus == "Активно" {
+	if advertStatus == activeStatus {
 		advertModel.Active = true
 	} else {
 		advertModel.Active = false
 	}
+
 	advertModel.CityID = cityModel.ID
 	advertModel.CategoryID = categoryModel.ID
 
@@ -416,37 +439,37 @@ func (ads *AdvertStorage) getAdvertAuth(ctx context.Context, tx pgx.Tx, userID, 
 	}, nil
 }
 
-func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, city,
-	category string) (*models.ReturningAdvert, error) {
+func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint) (*models.ReturningAdvert, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var advertsList *models.ReturningAdvert
-	var err error
+	var (
+		advertsList *models.ReturningAdvert
+		err         error
+	)
 
 	if userID == 0 {
 		err = pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvert(ctx, tx, advertID, city, category)
+			advertsListInner, err := ads.getAdvert(ctx, tx, advertID)
 			advertsList = advertsListInner
 
 			return err
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%w", err))
 
 			return nil, err
 		}
-
 	} else {
 		err = pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvertAuth(ctx, tx, userID, advertID, city, category)
+			advertsListInner, err := ads.getAdvertAuth(ctx, tx, userID, advertID)
 			advertsList = advertsListInner
 
 			return err
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%w", err))
 
 			return nil, err
 		}
@@ -454,23 +477,23 @@ func (ads *AdvertStorage) GetAdvert(ctx context.Context, userID, advertID uint, 
 
 	advertsList.Photos, err = ads.GetAdvertImagesURLs(ctx, advertsList.Advert.ID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert images urls , err=%w",
 			err))
 
 		return nil, err
 	}
 
 	for i := 0; i < len(advertsList.Photos); i++ {
-
 		image, err := utils.DecodeImage(advertsList.Photos[i])
-		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
 				advertsList.Photos[i], err))
 		}
+
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 	}
 
-	//advertsList.Advert.Sanitize()
+	// advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -486,7 +509,7 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / num)
+	param = (startID - 1) / num
 
 	SQLAdvertsByCityPromoted := `
 	WITH promoted_adverts AS (
@@ -536,15 +559,19 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertsByCityPromoted, param, city)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
@@ -552,12 +579,16 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+		var (
+			photoPad       models.PhotoPad
+			isPromotedPlug interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
-			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug, &photoPad.Photo); err != nil {
+			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
+			&photoPad.Photo); err != nil {
 			ads.metrics.IncreaseErrors(funcName)
+
 			return nil, err
 		}
 
@@ -572,30 +603,30 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
 					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
@@ -615,7 +646,7 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / num)
+	param = (startID - 1) / num
 
 	SQLAdvertsByCityAuth := `
 	WITH promoted_adverts AS (
@@ -669,26 +700,34 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 	ORDER BY is_promoted DESC, promotion_start DESC, id ASC
 	LIMIT 20;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, param, city, userID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+		var (
+			photoPad       models.PhotoPad
+			isPromotedPlug interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
 			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
@@ -705,30 +744,30 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
 					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -751,11 +790,10 @@ func (ads *AdvertStorage) GetAdvertsByCity(ctx context.Context, city string, use
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 			advertsListInner, err := ads.getAdvertsByCityAuth(ctx, tx, city, userID, startID, num)
@@ -765,7 +803,7 @@ func (ads *AdvertStorage) GetAdvertsByCity(ctx context.Context, city string, use
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
@@ -785,7 +823,7 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / num)
+	param = (startID - 1) / num
 
 	SQLAdvertsByCity := `
 	WITH promoted_adverts AS (
@@ -835,23 +873,30 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertsByCity, param, city, category)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+		var (
+			photoPad       models.PhotoPad
+			isPromotedPlug interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
 			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
@@ -868,17 +913,17 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
 					returningAdInList.Photos[i], err))
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -886,13 +931,13 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -911,7 +956,7 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / num)
+	param = (startID - 1) / num
 
 	SQLAdvertsByCityAuth := `
 	WITH promoted_adverts AS (
@@ -969,23 +1014,30 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertsByCityAuth, param, city, category, userID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+		var (
+			photoPad       models.PhotoPad
+			isPromotedPlug interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
 			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
@@ -1002,28 +1054,28 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 					returningAdInList.Photos[i], err))
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -1046,11 +1098,10 @@ func (ads *AdvertStorage) GetAdvertsByCategory(ctx context.Context, category, ci
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 			advertsListInner, err := ads.getAdvertsByCategoryAuth(ctx, tx, category, city, userID, startID, num)
@@ -1060,22 +1111,21 @@ func (ads *AdvertStorage) GetAdvertsByCategory(ctx context.Context, category, ci
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	}
 
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userId, deleted,
+func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx pgx.Tx, userID, deleted,
 	advertNum uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	advertStatus := "Активно"
+	advertStatus := activeStatus
 	if deleted == 1 {
 		advertStatus = "Продано"
 	}
@@ -1097,18 +1147,23 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userId, advertStatus, advertNum)
+
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIs, userID, advertStatus, advertNum)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
@@ -1131,18 +1186,19 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v", returningAdInList.Photos[i], err))
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
+					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -1150,13 +1206,13 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -1164,12 +1220,12 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context, tx pgx.Tx, userID, userId,
+func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context, tx pgx.Tx, userID, authorID,
 	deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	advertStatus := "Активно"
+	advertStatus := activeStatus
 	if deleted == 1 {
 		advertStatus = "Продано"
 	}
@@ -1195,18 +1251,23 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image, favourite, cart")
 
 	start := time.Now()
-	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIsAuth, userID, userId, advertStatus, advertNum)
+
+	rows, err := tx.Query(ctx, SQLGetAdvertsForUserWhereStatusIsAuth, userID, authorID, advertStatus, advertNum)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
@@ -1230,30 +1291,30 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -1261,7 +1322,7 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, userID, userId,
+func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, userID, authorID,
 	deleted, advertNum uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -1269,32 +1330,31 @@ func (ads *AdvertStorage) GetAdvertsForUserWhereStatusIs(ctx context.Context, us
 
 	if userID == 0 {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, userId, deleted, advertNum)
+			advertsListInner, err := ads.getAdvertsForUserWhereStatusIs(ctx, tx, authorID, deleted, advertNum)
 			advertsList = advertsListInner
 
 			return err
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.getAdvertsForUserWhereStatusIsAuth(ctx, tx, userID, userId, deleted, advertNum)
+			advertsListInner, err := ads.getAdvertsForUserWhereStatusIsAuth(ctx, tx, userID, authorID,
+				deleted, advertNum)
 			advertsList = advertsListInner
 
 			return err
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	}
 
 	return advertsList, nil
@@ -1343,8 +1403,11 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "INSERT INTO advert")
 
 	start := time.Now()
+
 	advertLine := tx.QueryRow(ctx, SQLCreateAdvert, data.UserID, data.Title, data.Description, data.Price, data.IsUsed,
-		data.City, data.Category, data.Phone, time.Now().Format("2006-01-02 15:04:05"), strconv.Itoa(int(data.Price)))
+		data.City, data.Category, data.Phone, time.Now().Format("2006-01-02 15:04:05"),
+		strconv.Itoa(int(data.Price)))
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -1355,8 +1418,7 @@ func (ads *AdvertStorage) createAdvert(ctx context.Context, tx pgx.Tx,
 		&advertModel.Title, &advertModel.Description, &advertModel.CreatedTime, &advertModel.ClosedTime,
 		&advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation, &categoryModel.Name,
 		&categoryModel.Translation); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%w", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
@@ -1386,7 +1448,7 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting advert, err=%w", err))
 
 		return nil, err
 	}
@@ -1394,7 +1456,7 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images",
 		"advert_images_resized", advertsList.Advert.ID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%w",
 			err))
 
 		return nil, err
@@ -1402,21 +1464,22 @@ func (ads *AdvertStorage) CreateAdvert(ctx context.Context, files []*multipart.F
 
 	for i := 0; i < len(advertsList.Photos); i++ {
 		image, err := utils.DecodeImage(advertsList.Photos[i])
-		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
 				advertsList.Photos[i], err))
 
 			return nil, err
 		}
+
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 	}
 
-	//advertsList.Advert.Sanitize()
+	// advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, originalImageUrl,
+func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertID uint, originalImageURL,
 	resizedImage string) (string, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -1429,20 +1492,21 @@ func (ads *AdvertStorage) setAdvertImage(ctx context.Context, tx pgx.Tx, advertI
 
 	logging.LogInfo(logger, "INSERT INTO advert_image")
 
-	var returningUrl string
+	var returningURL string
 
 	start := time.Now()
-	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, originalImageUrl, advertID, resizedImage)
+
+	urlLine := tx.QueryRow(ctx, SQLUpdateProfileAvatarURL, originalImageURL, advertID, resizedImage)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
-	if err := urlLine.Scan(&returningUrl); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert image , err=%v", err))
+	if err := urlLine.Scan(&returningURL); err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert image , err=%w", err))
 
 		return "", err
 	}
 
-	return returningUrl, nil
+	return returningURL, nil
 }
 
 func (ads *AdvertStorage) deleteAllImagesForAdvertFromLocalStorage(ctx context.Context, tx pgx.Tx,
@@ -1458,32 +1522,36 @@ func (ads *AdvertStorage) deleteAllImagesForAdvertFromLocalStorage(ctx context.C
 	logging.LogInfo(logger, "SELECT FROM advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLAdvertImagesURLs, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts urls, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts urls, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
+
 	defer rows.Close()
 
-	var oldUrl interface{}
+	var oldURL interface{}
 
 	for rows.Next() {
-		if err := rows.Scan(&oldUrl); err != nil {
+		if err := rows.Scan(&oldURL); err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning rows "+
-				"for deleting advert images for advert %v, err=%v", advertID, err))
+				"for deleting advert images for advert %d, err=%w", advertID, err))
 
 			return err
 		}
 
-		if oldUrl != nil {
-			err := os.Remove(oldUrl.(string))
+		if oldURL != nil {
+			err := os.Remove(oldURL.(string))
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("something went wrong while deleting image %v, err=%v",
-					oldUrl.(string), err))
+				logging.LogError(logger, fmt.Errorf("something went wrong while deleting image %s, err=%w",
+					oldURL.(string), err))
 
 				return err
 			}
@@ -1504,12 +1572,14 @@ func (ads *AdvertStorage) deleteAllImagesForAdvertFromDatabase(ctx context.Conte
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLCreateProfile, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("something went wrong while executing delete advert_image query, "+
-			"err=%v", err))
+			"err=%w", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -1528,7 +1598,7 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong deleting AllImagesForAdvertFromLocalStorage , err=%v", err))
+			fmt.Errorf("something went wrong deleting AllImagesForAdvertFromLocalStorage , err=%w", err))
 
 		return nil, err
 	}
@@ -1539,7 +1609,7 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while deleting AllImagesForAdvertFromDatabase , err=%v", err))
+			fmt.Errorf("something went wrong while deleting AllImagesForAdvertFromDatabase , err=%w", err))
 
 		return nil, err
 	}
@@ -1553,7 +1623,7 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 
 		if err != nil {
 			logging.LogError(logger,
-				fmt.Errorf("something went wrong while writing file of the original image , err=%v", err))
+				fmt.Errorf("something went wrong while writing file of the original image , err=%w", err))
 
 			return nil, err
 		}
@@ -1562,7 +1632,7 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 
 		if err != nil {
 			logging.LogError(logger,
-				fmt.Errorf("something went wrong while writing file of the resized image , err=%v", err))
+				fmt.Errorf("something went wrong while writing file of the resized image , err=%w", err))
 
 			return nil, err
 		}
@@ -1575,7 +1645,7 @@ func (ads *AdvertStorage) SetAdvertImages(ctx context.Context, files []*multipar
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%w", err))
 
 			return nil, err
 		}
@@ -1638,9 +1708,11 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "UPDATE advert")
 
 	start := time.Now()
+
 	advertLine := tx.QueryRow(ctx, SQLUpdateAdvert, data.Title, data.Description, data.Price, data.IsUsed,
 		data.City, data.Category, data.ID, data.Phone, time.Now().Format("2006-01-02 15:04:05"),
 		strconv.Itoa(int(data.Price)))
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	categoryModel := models.Category{}
@@ -1651,8 +1723,7 @@ func (ads *AdvertStorage) editAdvert(ctx context.Context, tx pgx.Tx,
 		&advertModel.Title, &advertModel.Description, &advertModel.CreatedTime, &advertModel.ClosedTime,
 		&advertModel.Price, &advertModel.IsUsed, &cityModel.CityName, &cityModel.Translation,
 		&categoryModel.Name, &categoryModel.Translation); err != nil {
-
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert, err=%w", err))
 
 		return nil, err
 	}
@@ -1681,7 +1752,7 @@ func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.Fil
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert, err=%w", err))
 
 		return nil, err
 	}
@@ -1689,25 +1760,25 @@ func (ads *AdvertStorage) EditAdvert(ctx context.Context, files []*multipart.Fil
 	advertsList.Photos, err = ads.SetAdvertImages(ctx, files, "advert_images",
 		"advert_images_resized", data.ID)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating advert image url , err=%w",
 			err))
 
 		return nil, err
 	}
 
 	for i := 0; i < len(advertsList.Photos); i++ {
-
 		image, err := utils.DecodeImage(advertsList.Photos[i])
-		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 				advertsList.Photos[i], err))
 
 			return nil, err
 		}
+
+		advertsList.PhotosIMG = append(advertsList.PhotosIMG, image)
 	}
 
-	//advertsList.Advert.Sanitize()
+	// advertsList.Advert.Sanitize()
 
 	return advertsList, nil
 }
@@ -1723,11 +1794,13 @@ func (ads *AdvertStorage) closeAdvert(ctx context.Context, tx pgx.Tx, advertID u
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLCloseAdvert, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing close advert query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing close advert query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
@@ -1743,7 +1816,7 @@ func (ads *AdvertStorage) CloseAdvert(ctx context.Context, advertID uint) error 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		err := ads.closeAdvert(ctx, tx, advertID)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while closing advert, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while closing advert, err=%w", err))
 
 			return err
 		}
@@ -1752,30 +1825,7 @@ func (ads *AdvertStorage) CloseAdvert(ctx context.Context, advertID uint) error 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while closing advert, err=%v", err))
-
-		return err
-	}
-
-	return nil
-}
-
-func (ads *AdvertStorage) deleteAdvert(ctx context.Context, tx pgx.Tx, user *models.User) error {
-	funcName := logging.GetOnlyFunctionName()
-	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	SQLCreateUser := `INSERT INTO public."user"(email, password_hash) VALUES ($1, $2);`
-	logging.LogInfo(logger, "INSERT INTO public.user")
-	var err error
-
-	start := time.Now()
-	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
-	ads.metrics.AddDuration(funcName, time.Since(start))
-
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing create user query, err=%v",
-			err))
-		ads.metrics.IncreaseErrors(funcName)
+		logging.LogError(logger, fmt.Errorf("error while closing advert, err=%w", err))
 
 		return err
 	}
@@ -1794,7 +1844,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		return nil, nil
 	}
 
-	param = uint((startID - 1) / num)
+	param = (startID - 1) / num
 
 	SQLSearchAdvertByTitle := `
 	WITH promoted_adverts AS (
@@ -1846,23 +1896,30 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
+
 	for rows.Next() {
 		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+		var (
+			photoPad       models.PhotoPad
+			isPromotedPlug interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
 			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
@@ -1879,17 +1936,17 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 					returningAdInList.Photos[i], err))
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -1897,13 +1954,13 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -1981,28 +2038,33 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 	logging.LogInfo(logger, "SELECT FROM advert, city, category, advert_image using index")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts query, err=%w",
 			err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdInList
-	for rows.Next() {
-		returningAdInList := models.ReturningAdInList{}
 
-		photoPad := models.PhotoPad{}
-		var isPromotedPlug interface{}
+	for rows.Next() {
+		var (
+			returningAdInList models.ReturningAdInList
+			photoPad          models.PhotoPad
+			isPromotedPlug    interface{}
+		)
 
 		if err := rows.Scan(&returningAdInList.ID, &returningAdInList.City, &returningAdInList.Category,
 			&returningAdInList.Title, &returningAdInList.Price, &returningAdInList.IsPromoted, &isPromotedPlug,
 			&photoPad.Photo, &returningAdInList.InFavourites, &returningAdInList.InCart); err != nil {
-
 			return nil, err
 		}
 
@@ -2015,30 +2077,30 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		}
 
 		for i := 0; i < len(returningAdInList.Photos); i++ {
-
 			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %v",
+				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
 					returningAdInList.Photos[i], err))
 
 				return nil, err
 			}
+
+			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
 		}
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
 
-		//returningAdInList.Sanitize()
+		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts rows, err=%w", err))
 
 		return nil, err
 	}
@@ -2061,11 +2123,10 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, userID, startID, num)
@@ -2075,11 +2136,10 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 		})
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 			return nil, err
 		}
-
 	}
 
 	return advertsList, nil
@@ -2122,27 +2182,35 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	ORDER BY title
 	LIMIT $2;
 	`
+
 	logging.LogInfo(logger, "SELECT FROM advert")
-	var rows pgx.Rows
-	var err error
+
+	var (
+		rows pgx.Rows
+		err  error
+	)
 
 	start := time.Now()
+
 	if wordsCount > 1 {
 		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num)
 	} else {
 		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num)
 	}
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while executing select advert title query, err=%v", err))
+			fmt.Errorf("something went wrong while executing select advert title query, err=%w", err))
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var suggestions []string
+
 	for rows.Next() {
 		var suggestionPad *string
 
@@ -2160,7 +2228,7 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert titles rows, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning advert titles rows, err=%w",
 			err))
 
 		return nil, err
@@ -2182,7 +2250,7 @@ func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title string, num 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 		return nil, err
 	}
@@ -2203,13 +2271,17 @@ func (ads *AdvertStorage) getPriceHistory(ctx context.Context, tx pgx.Tx, id uin
 	start := time.Now()
 
 	priceHistoryLine := tx.QueryRow(ctx, SQLSelectPriceHistory, id)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
-	var priceHistory []*models.PriceHistoryItem
-	var myJsonbArray []interface{}
+	var (
+		priceHistory []*models.PriceHistoryItem
+		myJsonbArray []interface{}
+	)
 
 	if err := priceHistoryLine.Scan(&myJsonbArray); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning priceHistory into []interface{} , err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while scanning priceHistory into []interface{} , err=%w", err))
 
 		return nil, err
 	}
@@ -2226,6 +2298,7 @@ func (ads *AdvertStorage) getPriceHistory(ctx context.Context, tx pgx.Tx, id uin
 
 			return nil, err
 		}
+
 		priceHistory = append(priceHistory, &priceHistoryItem)
 	}
 
@@ -2245,7 +2318,7 @@ func (ads *AdvertStorage) GetPriceHistory(ctx context.Context, userID uint) ([]*
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting priceHistory, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting priceHistory, err=%w", err))
 
 		return nil, err
 	}
@@ -2253,7 +2326,7 @@ func (ads *AdvertStorage) GetPriceHistory(ctx context.Context, userID uint) ([]*
 	return priceHistoryItem, nil
 }
 
-func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, advertId, userId uint) (bool, error) {
+func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, advertID, userID uint) (bool, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2263,13 +2336,15 @@ func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, a
 	logging.LogInfo(logger, "SELECT FROM advert")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertId, userId)
+
+	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertID, userID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	var ownership bool
 
 	if err := userLine.Scan(&ownership); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning advert ownership exists, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning advert ownership exists, err=%w", err))
 
 		return false, err
 	}
@@ -2277,32 +2352,31 @@ func (ads *AdvertStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx, a
 	return ownership, nil
 }
 
-func (ads *AdvertStorage) CheckAdvertOwnership(ctx context.Context, advertId, userId uint) bool {
+func (ads *AdvertStorage) CheckAdvertOwnership(ctx context.Context, advertID, userID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var ownership bool
 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-		ownershipExists, err := ads.checkAdvertOwnership(ctx, tx, advertId, userId)
+		ownershipExists, err := ads.checkAdvertOwnership(ctx, tx, advertID, userID)
 		ownership = ownershipExists
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%v", err))
-
+		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%w", err))
 	}
 
 	return ownership
 }
 
-func (ads *AdvertStorage) getPaymnetUuidList(ctx context.Context, tx pgx.Tx,
-	advertId uint) (*models.PaymnetUuidList, error) {
+func (ads *AdvertStorage) getPaymnetUUIDList(ctx context.Context, tx pgx.Tx,
+	advertID uint) (*models.PaymnetUUIDList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLSelectPaymnetUuidList := `SELECT 
+	SQLSelectPaymnetUUIDList := `SELECT 
 	(SELECT array_agg(payment_uuid) 
 	 FROM (SELECT payment_uuid FROM payments 
 		   WHERE advert_id = $1 AND payment_status='pending' ORDER BY id)
@@ -2312,46 +2386,48 @@ func (ads *AdvertStorage) getPaymnetUuidList(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "SELECT FROM payments")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLSelectPaymnetUuidList, advertId)
+
+	userLine := tx.QueryRow(ctx, SQLSelectPaymnetUUIDList, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
-	paymnetUuidList := models.PaymnetUuidList{}
-	uuidListPad := models.PaymnetUuidListPad{}
+	PaymnetUUIDList := models.PaymnetUUIDList{}
+	UUIDListPad := models.PaymnetUUIDListPad{}
 
-	if err := userLine.Scan(&uuidListPad.Pad); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning payments uuids, err=%v", err))
+	if err := userLine.Scan(&UUIDListPad.Pad); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning payments uuids, err=%w", err))
 
 		return nil, err
 	}
 
-	if uuidListPad.Pad != nil {
-		for _, ptr := range uuidListPad.Pad {
-			paymnetUuidList.UuidList = append(paymnetUuidList.UuidList, *ptr)
+	if UUIDListPad.Pad != nil {
+		for _, ptr := range UUIDListPad.Pad {
+			PaymnetUUIDList.UUIDList = append(PaymnetUUIDList.UUIDList, *ptr)
 		}
 	}
 
-	return &paymnetUuidList, nil
+	return &PaymnetUUIDList, nil
 }
 
-func (ads *AdvertStorage) GetPaymnetUuidList(ctx context.Context, advertId uint) (*models.PaymnetUuidList, error) {
+func (ads *AdvertStorage) GetPaymnetUUIDList(ctx context.Context, advertID uint) (*models.PaymnetUUIDList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var paymnetUuidList *models.PaymnetUuidList
+	var PaymnetUUIDList *models.PaymnetUUIDList
 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-		paymnetUuidListInner, err := ads.getPaymnetUuidList(ctx, tx, advertId)
-		paymnetUuidList = paymnetUuidListInner
+		PaymnetUUIDListInner, err := ads.getPaymnetUUIDList(ctx, tx, advertID)
+		PaymnetUUIDList = PaymnetUUIDListInner
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing ownership exists query, err=%w", err))
 
 		return nil, err
 	}
 
-	return paymnetUuidList, nil
+	return PaymnetUUIDList, nil
 }
 
 // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
@@ -2368,12 +2444,14 @@ func (ads *AdvertStorage) yuKassaUpdateOneRecord(ctx context.Context, tx pgx.Tx,
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLCloseAdvert, uuid)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while executing updating payment query, err=%v", err))
+			fmt.Errorf("something went wrong while executing updating payment query, err=%w", err))
 		ads.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -2389,7 +2467,7 @@ func (ads *AdvertStorage) YuKassaUpdateOneRecord(ctx context.Context, uuid strin
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
 		err := ads.yuKassaUpdateOneRecord(ctx, tx, uuid)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%w", err))
 
 			return err
 		}
@@ -2398,7 +2476,7 @@ func (ads *AdvertStorage) YuKassaUpdateOneRecord(ctx context.Context, uuid strin
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while closing advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while closing advert, err=%w", err))
 
 		return err
 	}
@@ -2407,31 +2485,30 @@ func (ads *AdvertStorage) YuKassaUpdateOneRecord(ctx context.Context, uuid strin
 }
 
 // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
-func (ads *AdvertStorage) YuKassaUpdateDb(ctx context.Context, paymentList *models.PaymentList, advertId uint) error {
+func (ads *AdvertStorage) YuKassaUpdateDB(ctx context.Context, paymentList *models.PaymentList, advertID uint) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	dbUuidList, err := ads.GetPaymnetUuidList(ctx, advertId)
+	dbUUIDList, err := ads.GetPaymnetUUIDList(ctx, advertID)
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("no payments for advert with id=%d or error occured, err=%v",
-			advertId, err))
+		logging.LogError(logger, fmt.Errorf("no payments for advert with id=%d or error occurred, err=%w",
+			advertID, err))
 
 		return err
 	}
-	yukassaUuidArray := []string{}
+
+	yukassaUUIDArray := []string{}
 
 	for i := 0; i < len(paymentList.Items); i++ {
-
-		yukassaUuidArray = append(yukassaUuidArray, paymentList.Items[i].ID)
+		yukassaUUIDArray = append(yukassaUUIDArray, paymentList.Items[i].ID)
 	}
 
-	resultArray := utils.FindIntersection(dbUuidList.UuidList, yukassaUuidArray)
+	resultArray := utils.FindIntersection(dbUUIDList.UUIDList, yukassaUUIDArray)
 
 	for i := 0; i < len(resultArray); i++ {
-
 		err = ads.YuKassaUpdateOneRecord(ctx, resultArray[i])
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%v",
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating payment status, err=%w",
 				err))
 
 			return err
@@ -2457,14 +2534,16 @@ func (ads *AdvertStorage) getPromotionData(ctx context.Context, tx pgx.Tx, adver
 	logging.LogInfo(logger, "SELECT promotion FROM advert")
 
 	start := time.Now()
+
 	line := tx.QueryRow(ctx, getPromotionDataQuery, advertID)
+
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
 	var promotionData models.Promotion
 
 	if err := line.Scan(&promotionData.IsPromoted, &promotionData.PromotionStart,
 		&promotionData.PromotionDuration); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning promotion data, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning promotion data, err=%w", err))
 
 		return nil, err
 	}
@@ -2485,7 +2564,7 @@ func (ads *AdvertStorage) GetPromotionData(ctx context.Context, advertID uint) (
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while promotion data advert, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while promotion data advert, err=%w", err))
 
 		return nil, err
 	}

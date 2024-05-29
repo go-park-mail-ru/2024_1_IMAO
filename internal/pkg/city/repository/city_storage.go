@@ -34,28 +34,34 @@ func (cl *CityStorage) getCityList(ctx context.Context, tx pgx.Tx) (*models.City
 	logging.LogInfo(logger, "SELECT FROM city")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLCityList)
+
 	cl.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select city query, err=%v",
-			err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing select city query, err=%w", err))
 		cl.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	cityList := models.CityList{}
+
 	for rows.Next() {
 		city := models.City{}
 		if err := rows.Scan(&city.ID, &city.CityName, &city.Translation); err != nil {
 			return nil, err
 		}
+
 		cityList.CityItems = append(cityList.CityItems, &city)
 	}
 
 	if err := rows.Err(); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning city rows, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning city rows, err=%w", err))
 
 		return nil, err
 	}
@@ -76,7 +82,7 @@ func (cl *CityStorage) GetCityList(ctx context.Context) (*models.CityList, error
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting city list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting city list, err=%w", err))
 
 		return nil, err
 	}

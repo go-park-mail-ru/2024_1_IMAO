@@ -1,3 +1,4 @@
+//nolint:tagliatelle
 package models
 
 import (
@@ -15,7 +16,7 @@ const (
 type Image struct{}
 
 type ReceivedAdData struct {
-	ID          uint   `json:"Id"`
+	ID          uint   `json:"Id"` //nolint:tagliatelle
 	UserID      uint   `json:"userId"`
 	City        string `json:"city"`
 	Category    string `json:"category"`

@@ -25,9 +25,8 @@ type FavouritesHandler struct {
 	authClient    authproto.AuthClient
 }
 
-func NewFavouritesHandler(storage favouritesusecases.FavouritesStorageInterface, advertStorage advertusecases.AdvertsStorageInterface,
-	authClient authproto.AuthClient,
-) *FavouritesHandler {
+func NewFavouritesHandler(storage favouritesusecases.FavouritesStorageInterface,
+	advertStorage advertusecases.AdvertsStorageInterface, authClient authproto.AuthClient) *FavouritesHandler {
 	return &FavouritesHandler{
 		storage:       storage,
 		advertStorage: advertStorage,
@@ -108,9 +107,11 @@ func (favouritesHandler *FavouritesHandler) ChangeFavourites(writer http.Respons
 
 	storage := favouritesHandler.storage
 	authClient := favouritesHandler.authClient
+
 	var data models.ReceivedCartItem
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
@@ -159,9 +160,11 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 
 	storage := favouritesHandler.storage
 	authClient := favouritesHandler.authClient
+
 	var data models.ReceivedCartItems
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)

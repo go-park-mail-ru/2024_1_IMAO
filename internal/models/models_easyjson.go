@@ -2266,7 +2266,7 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels23(in *jl
 		}
 		switch key {
 		case "advertId":
-			out.AdvertId = uint(in.Uint())
+			out.AdvertID = uint(in.Uint())
 		case "rate":
 			out.Rate = uint(in.Uint())
 		default:
@@ -2286,7 +2286,7 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels23(out *j
 	{
 		const prefix string = ",\"advertId\":"
 		out.RawString(prefix[1:])
-		out.Uint(uint(in.AdvertId))
+		out.Uint(uint(in.AdvertID))
 	}
 	{
 		const prefix string = ",\"rate\":"
@@ -3812,7 +3812,7 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels38(in *jl
 		case "description":
 			out.Description = string(in.String())
 		case "urlEnding":
-			out.UrlEnding = string(in.String())
+			out.URLEnding = string(in.String())
 		case "duration":
 			out.Duration = string(in.String())
 		default:
@@ -3842,7 +3842,7 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels38(out *j
 	{
 		const prefix string = ",\"urlEnding\":"
 		out.RawString(prefix)
-		out.String(string(in.UrlEnding))
+		out.String(string(in.URLEnding))
 	}
 	{
 		const prefix string = ",\"duration\":"
@@ -4063,7 +4063,7 @@ func (v *PhotoPad) UnmarshalJSON(data []byte) error {
 func (v *PhotoPad) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels40(l, v)
 }
-func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels41(in *jlexer.Lexer, out *PaymnetUuidListPad) {
+func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels41(in *jlexer.Lexer, out *PaymnetUUIDListPad) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -4123,7 +4123,7 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels41(in *jl
 		in.Consumed()
 	}
 }
-func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels41(out *jwriter.Writer, in PaymnetUuidListPad) {
+func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels41(out *jwriter.Writer, in PaymnetUUIDListPad) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -4151,29 +4151,29 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels41(out *j
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v PaymnetUuidListPad) MarshalJSON() ([]byte, error) {
+func (v PaymnetUUIDListPad) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels41(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v PaymnetUuidListPad) MarshalEasyJSON(w *jwriter.Writer) {
+func (v PaymnetUUIDListPad) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels41(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *PaymnetUuidListPad) UnmarshalJSON(data []byte) error {
+func (v *PaymnetUUIDListPad) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels41(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *PaymnetUuidListPad) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *PaymnetUUIDListPad) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels41(l, v)
 }
-func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(in *jlexer.Lexer, out *PaymnetUuidList) {
+func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(in *jlexer.Lexer, out *PaymnetUUIDList) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -4195,22 +4195,22 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(in *jl
 		case "uuidList":
 			if in.IsNull() {
 				in.Skip()
-				out.UuidList = nil
+				out.UUIDList = nil
 			} else {
 				in.Delim('[')
-				if out.UuidList == nil {
+				if out.UUIDList == nil {
 					if !in.IsDelim(']') {
-						out.UuidList = make([]string, 0, 4)
+						out.UUIDList = make([]string, 0, 4)
 					} else {
-						out.UuidList = []string{}
+						out.UUIDList = []string{}
 					}
 				} else {
-					out.UuidList = (out.UuidList)[:0]
+					out.UUIDList = (out.UUIDList)[:0]
 				}
 				for !in.IsDelim(']') {
 					var v41 string
 					v41 = string(in.String())
-					out.UuidList = append(out.UuidList, v41)
+					out.UUIDList = append(out.UUIDList, v41)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4225,18 +4225,18 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(in *jl
 		in.Consumed()
 	}
 }
-func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels42(out *jwriter.Writer, in PaymnetUuidList) {
+func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels42(out *jwriter.Writer, in PaymnetUUIDList) {
 	out.RawByte('{')
 	first := true
 	_ = first
 	{
 		const prefix string = ",\"uuidList\":"
 		out.RawString(prefix[1:])
-		if in.UuidList == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		if in.UUIDList == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v42, v43 := range in.UuidList {
+			for v42, v43 := range in.UUIDList {
 				if v42 > 0 {
 					out.RawByte(',')
 				}
@@ -4249,26 +4249,26 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels42(out *j
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v PaymnetUuidList) MarshalJSON() ([]byte, error) {
+func (v PaymnetUUIDList) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels42(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v PaymnetUuidList) MarshalEasyJSON(w *jwriter.Writer) {
+func (v PaymnetUUIDList) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels42(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *PaymnetUuidList) UnmarshalJSON(data []byte) error {
+func (v *PaymnetUUIDList) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *PaymnetUuidList) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *PaymnetUUIDList) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels42(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels43(in *jlexer.Lexer, out *PaymentsDatesList) {
@@ -4887,7 +4887,7 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels50(in *jl
 		}
 		switch key {
 		case "paymentFormUrl":
-			out.PaymentFormUrl = string(in.String())
+			out.PaymentFormURL = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -4905,7 +4905,7 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels50(out *j
 	{
 		const prefix string = ",\"paymentFormUrl\":"
 		out.RawString(prefix[1:])
-		out.String(string(in.PaymentFormUrl))
+		out.String(string(in.PaymentFormURL))
 	}
 	out.RawByte('}')
 }
