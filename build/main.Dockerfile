@@ -20,6 +20,7 @@ WORKDIR /root
 COPY --from=build /var/backend/main main
 COPY --from=build /var/backend/internal/pkg/config/config.yaml ./internal/pkg/config/config.yaml
 COPY --from=build /var/backend/uploads ./uploads
+COPY --from=build /var/backend/.env ./.env
 
 EXPOSE 8080
  
