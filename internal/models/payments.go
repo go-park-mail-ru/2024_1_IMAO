@@ -1,3 +1,4 @@
+//nolint:tagliatelle
 package models
 
 import "time"
@@ -72,20 +73,20 @@ type PaymentInitConfirmation struct {
 type PriceAndDescription struct {
 	Price       string `json:"price"`
 	Description string `json:"description"`
-	UrlEnding   string `json:"urlEnding"`
+	URLEnding   string `json:"urlEnding"`
 	Duration    string `json:"duration"`
 }
 
 type ReceivedPaymentFormItem struct {
-	AdvertId uint `json:"advertId"`
+	AdvertID uint `json:"advertId"`
 	Rate     uint `json:"rate"`
 }
 
-type PaymnetUuidList struct {
-	UuidList []string `json:"uuidList"`
+type PaymnetUUIDList struct {
+	UUIDList []string `json:"uuidList"`
 }
 
-type PaymnetUuidListPad struct {
+type PaymnetUUIDListPad struct {
 	Pad []*string `json:"pad"`
 }
 
@@ -156,5 +157,5 @@ type ThreeDSecure struct {
 }
 
 type PaymentFormResponse struct {
-	PaymentFormUrl string `json:"paymentFormUrl"`
+	PaymentFormURL string `json:"paymentFormUrl"`
 }

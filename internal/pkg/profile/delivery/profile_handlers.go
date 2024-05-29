@@ -20,6 +20,10 @@ import (
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 )
 
+const (
+	maxMemory = 2 << 20
+)
+
 type ProfileHandler struct {
 	profileClient profileproto.ProfileClient
 	authClient    authproto.AuthClient
@@ -66,6 +70,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	var data models.City
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -109,6 +114,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	var data models.SetProfilePhoneNec
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -141,11 +147,11 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	authClient := h.authClient
 	profileClient := h.profileClient
 
-	session, err := request.Cookie("session_id")
+	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	err = request.ParseMultipartForm(2 << 20)
+	err := request.ParseMultipartForm(maxMemory)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -161,16 +167,20 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		Surname: request.PostFormValue("surname"),
 	}
 
-	var pl *profileproto.ProfileData
-	var fullPath string
+	var (
+		pl       *profileproto.ProfileData
+		fullPath string
+	)
+
 	if len(avatar) != 0 {
 		fullPath, err = utils.WriteFile(avatar[0], "avatars")
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image, err=%v",
+			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image, err=%w",
 				err))
 			log.Println(err, responses.StatusInternalServerError)
 			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
+
 			return
 		}
 
@@ -197,9 +207,11 @@ func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request 
 
 	profileClient := h.profileClient
 	authClient := h.authClient
+
 	var data models.ReceivedMerchantItem
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)

@@ -6,7 +6,7 @@ import (
 
 type ReceivedCartItem struct {
 	// UserID   uint `json:"userID"`
-	AdvertID uint `json:"advertID"`
+	AdvertID uint `json:"advertId"`
 }
 
 type ReceivedCartItems struct {

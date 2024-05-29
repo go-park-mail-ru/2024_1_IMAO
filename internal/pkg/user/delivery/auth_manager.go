@@ -53,6 +53,7 @@ func (manager *AuthManager) Login(ctx context.Context, in *protobuf.ExistedUserD
 	}
 
 	sessionID := storage.AddSession(ctx, user.ID)
+
 	return &protobuf.LoggedUser{
 		ID:           uint64(user.ID),
 		Email:        user.Email,
@@ -85,6 +86,7 @@ func (manager *AuthManager) Signup(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+
 	sessionID := storage.AddSession(ctx, user.ID)
 
 	return &protobuf.LoggedUser{
@@ -120,6 +122,7 @@ func (manager *AuthManager) EditEmail(ctx context.Context, in *protobuf.EditEmai
 	storage := manager.userStorage
 
 	user, _ := storage.GetUserBySession(ctx, sessionID)
+
 	user, err := storage.EditUserEmail(ctx, user.ID, email)
 	if err != nil {
 		return nil, err

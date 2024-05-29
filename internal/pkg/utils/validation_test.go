@@ -1,7 +1,14 @@
 package utils_test
 
 import (
+	"errors"
 	"testing"
+
+	utils "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+)
+
+var (
+	ErrorOne = errors.New("mail: no angle-addr")
 )
 
 func TestValidateEmail(t *testing.T) {
@@ -10,13 +17,13 @@ func TestValidateEmail(t *testing.T) {
 	tests := []struct {
 		name  string
 		email string
-		want  bool
+		err   error
 	}{
-		{"Valid email", "test@example.com", true},
-		{"Invalid email", "test@.com", false},
-		{"Invalid email", "test.com", false},
-		{"Invalid email", "test@", false},
-		{"Empty email", "", false},
+		{"Valid email", "test@example.com", nil},
+		{"Invalid email", "test@.com", ErrorOne},
+		{"Invalid email", "test.com", errors.New("mail: missing '@' or angle-addr")},
+		{"Invalid email", "test@", errors.New("mail: no angle-addr")},
+		{"Empty email", "", errors.New("mail: no address")},
 	}
 
 	for _, tt := range tests {
@@ -24,40 +31,69 @@ func TestValidateEmail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := pkg.ValidateEmail(tt.email); got != tt.want {
-				t.Errorf("ValidateEmail(%s) = %v, want %v", tt.email, got, tt.want)
+			if tt.name == "Valid email" {
+
+				if got := utils.ValidateEmail(tt.email); got != nil {
+
+					t.Errorf("ValidateEmail(%s) = %v, want %v", tt.email, got, tt.err)
+				}
+
+			} else {
+
+				if got := utils.ValidateEmail(tt.email); got == nil {
+
+					t.Errorf("ValidateEmail(%s) = %v, want %v", tt.email, got, tt.err)
+				}
 			}
+
 		})
 	}
 }
 
-func TestValidatePassword(t *testing.T) {
+func compareSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestValidate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
 		password string
-		want     string
+		email    string
+		want     []string
 	}{
 		{
 			name:     "Valid password",
 			password: "Password123!",
-			want:     "",
+			email:    "test@example.com",
+			want:     []string{},
 		},
 		{
 			name:     "Too short password",
 			password: "Pass!",
-			want:     pkg.ErrTooShort,
+			email:    "test@.com",
+			want:     []string{"Password is too short", "Password does not contain required symbols", "Wrong email format"},
 		},
 		{
 			name:     "Too long password",
 			password: "ThisPasswordIsWayTooLongAndDoesNotMeetTheLengthRequirements123!",
-			want:     pkg.ErrTooLong,
+			email:    "test.com",
+			want:     []string{"Password is too long", "Wrong email format"},
 		},
 		{
 			name:     "Invalid format password",
 			password: "password",
-			want:     pkg.ErrWrongFormat,
+			email:    "test@",
+			want:     []string{"Password does not contain required symbols", "Wrong email format"},
 		},
 	}
 
@@ -66,7 +102,7 @@ func TestValidatePassword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := pkg.ValidatePassword(tt.password); got != tt.want {
+			if got := utils.Validate(tt.email, tt.password); !compareSlices(got, tt.want) {
 				t.Errorf("ValidatePassword() = %v, want %v", got, tt.want)
 			}
 		})

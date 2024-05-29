@@ -36,32 +36,32 @@ func (m *MockUsersStorageInterface) EXPECT() *MockUsersStorageInterfaceMockRecor
 }
 
 // AddSession mocks base method.
-func (m *MockUsersStorageInterface) AddSession(id uint) string {
+func (m *MockUsersStorageInterface) AddSession(ctx context.Context, id uint) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddSession", id)
+	ret := m.ctrl.Call(m, "AddSession", ctx, id)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // AddSession indicates an expected call of AddSession.
-func (mr *MockUsersStorageInterfaceMockRecorder) AddSession(id interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) AddSession(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSession", reflect.TypeOf((*MockUsersStorageInterface)(nil).AddSession), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSession", reflect.TypeOf((*MockUsersStorageInterface)(nil).AddSession), ctx, id)
 }
 
 // CreateUser mocks base method.
-func (m *MockUsersStorageInterface) CreateUser(ctx context.Context, email, passwordHash string) (*models.User, error) {
+func (m *MockUsersStorageInterface) CreateUser(ctx context.Context, email, password, passwordRepeat string) (*models.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", ctx, email, passwordHash)
+	ret := m.ctrl.Call(m, "CreateUser", ctx, email, password, passwordRepeat)
 	ret0, _ := ret[0].(*models.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockUsersStorageInterfaceMockRecorder) CreateUser(ctx, email, passwordHash interface{}) *gomock.Call {
+func (mr *MockUsersStorageInterfaceMockRecorder) CreateUser(ctx, email, password, passwordRepeat interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUsersStorageInterface)(nil).CreateUser), ctx, email, passwordHash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUsersStorageInterface)(nil).CreateUser), ctx, email, password, passwordRepeat)
 }
 
 // EditUserEmail mocks base method.
@@ -121,20 +121,6 @@ func (m *MockUsersStorageInterface) GetUserBySession(ctx context.Context, sessio
 func (mr *MockUsersStorageInterfaceMockRecorder) GetUserBySession(ctx, sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserBySession", reflect.TypeOf((*MockUsersStorageInterface)(nil).GetUserBySession), ctx, sessionID)
-}
-
-// MAP_GetUserIDBySession mocks base method.
-func (m *MockUsersStorageInterface) MAP_GetUserIDBySession(sessionID string) uint {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MAP_GetUserIDBySession", sessionID)
-	ret0, _ := ret[0].(uint)
-	return ret0
-}
-
-// MAP_GetUserIDBySession indicates an expected call of MAP_GetUserIDBySession.
-func (mr *MockUsersStorageInterfaceMockRecorder) MAP_GetUserIDBySession(sessionID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MAP_GetUserIDBySession", reflect.TypeOf((*MockUsersStorageInterface)(nil).MAP_GetUserIDBySession), sessionID)
 }
 
 // RemoveSession mocks base method.

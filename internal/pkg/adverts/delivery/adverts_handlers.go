@@ -1,3 +1,4 @@
+//nolint:ineffassign,gocritic,cyclop
 package delivery
 
 import (
@@ -20,6 +21,7 @@ import (
 const (
 	defaultCity       = "Moscow"
 	defaultAdverCount = 20
+	maxMemory         = 2 << 28
 )
 
 type AdvertsHandler struct {
@@ -27,7 +29,8 @@ type AdvertsHandler struct {
 	authClient authproto.AuthClient
 }
 
-func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface, authClient authproto.AuthClient) *AdvertsHandler {
+func NewAdvertsHandler(storage advertusecases.AdvertsStorageInterface,
+	authClient authproto.AuthClient) *AdvertsHandler {
 	return &AdvertsHandler{
 		storage:    storage,
 		authClient: authClient,
@@ -71,9 +74,11 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		city = defaultCity
 	}
 
-	var adsList []*models.ReturningAdInList
-	var err error
-	sessionValue := ""
+	var (
+		adsList      []*models.ReturningAdInList
+		err          error
+		sessionValue string
+	)
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -81,22 +86,23 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		sessionValue = session.Value
 	}
 
-	var userIdCookie uint = 0
+	var userIDCookie uint
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
-		userIdCookie = uint(user.ID)
-
+		userIDCookie = uint(user.ID)
 	}
 
 	if category != "" {
-		adsList, err = storage.GetAdvertsByCategory(ctx, category, city, userIdCookie, uint(startID), uint(count))
+		adsList, err = storage.GetAdvertsByCategory(ctx, category, city, userIDCookie, uint(startID), uint(count))
 	} else if errCount == nil && errstartID == nil {
-		adsList, err = storage.GetAdvertsByCity(ctx, city, userIdCookie, uint(startID), uint(count))
+		adsList, err = storage.GetAdvertsByCity(ctx, city, userIDCookie, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
-		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIdCookie, uint(userID), uint(deleted), uint(count))
+		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIDCookie, uint(userID),
+			uint(deleted), uint(count))
 	}
+
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -119,15 +125,12 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
 	startID, errStartID := strconv.Atoi(request.URL.Query().Get("startId"))
 	title := request.URL.Query().Get("title")
-	city := request.URL.Query().Get("city")
 
-	if city == "" {
-		city = defaultCity
-	}
-
-	var adsList []*models.ReturningAdInList
-	var err error
-	var sessionValue string = ""
+	var (
+		adsList      []*models.ReturningAdInList
+		err          error
+		sessionValue string
+	)
 
 	session, cookieErr := request.Cookie("session_id")
 
@@ -135,17 +138,16 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 		sessionValue = session.Value
 	}
 
-	var userIdCookie uint = 0
+	var userIDCookie uint
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
-		userIdCookie = uint(user.ID)
-
+		userIDCookie = uint(user.ID)
 	}
 
 	if errCount == nil && errStartID == nil && title != "" {
-		adsList, err = storage.SearchAdvertByTitle(ctx, title, userIdCookie, uint(startID), uint(count))
+		adsList, err = storage.SearchAdvertByTitle(ctx, title, userIDCookie, uint(startID), uint(count))
 	} else {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -175,14 +177,11 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	storage := advertsHandler.storage
 	num, errCount := strconv.Atoi(request.URL.Query().Get("num"))
 	title := request.URL.Query().Get("title")
-	city := request.URL.Query().Get("city")
 
-	if city == "" {
-		city = defaultCity
-	}
-
-	var suggestions []string
-	var err error
+	var (
+		suggestions []string
+		err         error
+	)
 
 	if errCount == nil && title != "" {
 		suggestions, err = storage.GetSuggestions(ctx, title, uint(num))
@@ -213,8 +212,6 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	vars := mux.Vars(request)
-	city := vars["city"]
-	category := vars["category"]
 	id, _ := strconv.Atoi(vars["id"])
 
 	storage := advertsHandler.storage
@@ -228,25 +225,25 @@ func (advertsHandler *AdvertsHandler) GetAdvert(writer http.ResponseWriter, requ
 		sessionValue = session.Value
 	}
 
-	var userIdCookie uint = 0
+	var userIDCookie uint
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
 
 	if cookieErr == nil && user.IsAuth {
-		userIdCookie = uint(user.ID)
+		userIDCookie = uint(user.ID)
 
-		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
+		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIDCookie)
 
 		if ownership {
 			paymentList, err := utils.YuKassaUpdates()
 
 			if err == nil {
-				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
+				_ = storage.YuKassaUpdateDB(ctx, paymentList, uint(id)) // ПЕРЕПИСАТЬ ЧЕРЕЗ ПЕРЕСЕЧЕНИЕ МНОЖЕСТВ И BULK UPDATE
 			}
 		}
 	}
 
-	ad, err := storage.GetAdvert(ctx, userIdCookie, uint(id), city, category)
+	ad, err := storage.GetAdvert(ctx, userIDCookie, uint(id))
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -322,7 +319,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	err := request.ParseMultipartForm(2 << 28)
+	err := request.ParseMultipartForm(maxMemory)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -336,6 +333,7 @@ func (advertsHandler *AdvertsHandler) CreateAdvert(writer http.ResponseWriter, r
 	if request.PostFormValue("condition") == "1" {
 		isUsed = false
 	}
+
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
 	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
 
@@ -371,7 +369,7 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	err := request.ParseMultipartForm(2 << 28)
+	err := request.ParseMultipartForm(maxMemory)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -380,11 +378,12 @@ func (advertsHandler *AdvertsHandler) EditAdvert(writer http.ResponseWriter, req
 	}
 
 	storage := advertsHandler.storage
-
 	isUsed := true
+
 	if request.PostFormValue("condition") == "1" {
 		isUsed = false
 	}
+
 	price, _ := strconv.Atoi(request.PostFormValue("price"))
 	id, _ := strconv.Atoi(request.PostFormValue("id"))
 	userID, _ := strconv.Atoi(request.PostFormValue("userId"))
@@ -450,7 +449,7 @@ func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWrite
 
 	session, cookieErr := request.Cookie("session_id")
 
-	var userIdCookie uint = 0
+	var userIDCookie uint
 
 	authClient := advertsHandler.authClient
 	storage := advertsHandler.storage
@@ -458,15 +457,15 @@ func (advertsHandler *AdvertsHandler) GetPromotionData(writer http.ResponseWrite
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
 	if cookieErr == nil && user.IsAuth {
-		userIdCookie = uint(user.ID)
+		userIDCookie = uint(user.ID)
 
-		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIdCookie)
+		ownership := storage.CheckAdvertOwnership(ctx, uint(id), userIDCookie)
 
 		if ownership {
 			paymentList, err := utils.YuKassaUpdates()
 
 			if err == nil {
-				_ = storage.YuKassaUpdateDb(ctx, paymentList, uint(id))
+				_ = storage.YuKassaUpdateDB(ctx, paymentList, uint(id))
 			}
 		}
 	}

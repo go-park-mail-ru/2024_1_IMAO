@@ -72,21 +72,24 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLGetBoughtOrdersByUserID, userID)
+
 	ol.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%w", err))
 		ol.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var orderList []*models.ReturningOrder
 
 	for rows.Next() {
-
 		categoryModel := models.Category{}
 		cityModel := models.City{}
 		advertModel := models.Advert{}
@@ -99,8 +102,8 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
 			&advertModel.IsUsed, &photoPad.Photo); err != nil {
-
-			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
+			logging.LogError(logger,
+				fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
 			return nil, err
 		}
@@ -122,7 +125,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		decodedImage, err := utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -139,7 +142,6 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 	}
 
 	return orderList, nil
-
 }
 
 func (ol *OrderStorage) GetBoughtOrdersByUserID(ctx context.Context, userID uint) ([]*models.ReturningOrder, error) {
@@ -155,7 +157,7 @@ func (ol *OrderStorage) GetBoughtOrdersByUserID(ctx context.Context, userID uint
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting orders list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting orders list, err=%w", err))
 
 		return nil, err
 	}
@@ -165,7 +167,6 @@ func (ol *OrderStorage) GetBoughtOrdersByUserID(ctx context.Context, userID uint
 	}
 
 	return orderList, nil
-
 }
 
 func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
@@ -213,21 +214,24 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
 
 	start := time.Now()
+
 	rows, err := tx.Query(ctx, SQLGetSoldOrdersByUserID, userID)
+
 	ol.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%w", err))
 		ol.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var orderList []*models.ReturningOrder
 
 	for rows.Next() {
-
 		categoryModel := models.Category{}
 		cityModel := models.City{}
 		advertModel := models.Advert{}
@@ -240,8 +244,7 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
 			&advertModel.IsUsed, &photoPad.Photo); err != nil {
-
-			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
 			return nil, err
 		}
@@ -263,7 +266,7 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		decodedImage, err := utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -280,7 +283,6 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 	}
 
 	return orderList, nil
-
 }
 
 func (ol *OrderStorage) GetSoldOrdersByUserID(ctx context.Context, userID uint) ([]*models.ReturningOrder, error) {
@@ -296,7 +298,7 @@ func (ol *OrderStorage) GetSoldOrdersByUserID(ctx context.Context, userID uint) 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting orders list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting orders list, err=%w", err))
 
 		return nil, err
 	}
@@ -306,7 +308,6 @@ func (ol *OrderStorage) GetSoldOrdersByUserID(ctx context.Context, userID uint) 
 	}
 
 	return orderList, nil
-
 }
 
 func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID uint,
@@ -323,17 +324,21 @@ func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID u
 
 	var err error
 
-	const paidStatus string = "Оплачено"
-	const surnamePlug string = "Фамилия"
-	const patronymicPlug string = "Отчество"
+	const (
+		paidStatus     string = "Оплачено"
+		surnamePlug    string = "Фамилия"
+		patronymicPlug string = "Отчество"
+	)
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLCreateOrder, userID, data.AdvertID, paidStatus, data.Phone, data.Name, surnamePlug,
 		patronymicPlug, data.Email, data.DeliveryPrice, data.DeliveryAddress)
+
 	ol.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing create order query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create order query, err=%w",
 			err))
 		ol.metrics.IncreaseErrors(funcName)
 
@@ -344,13 +349,12 @@ func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID u
 }
 
 func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *models.ReceivedOrderItem) error {
-
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
 		err := ol.createOrderByID(ctx, tx, userID, data)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while creating order, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while creating order, err=%w", err))
 
 			return err
 		}
@@ -359,7 +363,7 @@ func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while creating user, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while creating user, err=%w", err))
 
 		return err
 	}

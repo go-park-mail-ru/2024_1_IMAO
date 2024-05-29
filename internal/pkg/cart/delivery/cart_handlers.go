@@ -59,6 +59,7 @@ func (cartHandler *CartHandler) GetCartList(writer http.ResponseWriter, request 
 
 		return
 	}
+
 	log.Println("Get cart for user", user.ID)
 	responses.SendOkResponse(writer, responses.NewOkResponse(ReturningAdvertItem(adsList)))
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get cart for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
@@ -70,9 +71,11 @@ func (cartHandler *CartHandler) ChangeCart(writer http.ResponseWriter, request *
 
 	cartClient := cartHandler.cartClient
 	authClient := cartHandler.authClient
+
 	var data models.ReceivedCartItem
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
@@ -106,9 +109,11 @@ func (cartHandler *CartHandler) DeleteFromCart(writer http.ResponseWriter, reque
 
 	cartClient := cartHandler.cartClient
 	authClient := cartHandler.authClient
+
 	var data models.ReceivedCartItems
 
 	reqData, _ := io.ReadAll(request.Body)
+
 	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)

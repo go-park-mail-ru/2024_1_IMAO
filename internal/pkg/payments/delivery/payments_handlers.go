@@ -1,3 +1,4 @@
+//nolint:noctx
 package delivery
 
 import (
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	yookassa_url = "https://api.yookassa.ru/v3/payments"
+	yookassaURL = "https://api.yookassa.ru/v3/payments"
 )
 
 type PaymentsHandler struct {
@@ -44,6 +45,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 	var frontendData models.ReceivedPaymentFormItem
 
 	data, _ := io.ReadAll(request.Body)
+
 	err := frontendData.UnmarshalJSON(data)
 	if err != nil {
 		log.Println(err, responses.StatusInternalServerError)
@@ -65,7 +67,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	ownership := storage.CheckAdvertOwnership(ctx, frontendData.AdvertId, uint(user.ID))
+	ownership := storage.CheckAdvertOwnership(ctx, frontendData.AdvertID, uint(user.ID))
 
 	if !ownership {
 		log.Println(err, responses.StatusBadRequest)
@@ -83,7 +85,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	var priceAndDescription *models.PriceAndDescription
 
-	priceAndDescription, err = storage.GetPriceAndDescription(ctx, frontendData.AdvertId, frontendData.Rate)
+	priceAndDescription, err = storage.GetPriceAndDescription(ctx, frontendData.AdvertID, frontendData.Rate)
 
 	if err != nil {
 		log.Println(err, responses.StatusBadRequest)
@@ -104,7 +106,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 		},
 		Confirmation: models.PaymentInitConfirmation{
 			Type:      "redirect",
-			ReturnURL: returnURL + priceAndDescription.UrlEnding,
+			ReturnURL: returnURL + priceAndDescription.URLEnding,
 		},
 		Description: priceAndDescription.Description,
 	}
@@ -121,7 +123,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	req, err := http.NewRequest("POST", yookassa_url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", yookassaURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -149,6 +151,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 	var payment models.Payment
 
 	respData, _ := io.ReadAll(resp.Body)
+
 	err = payment.UnmarshalJSON(respData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -159,7 +162,7 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	err = storage.CreatePayment(ctx, &payment, idempotencyKey, frontendData.AdvertId, priceAndDescription.Duration)
+	err = storage.CreatePayment(ctx, &payment, idempotencyKey, frontendData.AdvertID, priceAndDescription.Duration)
 
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -174,5 +177,5 @@ func (h *PaymentsHandler) GetPaymentForm(writer http.ResponseWriter, request *ht
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer,
-		responses.NewOkResponse(models.PaymentFormResponse{PaymentFormUrl: confirmationURL}))
+		responses.NewOkResponse(models.PaymentFormResponse{PaymentFormURL: confirmationURL}))
 }

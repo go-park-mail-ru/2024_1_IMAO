@@ -36,6 +36,7 @@ func (surveyHandler *SurveyHandler) CreateAnswer(writer http.ResponseWriter, req
 	var survey models.SurveyAnswersList
 
 	data, _ := io.ReadAll(request.Body)
+
 	err := survey.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)

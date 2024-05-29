@@ -1,3 +1,4 @@
+//nolint:all
 package storage
 
 import (
@@ -52,7 +53,7 @@ func (pl *ProfileStorage) createProfile(ctx context.Context, tx pgx.Tx, profile 
 	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing create profile query, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create profile query, err=%w", err))
 		pl.metrics.IncreaseErrors(funcName)
 
 		return err
@@ -71,16 +72,18 @@ func (pl *ProfileStorage) CreateProfile(ctx context.Context, userID uint) *model
 	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
 		err := pl.createProfile(ctx, tx, &profile)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while creating profile, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while creating profile, err=%w", err))
 
 			return err
 		}
+
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqProfile)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong getting user id from seq, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong getting user id from seq, err=%w", err))
 
 			return err
 		}
+
 		profile.ID = uint(id)
 
 		return nil
@@ -144,7 +147,7 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount,
 		&profile.CartNum, &profile.FavNum); err != nil {
 
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile, err=%w", err))
 
 		return nil, err
 	}
@@ -175,7 +178,7 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 	profile.Avatar = avatartToInsert
 	profile.City = city
 
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
 	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	//profile.ReactionsCount = 10
 	//profile.Approved = true
@@ -199,14 +202,14 @@ func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, userID uint) (
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting profile by UserID , err=%v", errProfileNotExists))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting profile by UserID , err=%w", errProfileNotExists))
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %v", err))
+		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
 
 		return nil, err
 	}
@@ -239,7 +242,7 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines, err=%w", err))
 
 		return nil, err
 	}
@@ -270,7 +273,7 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	profile.Avatar = avatartToInsert
 	profile.City = city
 
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
 	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
@@ -294,14 +297,14 @@ func (pl *ProfileStorage) SetProfileCity(ctx context.Context, userID uint, data 
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile city, err=%v", errProfileNotExists))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile city, err=%w", errProfileNotExists))
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %v", err))
+		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
 
 		return nil, err
 	}
@@ -334,7 +337,7 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
 
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines , err=%w", err))
 
 		return nil, err
 	}
@@ -365,7 +368,7 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	profile.Avatar = avatartToInsert
 	profile.City = city
 
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
 	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
@@ -389,14 +392,14 @@ func (pl *ProfileStorage) SetProfilePhone(ctx context.Context, userID uint, data
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile phone , err=%v", errProfileNotExists))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile phone , err=%w", errProfileNotExists))
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %v", err))
+		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
 
 		return nil, err
 	}
@@ -425,7 +428,7 @@ func (pl *ProfileStorage) setProfileAvatarUrl(ctx context.Context, tx pgx.Tx, us
 	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	if err := urlLine.Scan(&url); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning url line , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning url line , err=%w", err))
 
 		return "", err
 	}
@@ -451,7 +454,7 @@ func (pl *ProfileStorage) deleteAvatar(ctx context.Context, tx pgx.Tx, userID ui
 	pl.metrics.AddDuration(funcName, time.Since(start))
 
 	if err := urlLine.Scan(&oldUrl); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while deleting url , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while deleting url , err=%w", err))
 
 		return err
 	}
@@ -470,7 +473,7 @@ func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, fullPath stri
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%w", err))
 
 		return "", err
 	}
@@ -485,7 +488,7 @@ func (pl *ProfileStorage) SetProfileAvatarUrl(ctx context.Context, fullPath stri
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", errProfileNotExists))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%w", errProfileNotExists))
 
 		return "", err
 	}
@@ -522,7 +525,7 @@ func (pl *ProfileStorage) setProfileInfo(ctx context.Context, tx pgx.Tx, userID 
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar,
 		&city.CityName, &city.Translation); err != nil {
 
-		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines , err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines , err=%w", err))
 
 		return nil, err
 	}
@@ -569,13 +572,15 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint,
 
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var profile *models.Profile
-	var err error
+	var (
+		profile *models.Profile
+		err     error
+	)
 
 	if data.Avatar != "" {
 		data.Avatar, err = pl.SetProfileAvatarUrl(ctx, data.Avatar, userID)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%w", err))
 
 			return nil, err
 		}
@@ -589,14 +594,14 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint,
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%v", errProfileNotExists))
+		logging.LogError(logger, fmt.Errorf("something went wrong while updating profile url , err=%w", errProfileNotExists))
 
 		return nil, errProfileNotExists
 	}
 
 	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %v", err))
+		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
 
 		return nil, err
 	}
@@ -606,7 +611,7 @@ func (pl *ProfileStorage) SetProfileInfo(ctx context.Context, userID uint,
 	return profile, nil
 }
 
-func (pl *ProfileStorage) appendSubByIDs(ctx context.Context, tx pgx.Tx, userID uint, merchantID uint) (bool, error) {
+func (pl *ProfileStorage) appendSubByIDs(ctx context.Context, tx pgx.Tx, userID uint, merchantID uint) bool {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -630,29 +635,33 @@ func (pl *ProfileStorage) appendSubByIDs(ctx context.Context, tx pgx.Tx, userID 
 	added := false
 
 	if err := userLine.Scan(&added); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning subscriber added, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning subscriber added, err=%w", err))
 		pl.metrics.IncreaseErrors(funcName)
 
-		return false, nil
+		return false
 	}
 
-	return added, nil
+	return added
 }
 
 func (pl *ProfileStorage) AppendSubByIDs(ctx context.Context, userID uint, advertID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var added bool
+	var (
+		added bool
+		err   error
+	)
 
-	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
-		addedInner, err := pl.appendSubByIDs(ctx, tx, userID, advertID)
+	err = pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
+		addedInner := pl.appendSubByIDs(ctx, tx, userID, advertID)
 		added = addedInner
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing subscriber add to subscriber list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing subscriber add to subscriber list, err=%w",
+			err))
 	}
 
 	return added

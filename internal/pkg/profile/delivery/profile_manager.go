@@ -146,11 +146,11 @@ func (manager *ProfileManager) EditProfile(ctx context.Context,
 
 func (manager *ProfileManager) AppendSubByIDs(ctx context.Context,
 	in *protobuf.UserIdMerchantIdRequest) (*protobuf.AppendSubResponse, error) {
-	userId := in.GetUserId()
-	merchantId := in.GetMerchantId()
+	userID := in.GetUserId()
+	merchantID := in.GetMerchantId()
 	storage := manager.profileStorage
 
-	isAppended := storage.AppendSubByIDs(ctx, uint(userId), uint(merchantId))
+	isAppended := storage.AppendSubByIDs(ctx, uint(userID), uint(merchantID))
 
 	return &protobuf.AppendSubResponse{IsAppended: isAppended}, nil
 }

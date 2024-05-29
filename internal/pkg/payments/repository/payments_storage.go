@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+)
+
+const (
+	lifting = 1
+	premium = 2
+	maximum = 3
 )
 
 type PaymentsStorage struct {
@@ -36,13 +43,15 @@ func (paymentsStorage *PaymentsStorage) paymentFormExists(ctx context.Context, t
 	logging.LogInfo(logger, "SELECT FROM payments")
 
 	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLUserExists, email)
+
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	var exists bool
 
 	if err := userLine.Scan(&exists); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning user exists, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning user exists, err=%w", err))
 
 		return false, err
 	}
@@ -63,14 +72,13 @@ func (paymentsStorage *PaymentsStorage) PaymentFormExists(ctx context.Context, e
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
-
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w", err))
 	}
 
 	return exists
 }
 
-func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Context, tx pgx.Tx, advertId,
+func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Context, tx pgx.Tx, advertID,
 	rateCode uint) (*models.PriceAndDescription, error) {
 	priceMap := map[uint]string{
 		1: "35",
@@ -93,39 +101,41 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 	logging.LogInfo(logger, "SELECT FROM advert")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLSelectPriceAndDescription, advertId)
+
+	userLine := tx.QueryRow(ctx, SQLSelectPriceAndDescription, advertID)
+
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	var (
-		title                string
-		city_translation     string
-		category_translation string
+		title               string
+		cityTranslation     string
+		categoryTranslation string
+		priceAndDescription models.PriceAndDescription
 	)
-	priceAndDescription := models.PriceAndDescription{}
 
-	if err := userLine.Scan(&title, &city_translation, &category_translation); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning advert title, err=%v", err))
+	if err := userLine.Scan(&title, &cityTranslation, &categoryTranslation); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning advert title, err=%w", err))
 
 		return nil, err
 	}
 
 	if val, ok := priceMap[rateCode]; ok {
 		priceAndDescription.Price = val
-		priceAndDescription.UrlEnding = city_translation + "/" + category_translation +
-			"/" + strconv.FormatUint(uint64(advertId), 10)
+		priceAndDescription.URLEnding = cityTranslation + "/" + categoryTranslation +
+			"/" + strconv.FormatUint(uint64(advertID), 10)
 
 		switch key := rateCode; key {
-		case 1:
-			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 1 день`
+		case lifting:
+			priceAndDescription.Description = fmt.Sprintf("Платное продвижение товара %s на 1 день", title)
 			priceAndDescription.Duration = "1 day"
-		case 2:
-			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 3 дня`
+		case premium:
+			priceAndDescription.Description = fmt.Sprintf("Платное продвижение товара %s на 3 дня", title)
 			priceAndDescription.Duration = "3 days"
-		case 3:
-			priceAndDescription.Description = `Платное продвижение товара "` + title + `" на 7 дней`
+		case maximum:
+			priceAndDescription.Description = fmt.Sprintf("Платное продвижение товара %s на 7 дней", title)
 			priceAndDescription.Duration = "7 days"
 		default:
-			fmt.Println("no such key in the map")
+			log.Println("no such key in the map")
 		}
 	} else {
 		logging.LogError(logger, fmt.Errorf("no such key in the map"))
@@ -134,24 +144,23 @@ func (paymentsStorage *PaymentsStorage) getPriceAndDescription(ctx context.Conte
 	}
 
 	return &priceAndDescription, nil
-
 }
 
-func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Context, advertId,
+func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Context, advertID,
 	rateCode uint) (*models.PriceAndDescription, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var priceAndDescription *models.PriceAndDescription
 
 	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {
-		priceAndDescriptionInner, err := paymentsStorage.getPriceAndDescription(ctx, tx, advertId, rateCode)
+		priceAndDescriptionInner, err := paymentsStorage.getPriceAndDescription(ctx, tx, advertID, rateCode)
 		priceAndDescription = priceAndDescriptionInner
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing get payment's price and description, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing get payment's price and description, err=%w", err))
 
 		return nil, err
 	}
@@ -160,7 +169,7 @@ func (paymentsStorage *PaymentsStorage) GetPriceAndDescription(ctx context.Conte
 }
 
 func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context, tx pgx.Tx,
-	advertId, userId uint) (bool, error) {
+	advertID, userID uint) (bool, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -173,13 +182,15 @@ func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context
 	logging.LogInfo(logger, "SELECT FROM advert")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertId, userId)
+
+	userLine := tx.QueryRow(ctx, SQLCheckAdvertOwnership, advertID, userID)
+
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	var ownership bool
 
 	if err := userLine.Scan(&ownership); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning advert ownership exists, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning advert ownership exists, err=%w", err))
 
 		return false, err
 	}
@@ -187,28 +198,27 @@ func (paymentsStorage *PaymentsStorage) checkAdvertOwnership(ctx context.Context
 	return ownership, nil
 }
 
-func (paymentsStorage *PaymentsStorage) CheckAdvertOwnership(ctx context.Context, advertId, userId uint) bool {
+func (paymentsStorage *PaymentsStorage) CheckAdvertOwnership(ctx context.Context, advertID, userID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var ownership bool
 
 	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {
-		ownershipExists, err := paymentsStorage.checkAdvertOwnership(ctx, tx, advertId, userId)
+		ownershipExists, err := paymentsStorage.checkAdvertOwnership(ctx, tx, advertID, userID)
 		ownership = ownershipExists
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v", err))
-
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w", err))
 	}
 
 	return ownership
 }
 
 func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pgx.Tx, payment *models.Payment,
-	idempotencyKey string, advertId uint, duration string) error {
+	idempotencyKey string, advertID uint, duration string) error {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -223,7 +233,7 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 
 	float64Value, err := strconv.ParseFloat(payment.Amount.Value, 64)
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%w",
 			err))
 		paymentsStorage.metrics.IncreaseErrors(funcName)
 
@@ -233,12 +243,14 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 	uintValue := uint(float64Value)
 
 	start := time.Now()
-	_, err = tx.Exec(ctx, SQLCreateProfile, advertId, payment.ID, uintValue, payment.Description,
+
+	_, err = tx.Exec(ctx, SQLCreateProfile, advertID, payment.ID, uintValue, payment.Description,
 		payment.Status, payment.Confirmation.ConfirmationURL, payment.CreatedAt, idempotencyKey, duration)
+
 	paymentsStorage.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing insert payment query, err=%w",
 			err))
 		paymentsStorage.metrics.IncreaseErrors(funcName)
 
@@ -249,17 +261,17 @@ func (paymentsStorage *PaymentsStorage) createPayment(ctx context.Context, tx pg
 }
 
 func (paymentsStorage *PaymentsStorage) CreatePayment(ctx context.Context, payment *models.Payment,
-	idempotencyKey string, advertId uint, duration string) error {
+	idempotencyKey string, advertID uint, duration string) error {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	err := pgx.BeginFunc(ctx, paymentsStorage.pool, func(tx pgx.Tx) error {
-		err := paymentsStorage.createPayment(ctx, tx, payment, idempotencyKey, advertId, duration)
+		err := paymentsStorage.createPayment(ctx, tx, payment, idempotencyKey, advertID, duration)
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while inserting payment in db, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while inserting payment in db, err=%w", err))
 
 		return err
 	}

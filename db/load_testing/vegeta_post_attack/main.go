@@ -1,3 +1,4 @@
+//nolint:errcheck
 package main
 
 import (
@@ -12,6 +13,11 @@ import (
 	vegeta "github.com/tsenart/vegeta/lib"
 )
 
+const (
+	duration = 3 * time.Second // change the duration here
+	freq     = 1
+)
+
 func customTargeter() vegeta.Targeter {
 	return func(tgt *vegeta.Target) error {
 		if tgt == nil {
@@ -23,6 +29,7 @@ func customTargeter() vegeta.Targeter {
 		tgt.URL = "http://localhost:8080/api/adverts/create" // your url here
 
 		var b bytes.Buffer
+
 		w := multipart.NewWriter(&b)
 
 		// Добавляем файлы или поля в multipart writer
@@ -31,6 +38,7 @@ func customTargeter() vegeta.Targeter {
 		if err != nil {
 			return err
 		}
+
 		_, err = part.Write([]byte(`562737c1ff567dbd5574c814`)) // значение salon_id
 		if err != nil {
 			return err
@@ -56,8 +64,7 @@ func customTargeter() vegeta.Targeter {
 }
 
 func main() {
-	rate := vegeta.Rate{Freq: 1, Per: time.Second} // change the rate here
-	duration := 3 * time.Second                    // change the duration here
+	rate := vegeta.Rate{Freq: freq, Per: time.Second} // change the rate here
 
 	targeter := customTargeter()
 	attacker := vegeta.NewAttacker()
@@ -66,6 +73,7 @@ func main() {
 	for res := range attacker.Attack(targeter, rate, duration, "Whatever name") {
 		metrics.Add(res)
 	}
+
 	metrics.Close()
 
 	fmt.Println(metrics)

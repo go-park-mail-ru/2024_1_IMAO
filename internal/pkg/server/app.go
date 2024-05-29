@@ -1,3 +1,4 @@
+//nolint:errcheck
 package server
 
 import (
@@ -34,9 +35,10 @@ import (
 
 const (
 	Timeout            = time.Second * 15
-	Address            = ":8080" //"109.120.183.3:8080"
+	Address            = ":8080" // "109.120.183.3:8080"
 	outputLogPath      = "stdout logs.json"
 	errorOutputLogPath = "stderr err_logs.json"
+	tickerTime         = 10 * time.Minute
 )
 
 type Server struct {
@@ -78,11 +80,15 @@ func (srv *Server) Run() error {
 		authAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on auth service", err)
+
 		return err
 	}
+
 	defer grpcConnAuth.Close()
+
 	authClient := authproto.NewAuthClient(grpcConnAuth)
 
 	profileAddr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
@@ -91,11 +97,15 @@ func (srv *Server) Run() error {
 		profileAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on profile service", err)
+
 		return err
 	}
+
 	defer grpcConnProfile.Close()
+
 	profileClient := profileproto.NewProfileClient(grpcConnProfile)
 
 	cartAddr := cfg.Server.CartIP + cfg.Server.CartServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
@@ -104,15 +114,19 @@ func (srv *Server) Run() error {
 		cartAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on cart service", err)
+
 		return err
 	}
+
 	defer grpcConnCart.Close()
+
 	cartClient := cartproto.NewCartClient(grpcConnCart)
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
+		ticker := time.NewTicker(tickerTime)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -128,7 +142,8 @@ func (srv *Server) Run() error {
 
 	credentials := handlers.AllowCredentials()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru", "http://vol-4-ok.ru", "http://127.0.0.1:8008", "http://127.0.0.1"})
+	originsOk := handlers.AllowedOrigins([]string{"http://www.vol-4-ok.ru", "http://vol-4-ok.ru",
+		"http://127.0.0.1:8008", "http://127.0.0.1"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	muxWithCORS := handlers.CORS(credentials, originsOk, headersOk, methodsOk)(router)
@@ -141,6 +156,7 @@ func (srv *Server) Run() error {
 	}
 
 	log.Println("Server is running on port", Address)
+
 	return srv.server.ListenAndServe()
 }
 
@@ -151,5 +167,6 @@ func (srv *Server) Shutdown() error {
 	if err := srv.server.Shutdown(ctx); err != nil {
 		return err
 	}
+
 	return nil
 }

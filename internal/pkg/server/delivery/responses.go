@@ -1,3 +1,4 @@
+//nolint:forcetypeassert
 package responses
 
 import (
@@ -85,7 +86,7 @@ func NewErrResponse(code int, status string) *models.ErrResponse {
 
 func NewOkResponse(items any) *models.OkResponse {
 	return &models.OkResponse{
-		Code:  200,
+		Code:  StatusOk,
 		Items: items,
 	}
 }

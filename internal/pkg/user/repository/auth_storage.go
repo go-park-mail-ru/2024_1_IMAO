@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
@@ -49,13 +50,15 @@ func (active *UserStorage) userExists(ctx context.Context, tx pgx.Tx, email stri
 	logging.LogInfo(logger, "SELECT FROM user")
 
 	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLUserExists, email)
+
 	active.metrics.AddDuration(funcName, time.Since(start))
 
 	var exists bool
 
 	if err := userLine.Scan(&exists); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning user exists, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning user exists, err=%w", err))
 
 		return false, err
 	}
@@ -76,9 +79,8 @@ func (active *UserStorage) UserExists(ctx context.Context, email string) bool {
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%v",
+		logging.LogError(logger, fmt.Errorf("error while executing user exists query, err=%w",
 			err))
-
 	}
 
 	return exists
@@ -88,14 +90,16 @@ func (active *UserStorage) GetLastID(ctx context.Context) uint {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var lastID uint
+
 	_ = pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while getting user id from seq, err=%v",
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting user id from seq, err=%w",
 				err))
 
 			return err
 		}
+
 		lastID = uint(id)
 
 		return nil
@@ -115,11 +119,13 @@ func (active *UserStorage) createUser(ctx context.Context, tx pgx.Tx, user *mode
 	var err error
 
 	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLCreateUser, user.Email, user.PasswordHash)
+
 	active.metrics.AddDuration(funcName, time.Since(start))
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing create user query, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create user query, err=%w",
 			err))
 		active.metrics.IncreaseErrors(funcName)
 
@@ -138,9 +144,11 @@ func (active *UserStorage) CreateUser(ctx context.Context, email,
 	}
 
 	errs := utils.Validate(email, password)
+
 	if password != passwordRepeat {
 		errs = append(errs, "Passwords do not match")
 	}
+
 	if errs != nil {
 		return nil, errWrongData
 	}
@@ -153,30 +161,32 @@ func (active *UserStorage) CreateUser(ctx context.Context, email,
 	err := pgx.BeginFunc(ctx, active.pool, func(tx pgx.Tx) error {
 		err := active.createUser(ctx, tx, &user)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while creating user, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while creating user, err=%w", err))
 
 			return err
 		}
+
 		id, err := repository.GetLastValSeq(ctx, tx, NameSeqUser)
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong getting user id from seq, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong getting user id from seq, err=%w", err))
 
 			return err
 		}
+
 		user.ID = uint(id)
 
 		return nil
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while creating user, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while creating user, err=%w", err))
 
 		return nil, err
 	}
 
 	fmt.Println("user", user)
-	return &user, nil
 
+	return &user, nil
 }
 
 func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint, email string) (*models.User, error) {
@@ -188,13 +198,15 @@ func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint
 	logging.LogInfo(logger, "UPDATE user")
 
 	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLUserExists, email, id)
+
 	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning edit user email, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning edit user email, err=%w", err))
 
 		return nil, err
 	}
@@ -204,6 +216,7 @@ func (active *UserStorage) editUserEmail(ctx context.Context, tx pgx.Tx, id uint
 
 func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email string) (*models.User, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
 	err := utils.ValidateEmail(email)
 	if err != nil {
 		return nil, err
@@ -219,7 +232,7 @@ func (active *UserStorage) EditUserEmail(ctx context.Context, id uint, email str
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while editing user profile , err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while editing user profile , err=%w",
 			errUserNotExists))
 
 		return nil, errUserNotExists
@@ -237,13 +250,15 @@ func (active *UserStorage) getUserByEmail(ctx context.Context, tx pgx.Tx, email 
 	logging.LogInfo(logger, "SELECT FROM user")
 
 	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLUserByEmail, email)
+
 	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%w",
 			err))
 
 		return nil, err
@@ -266,7 +281,7 @@ func (active *UserStorage) GetUserByEmail(ctx context.Context, email string) (*m
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by email from seq, err=%w",
 			err))
 
 		return nil, errUserNotExists
@@ -279,18 +294,20 @@ func (active *UserStorage) getUserByID(ctx context.Context, tx pgx.Tx, id uint) 
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLUserById := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
+	SQLUserByID := `SELECT id, email, password_hash	FROM public."user" where id = $1 `
 
 	logging.LogInfo(logger, "SELECT FROM user")
 
 	start := time.Now()
-	userLine := tx.QueryRow(ctx, SQLUserById, id)
+
+	userLine := tx.QueryRow(ctx, SQLUserByID, id)
+
 	active.metrics.AddDuration(funcName, time.Since(start))
 
 	user := models.User{}
 
 	if err := userLine.Scan(&user.ID, &user.Email, &user.PasswordHash); err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%v",
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%w",
 			err))
 
 		return nil, err
@@ -312,7 +329,7 @@ func (active *UserStorage) GetUserByID(ctx context.Context, userID uint) (*model
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting user by id from seq, err=%w", err))
 
 		return nil, errUserNotExists
 	}
@@ -335,7 +352,8 @@ func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID strin
 	rawUserID, err := redis.Uint64(data, err)
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while converting redis data to uint64, err=%v", err))
+			fmt.Errorf("something went wrong while converting redis data to uint64, err=%w", err))
+
 		return nil, err
 	}
 
@@ -352,7 +370,7 @@ func (active *UserStorage) GetUserBySession(ctx context.Context, sessionID strin
 
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while getting user by session from seq, err=%v", err))
+			fmt.Errorf("something went wrong while getting user by session from seq, err=%w", err))
 
 		return nil, errUserNotExists
 	}
@@ -381,7 +399,8 @@ func (active *UserStorage) AddSession(ctx context.Context, id uint) string {
 	_, err := conn.Do("SET", sessionID, id)
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while setting user session, err=%v", err))
+			fmt.Errorf("something went wrong while setting user session, err=%w", err))
+
 		return ""
 	}
 
@@ -396,7 +415,7 @@ func (active *UserStorage) RemoveSession(ctx context.Context, sessionID string) 
 
 	if !active.SessionExists(sessionID) {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while removing session, err=%v", errSessionNotExists))
+			fmt.Errorf("something went wrong while removing session, err=%w", errSessionNotExists))
 
 		return errSessionNotExists
 	}
@@ -404,7 +423,7 @@ func (active *UserStorage) RemoveSession(ctx context.Context, sessionID string) 
 	_, err := conn.Do("DEL", sessionID)
 	if err != nil {
 		logging.LogError(logger,
-			fmt.Errorf("something went wrong while removing session, err=%v", errSessionNotExists))
+			fmt.Errorf("something went wrong while removing session, err=%w", errSessionNotExists))
 
 		return errSessionNotExists
 	}

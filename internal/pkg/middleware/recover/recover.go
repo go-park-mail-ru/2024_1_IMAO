@@ -1,4 +1,4 @@
-package recover
+package myrecover
 
 import (
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"

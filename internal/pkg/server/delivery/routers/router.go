@@ -46,13 +46,13 @@ func NewRouter(logger *zap.SugaredLogger,
 	profileClient profileproto.ProfileClient,
 	favouritesStorage favusecases.FavouritesStorageInterface,
 	paymentsStorage paymentsusescases.PaymentsStorageInterface) *mux.Router {
-
 	router := mux.NewRouter()
 	router.Use(recoveryMiddleware.RecoveryMiddleware)
 
 	metrics, err := mymetrics.CreateHTTPMetrics("main")
 	if err != nil {
 		log.Println("error occurred while creating metrics", err)
+
 		return nil
 	}
 

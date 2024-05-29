@@ -1,3 +1,4 @@
+//nolint:gomnd
 package repository
 
 import (
@@ -13,6 +14,7 @@ func NewRedisPool(host, password string) *redis.Pool {
 			conn, err := redis.Dial("tcp", host, redis.DialPassword(password))
 			if err != nil {
 				log.Println("Failed to connect Redis", err)
+
 				return nil, err
 			}
 

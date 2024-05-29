@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
+	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	"google.golang.org/grpc"
 	"strconv"
 	"time"
@@ -21,14 +22,14 @@ func CreateMetricsInterceptor(metrics metrics.GRPCMetrics) *Interceptor {
 func getCode(err string) int {
 	switch err {
 	case "session does not exist":
-		return 401
+		return responses.StatusUnauthorized
 	case "no such cookie in userStorage":
-		return 401
+		return responses.StatusUnauthorized
 	case "user not authorized":
-		return 401
+		return responses.StatusUnauthorized
 	}
 
-	return 400
+	return responses.StatusBadRequest
 }
 
 func (interceptor *Interceptor) ServeMetricsInterceptor(ctx context.Context, req interface{},
@@ -36,7 +37,8 @@ func (interceptor *Interceptor) ServeMetricsInterceptor(ctx context.Context, req
 	start := time.Now()
 	h, err := handler(ctx, req)
 	end := time.Since(start)
-	code := 200
+	code := responses.StatusOk
+
 	if err != nil {
 		code = getCode(err.Error())
 	}
@@ -44,5 +46,6 @@ func (interceptor *Interceptor) ServeMetricsInterceptor(ctx context.Context, req
 	codeStr := strconv.Itoa(code)
 	interceptor.metrics.IncreaseTotal(codeStr, info.FullMethod)
 	interceptor.metrics.AddDuration(codeStr, info.FullMethod, end)
+
 	return h, err
 }

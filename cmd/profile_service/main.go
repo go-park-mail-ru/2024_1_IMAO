@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
@@ -22,6 +23,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	timeout = 10 * time.Second
+	port    = 7072
+)
+
 func main() {
 	cfg := config.ReadConfig()
 	addr := cfg.Server.ProfileIP + cfg.Server.ProfileServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
@@ -30,6 +36,7 @@ func main() {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Println("Error occurred while listening profile service", err)
+
 		return
 	}
 
@@ -46,18 +53,19 @@ func main() {
 	)
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on profile service", err)
+
 		return
 	}
 	defer grpcConn.Close()
 
 	connPool, err := pgxpool.NewWithConfig(context.Background(), pgxpoolconfig.PGXPoolConfig())
 	if err != nil {
-		log.Fatal("Error while creating connection to the database!!")
+		log.Println("Error while creating connection to the database!!")
 	}
 
 	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("profile", "postgres")
 	if err != nil {
-		log.Fatal("Error while creating postgres metrics")
+		log.Println("Error while creating postgres metrics")
 	}
 
 	profileStorage := profilerepo.NewProfileStorage(connPool, postgresMetrics)
@@ -69,7 +77,8 @@ func main() {
 
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7072)}
+	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", port), ReadHeaderTimeout: timeout}
+
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail profile.ListenAndServe")
@@ -79,6 +88,7 @@ func main() {
 	err = srv.Serve(listener)
 	if err != nil {
 		log.Println(err)
+
 		return
 	}
 }
