@@ -13,6 +13,7 @@ COPY go.sum .
 
 RUN go mod tidy
 RUN go build -o main ./cmd/app/main.go
+COPY --from=build /var/backend/.env ./.env
 
 EXPOSE 8080
 

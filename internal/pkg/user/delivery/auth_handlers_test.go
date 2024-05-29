@@ -1,3 +1,4 @@
+//nolint:all
 package delivery_test
 
 import (

@@ -1,3 +1,4 @@
+//nolint:all
 package utils_test
 
 import (
