@@ -143,3 +143,14 @@ func (manager *ProfileManager) EditProfile(ctx context.Context,
 
 	return newProtobufProfile(profile), nil
 }
+
+func (manager *ProfileManager) AppendSubByIDs(ctx context.Context,
+	in *protobuf.UserIdMerchantIdRequest) (*protobuf.AppendSubResponse, error) {
+	userID := in.GetUserId()
+	merchantID := in.GetMerchantId()
+	storage := manager.profileStorage
+
+	isAppended := storage.AppendSubByIDs(ctx, uint(userID), uint(merchantID))
+
+	return &protobuf.AppendSubResponse{IsAppended: isAppended}, nil
+}

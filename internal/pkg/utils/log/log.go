@@ -1,3 +1,4 @@
+//nolint:gomnd
 package utils
 
 import (
@@ -7,8 +8,6 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
-
-	"github.com/google/uuid"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/config"
 
@@ -33,9 +32,14 @@ func GetFunctionName() string {
 	return values[len(values)-1] + " in " + shortPath + ":" + line
 }
 
-func GetRequestId(ctx context.Context) string {
-	requestID, _ := ctx.Value(config.RequestUUIDContextKey).(uuid.UUID)
-	return requestID.String()
+func GetOnlyFunctionName() string {
+	pc := make([]uintptr, 15)
+	n := runtime.Callers(2, pc)
+	frames := runtime.CallersFrames(pc[:n])
+	frame, _ := frames.Next()
+	values := strings.Split(frame.Function, ".")
+
+	return values[len(values)-1]
 }
 
 func LogInfo(logger *zap.SugaredLogger, msg string) {

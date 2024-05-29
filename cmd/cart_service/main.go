@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	createMetricsMiddleware "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/middleware/metrics"
@@ -22,13 +23,20 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	timeout = 10 * time.Second
+	port    = 7073
+)
+
 func main() {
 	cfg := config.ReadConfig()
-	addr := cfg.Server.CartIP + cfg.Server.CartServicePort
+	addr := cfg.Server.CartIP + cfg.Server.CartServicePort // ДЛЯ ЗАПУСКА В КОНТЕЙНЕРЕ
+	//addr := cfg.Server.Host + cfg.Server.CartServicePort // ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА (НЕ В КОНТЕЙНЕРЕ)
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Println("Error occurred while listening cart service", err)
+
 		return
 	}
 
@@ -45,16 +53,22 @@ func main() {
 	)
 	if err != nil {
 		log.Println("Error occurred while starting grpc connection on cart service", err)
+
 		return
 	}
 	defer grpcConn.Close()
 
 	connPool, err := pgxpool.NewWithConfig(context.Background(), pgxpoolconfig.PGXPoolConfig())
 	if err != nil {
-		log.Fatal("Error while creating connection to the database!!")
+		log.Println("Error while creating connection to the database!!")
 	}
 
-	cartStorage := cartrepo.NewCartStorage(connPool)
+	postgresMetrics, err := mymetrics.CreateDatabaseMetrics("cart", "postgres")
+	if err != nil {
+		log.Println("Error while creating postgres metrics for cart service")
+	}
+
+	cartStorage := cartrepo.NewCartStorage(connPool, postgresMetrics)
 	cartManager := delivery.NewCartManager(cartStorage)
 
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.ServeMetricsInterceptor))
@@ -63,7 +77,8 @@ func main() {
 
 	router := mux.NewRouter()
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
-	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", 7073)}
+	server := http.Server{Handler: router, Addr: fmt.Sprintf(":%d", port), ReadHeaderTimeout: timeout}
+
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Println("fail cart.ListenAndServe")
@@ -73,6 +88,7 @@ func main() {
 	err = srv.Serve(listener)
 	if err != nil {
 		log.Println(err)
+
 		return
 	}
 }

@@ -2,10 +2,11 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
+	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
@@ -13,24 +14,23 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	errNotInCart = errors.New("there is no advert in the cart")
-)
-
 type CartStorage struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics *mymetrics.DatabaseMetrics
 }
 
-func NewCartStorage(pool *pgxpool.Pool) *CartStorage {
+func NewCartStorage(pool *pgxpool.Pool, metrics *mymetrics.DatabaseMetrics) *CartStorage {
 	return &CartStorage{
-		pool: pool,
+		pool:    pool,
+		metrics: metrics,
 	}
 }
 
 func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID uint) ([]*models.ReturningAdvert, error) {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	SQLAdvertByUserId := `
+	SQLAdvertByUserID := `
 			SELECT 
 			a.id, 
 			a.user_id,
@@ -46,6 +46,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 			a.created_time, 
 			a.closed_time, 
 			a.is_used,
+			a.advert_status,
 			(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
 			CAST(CASE WHEN EXISTS (SELECT 1 FROM favourite f WHERE f.user_id = $1 AND f.advert_id = a.id)
          		THEN 1 ELSE 0 END AS bool) AS in_favourites
@@ -61,29 +62,47 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 
 	logging.LogInfo(logger, "SELECT FROM advert, cart, category, city, advert_image")
 
-	rows, err := tx.Query(ctx, SQLAdvertByUserId, userID)
+	start := time.Now()
+
+	rows, err := tx.Query(ctx, SQLAdvertByUserID, userID)
+
+	cl.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing select adverts from the cart, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing select adverts from the cart, err=%w", err))
+		cl.metrics.IncreaseErrors(funcName)
 
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var adsList []*models.ReturningAdvert
+
 	for rows.Next() {
+		var (
+			categoryModel models.Category
+			cityModel     models.City
+			advertModel   models.Advert
+			photoPad      models.PhotoPadSoloImage
+			isActivePad   string
+		)
 
-		categoryModel := models.Category{}
-		cityModel := models.City{}
-		advertModel := models.Advert{}
-		photoPad := models.PhotoPadSoloImage{}
-
-		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
-			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title, &advertModel.Description, &advertModel.Price,
-			&advertModel.CreatedTime, &advertModel.ClosedTime, &advertModel.IsUsed, &photoPad.Photo, &advertModel.InFavourites); err != nil {
-
-			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%v", err))
+		if err := rows.Scan(&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName,
+			&cityModel.Translation, &categoryModel.ID, &categoryModel.Name, &categoryModel.Translation,
+			&advertModel.Title, &advertModel.Description, &advertModel.Price, &advertModel.CreatedTime,
+			&advertModel.ClosedTime, &advertModel.IsUsed, &isActivePad, &photoPad.Photo,
+			&advertModel.InFavourites); err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
 			return nil, err
+		}
+
+		advertModel.Active = false
+
+		if isActivePad == "Активно" {
+			advertModel.Active = true
 		}
 
 		advertModel.CityID = cityModel.ID
@@ -103,7 +122,7 @@ func (cl *CartStorage) getCartByUserID(ctx context.Context, tx pgx.Tx, userID ui
 		decodedImage, err := utils.DecodeImage(photoURLToInsert)
 
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%v", err))
+			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
 
 			return nil, err
 		}
@@ -130,7 +149,7 @@ func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint) ([]*mod
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, err=%w", err))
 
 		return nil, err
 	}
@@ -143,6 +162,7 @@ func (cl *CartStorage) GetCartByUserID(ctx context.Context, userID uint) ([]*mod
 }
 
 func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) error {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLDeleteFromCart := `DELETE FROM public.cart
@@ -152,10 +172,16 @@ func (cl *CartStorage) deleteAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 
 	var err error
 
+	start := time.Now()
+
 	_, err = tx.Exec(ctx, SQLDeleteFromCart, userID, advertID)
 
+	cl.metrics.AddDuration(funcName, time.Since(start))
+
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while executing advert delete from the cart, err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while executing advert delete from the cart, err=%w", err))
+		cl.metrics.IncreaseErrors(funcName)
 
 		return err
 	}
@@ -173,7 +199,8 @@ func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting adverts list, most likely , err=%v", err))
+		logging.LogError(logger,
+			fmt.Errorf("something went wrong while getting adverts list, most likely , err=%w", err))
 
 		return err
 	}
@@ -181,7 +208,8 @@ func (cl *CartStorage) DeleteAdvByIDs(ctx context.Context, userID uint, advertID
 	return nil
 }
 
-func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) (bool, error) {
+func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uint, advertID uint) bool {
+	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	SQLAddToCart := `WITH deletion AS (
@@ -195,35 +223,44 @@ func (cl *CartStorage) appendAdvByIDs(ctx context.Context, tx pgx.Tx, userID uin
 		SELECT 1 FROM deletion
 	) RETURNING true;
 	`
+
 	logging.LogInfo(logger, "DELETE or SELECT FROM cart")
 
+	start := time.Now()
+
 	userLine := tx.QueryRow(ctx, SQLAddToCart, userID, advertID)
+
+	cl.metrics.AddDuration(funcName, time.Since(start))
 
 	added := false
 
 	if err := userLine.Scan(&added); err != nil {
-		logging.LogError(logger, fmt.Errorf("error while scanning advert added, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while scanning advert added, err=%w", err))
+		cl.metrics.IncreaseErrors(funcName)
 
-		return false, nil
+		return false
 	}
 
-	return added, nil
+	return added
 }
 
 func (cl *CartStorage) AppendAdvByIDs(ctx context.Context, userID uint, advertID uint) bool {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	var added bool
+	var (
+		added bool
+		err   error
+	)
 
-	err := pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
-		addedInner, err := cl.appendAdvByIDs(ctx, tx, userID, advertID)
+	err = pgx.BeginFunc(ctx, cl.pool, func(tx pgx.Tx) error {
+		addedInner := cl.appendAdvByIDs(ctx, tx, userID, advertID)
 		added = addedInner
 
 		return err
 	})
 
 	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error while executing addvert add to cart, err=%v", err))
+		logging.LogError(logger, fmt.Errorf("error while executing addvert add to cart, err=%w", err))
 	}
 
 	return added

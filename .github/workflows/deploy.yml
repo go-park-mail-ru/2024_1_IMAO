@@ -1,0 +1,72 @@
+name: IMAO_2024_1 deploy
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  run-linters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+          cache: false
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.56.2
+
+  run-tests:
+    needs: run-linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+      - name: Get dependencies
+        run: go get ./...
+      - name: Build application
+        run: go build ./...
+      - name: Run tests for application
+        run: go test ./...
+
+  deploy:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pulling code
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: | 
+            cd /home/${{ secrets.USERNAME }}/server/back
+            git checkout dev
+            git fetch && git pull
+      - name: Building containers
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: |
+            cd /home/${{ secrets.USERNAME }}/server/back
+            sudo docker-compose build
+      - name: Restarting server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: |
+            cd /home/${{ secrets.USERNAME }}/server/back
+            sudo docker-compose down
+            sudo docker-compose up -d

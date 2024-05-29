@@ -1,9 +1,9 @@
 package delivery
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -21,7 +21,9 @@ import (
 )
 
 const (
-	sessionTime = 24 * time.Hour
+	sessionTime   = 24 * time.Hour
+	tokenDuration = 24 * time.Hour
+	sameSite      = 4
 )
 
 type AuthHandler struct {
@@ -68,7 +70,10 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 	client := authHandler.authClient
 
 	user := new(models.UnauthorizedUser)
-	err := json.NewDecoder(request.Body).Decode(&user)
+
+	data, _ := io.ReadAll(request.Body)
+
+	err := user.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -88,14 +93,19 @@ func (authHandler *AuthHandler) Login(writer http.ResponseWriter, request *http.
 
 		return
 	}
+
 	cookie := createSession(authUser.SessionID)
+
 	http.SetCookie(writer, cookie)
 
-	userData := NewAuthOkResponse(models.User{
-		ID:    uint(authUser.ID),
-		Email: authUser.Email,
-	}, authUser.SessionID, true)
-	responses.SendOkResponse(writer, userData)
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(authUser.ID),
+			Email: authUser.Email,
+		},
+		IsAuth: true,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
 		user.Email, authUser.SessionID), responses.StatusOk)
@@ -121,6 +131,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 
 	session, err := request.Cookie("session_id")
 	_, clientErr := client.Logout(ctx, &authproto.SessionData{SessionID: session.Value})
+
 	if err != nil || clientErr != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		logging.LogHandlerError(logger, clientErr, responses.StatusUnauthorized)
@@ -135,8 +146,10 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(writer, session)
 
-	userData := NewAuthOkResponse(models.User{}, "", false)
-	responses.SendOkResponse(writer, userData)
+	userData := models.AuthResponse{
+		IsAuth: false,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	// ПО-ХОРОШЕМУ НУЖНО ПЕРЕПИСАТЬ ХЭНДЛЕР, ЧТОБЫ В ЛОГЕ МОЖНО БЫЛО ВЫВОДИТЬ КАКОЙ ИМЕННО ПОЛЬЗОВАТЕЛЬ РАЗЛОГИНИЛСЯ
 	logging.LogHandlerInfo(logger, "User have been logged out", responses.StatusOk)
@@ -154,7 +167,7 @@ func (authHandler *AuthHandler) Logout(writer http.ResponseWriter, request *http
 // @Success 201 {object} responses.AuthOkResponse
 // @Failure 400 {object} responses.AuthErrResponse
 // @Router /api/auth/signup [post]
-func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) { //nolint:funlen
+func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -162,7 +175,10 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 	profileClient := authHandler.profileClient
 
 	var newUser models.UnauthorizedUser
-	err := json.NewDecoder(request.Body).Decode(&newUser)
+
+	data, _ := io.ReadAll(request.Body)
+
+	err := newUser.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -183,14 +199,21 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 		return
 	}
-	cookie := createSession(user.SessionID)
-	http.SetCookie(writer, cookie)
-	profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
 
-	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
-		ID:    uint(user.ID),
-		Email: user.Email,
-	}, user.SessionID, true))
+	cookie := createSession(user.SessionID)
+
+	http.SetCookie(writer, cookie)
+
+	_, _ = profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
+
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(user.ID),
+			Email: user.Email,
+		},
+		IsAuth: true,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s have been authorized with session ID: %s ",
 		user.Email, user.SessionID), responses.StatusOk)
@@ -216,7 +239,8 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
-		responses.SendOkResponse(writer, NewAuthOkResponse(models.User{}, "", false))
+		responses.SendOkResponse(writer,
+			responses.NewOkResponse(models.AuthResponse{IsAuth: false}))
 
 		return
 	}
@@ -225,25 +249,28 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		SessionID: session.Value,
 	})
 
-	var avatar string
-	var cartNum uint
-	var favNum uint
+	var responseData models.AdditionalUserData
 
 	if user.IsAuth {
 		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
-		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
-		avatar = profile.AvatarIMG
-		favNum = uint(profile.FavNum)
-		cartNum = uint(profile.CartNum)
 
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
+
+		responseData.Avatar = profile.AvatarIMG
+		responseData.PhoneNumber = profile.Phone
+		responseData.FavNum = uint(profile.FavNum)
+		responseData.CartNum = uint(profile.CartNum)
 	} else {
-		logging.LogHandlerInfo(logger, fmt.Sprintf("User not authorized"), responses.StatusOk)
+		logging.LogHandlerInfo(logger, "User not authorized", responses.StatusOk)
 	}
 
-	responses.SendOkResponse(writer, NewAuthOkResponseLogged(models.User{
+	responseData.User = models.User{
 		ID:    uint(user.ID),
 		Email: user.Email,
-	}, avatar, user.IsAuth, cartNum, favNum))
+	}
+	responseData.IsAuth = user.IsAuth
+
+	responses.SendOkResponse(writer, responses.NewOkResponse(responseData))
 }
 
 func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, request *http.Request) {
@@ -263,7 +290,10 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 	}
 
 	var newUser models.UnauthorizedUser
-	err = json.NewDecoder(request.Body).Decode(&newUser)
+
+	data, _ := io.ReadAll(request.Body)
+
+	err = newUser.UnmarshalJSON(data)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -286,21 +316,20 @@ func (authHandler *AuthHandler) EditUserEmail(writer http.ResponseWriter, reques
 
 	logging.LogHandlerInfo(logger, fmt.Sprintf("User %s successfully changed his authorization data",
 		user.Email), responses.StatusOk)
-	responses.SendOkResponse(writer, NewAuthOkResponse(models.User{
-		ID:    uint(user.ID),
-		Email: user.Email,
-	}, "", true))
+
+	userData := models.AuthResponse{
+		User: models.User{
+			ID:    uint(user.ID),
+			Email: user.Email,
+		},
+		IsAuth: true,
+	}
+	responses.SendOkResponse(writer, responses.NewOkResponse(userData))
 }
 
 func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
-
-	if request.Method != http.MethodGet {
-		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
-
-		return
-	}
 
 	sessionInstance, ok := ctx.Value(config.SessionContextKey).(models.Session)
 	if !ok {
@@ -323,7 +352,8 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 
 	fmt.Printf("ID сессии: %s\n", sessionInstance.Value)
 
-	tokenExpTime := time.Now().Add(24 * time.Hour).Unix()
+	tokenExpTime := time.Now().Add(tokenDuration).Unix()
+
 	token, err := hashToken.Create(&sessionInstance, tokenExpTime)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
@@ -331,8 +361,9 @@ func (authHandler *AuthHandler) GetCSRFToken(writer http.ResponseWriter, request
 		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 			responses.ErrInternalServer))
 	}
-	fmt.Printf("Сгенерированный токен: %s\n", token)
+
+	log.Printf("Сгенерированный токен: %s\n", token)
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewSessionOkResponse(token))
+	responses.SendOkResponse(writer, responses.NewOkResponse(token))
 }

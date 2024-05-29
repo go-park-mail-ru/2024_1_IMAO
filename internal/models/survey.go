@@ -26,3 +26,7 @@ type SurveyResults struct {
 type QuestionResults struct {
 	QuestionResults []uint
 }
+
+type SurveyCheckResponse struct {
+	IsChecked bool `json:"isChecked"`
+}

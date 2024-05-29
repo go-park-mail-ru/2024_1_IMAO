@@ -1,3 +1,4 @@
+//nolint:revive,staticcheck
 package metrics
 
 import (
@@ -15,16 +16,21 @@ func CreateMetricsMiddleware(metric *metrics.HTTPMetrics) mux.MiddlewareFunc {
 			code := new(int)
 			*code = 200
 			request = request.WithContext(context.WithValue(request.Context(), "code", code))
+
 			start := time.Now()
+
 			next.ServeHTTP(writer, request)
+
 			end := time.Since(start)
 
 			codeStr := strconv.Itoa(*code)
 			route := mux.CurrentRoute(request)
 			path, _ := route.GetPathTemplate()
 
-			metric.AddDuration(path, codeStr, end)
-			metric.IncreaseTotal(path, codeStr)
+			if path != "/metrics" {
+				metric.AddDuration(path, codeStr, end)
+				metric.IncreaseTotal(path, codeStr)
+			}
 		})
 	}
 }

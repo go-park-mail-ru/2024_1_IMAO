@@ -17,13 +17,20 @@ func ServeAdvertsRouter(router *mux.Router, advertsHandler *delivery.AdvertsHand
 	subrouterEdit.Use(authCheckMiddleware, csrfMiddleware)
 	subrouterEdit.HandleFunc("", advertsHandler.EditAdvert).Methods("POST")
 
-	subrouter.HandleFunc("/search", advertsHandler.GetAdsListWithSearch)
-	subrouter.HandleFunc("/suggestions", advertsHandler.GetSuggestions)
-	subrouter.HandleFunc("/", advertsHandler.GetAdsList)
-	subrouter.HandleFunc("/{city:[a-zA-Z_]+}", advertsHandler.GetAdsList)
-	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList)
-	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}/{id:[0-9]+}", advertsHandler.GetAdvert)
-	subrouter.HandleFunc("/{id:[0-9]+}", advertsHandler.GetAdvertByID)
+	subrouterPromotion := subrouter.PathPrefix("/promotion").Subrouter()
+	subrouterPromotion.Use(authCheckMiddleware)
+	subrouterPromotion.HandleFunc("/{id:[0-9]+}", advertsHandler.GetPromotionData).Methods("GET")
 
-	//subrouter.HandleFunc("/api/adverts/delete/{id:[0-9]+}", advertsHandler.DeleteAdvert)
+	subrouter.HandleFunc("/search", advertsHandler.GetAdsListWithSearch).Methods("GET")
+	subrouter.HandleFunc("/suggestions", advertsHandler.GetSuggestions).Methods("GET")
+	subrouter.HandleFunc("/price_history/{id:[0-9]+}", advertsHandler.GetAdvertPriceHistoryByID).
+		Methods("GET")
+	subrouter.HandleFunc("/", advertsHandler.GetAdsList).Methods("GET")
+	subrouter.HandleFunc("/{city:[a-zA-Z_]+}", advertsHandler.GetAdsList).Methods("GET")
+	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}", advertsHandler.GetAdsList).
+		Methods("GET")
+	subrouter.HandleFunc("/{city:[a-zA-Z_]+}/{category:[a-zA-Z_]+}/{id:[0-9]+}", advertsHandler.GetAdvert).
+		Methods("GET")
+	subrouter.HandleFunc("/{id:[0-9]+}", advertsHandler.GetAdvertByID).Methods("GET")
+	subrouter.HandleFunc("/close/{id:[0-9]+}", advertsHandler.CloseAdvert).Methods("POST")
 }

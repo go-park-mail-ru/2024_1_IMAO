@@ -9,7 +9,7 @@ import (
 
 type Profile struct {
 	ID              uint      `json:"id"`
-	UserID          uint      `json:"user_id"`
+	UserID          uint      `json:"userId"`
 	Name            string    `json:"name"`
 	Surname         string    `json:"surname"`
 	City            City      `json:"city"`
@@ -82,6 +82,14 @@ type EditProfileNec struct {
 	SubonsCount   int    `json:"subonsCount"`
 }
 
+type DBInsertionProfile struct {
+	UserID  uint   `json:"userId"`
+	CityID  uint   `json:"cityId"`
+	Phone   string `json:"phone"`
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+}
+
 func (prof *Profile) Sanitize() {
 	sanitizer := bluemonday.UGCPolicy()
 
@@ -89,4 +97,12 @@ func (prof *Profile) Sanitize() {
 	prof.Surname = sanitizer.Sanitize(prof.Surname)
 	prof.MerchantsName = sanitizer.Sanitize(prof.MerchantsName)
 	prof.Phone = sanitizer.Sanitize(prof.Phone)
+}
+
+type ReceivedMerchantItem struct {
+	MerchantID uint `json:"merchantId"`
+}
+
+type ProfileAppended struct {
+	IsAppended bool `json:"isAppended"`
 }

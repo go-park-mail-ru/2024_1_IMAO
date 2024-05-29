@@ -1,9 +1,5 @@
 package models
 
-import (
-	"sync"
-)
-
 const (
 	SessionIDLen = 32
 )
@@ -20,11 +16,6 @@ type User struct {
 	PasswordHash string `json:"-"`
 }
 
-type SessionList struct {
-	Sessions map[string]uint
-	Mux      sync.RWMutex
-}
-
 type CSRFToken struct {
 	TokenBody string
 }
@@ -32,4 +23,24 @@ type CSRFToken struct {
 type Session struct {
 	UserID uint32
 	Value  string
+}
+
+type DBInsertionUser struct {
+	Email        string `json:"email"`
+	PasswordHash string `json:"-"`
+}
+
+type AdditionalUserData struct {
+	User        User   `json:"user"`
+	Avatar      string `json:"avatarImg"`
+	IsAuth      bool   `json:"isAuth"`
+	CartNum     uint   `json:"cartNum"`
+	FavNum      uint   `json:"favNum"`
+	PhoneNumber string `json:"phoneNumber"`
+}
+
+type AuthResponse struct {
+	User   User   `json:"user"`
+	Avatar string `json:"avatarImg"`
+	IsAuth bool   `json:"isAuth"`
 }

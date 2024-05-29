@@ -1,0 +1,6 @@
+--vegetaboundary
+Content-Disposition: form-data; name="file"; filename="dummy"
+Content-Type: application/octet-stream
+
+12345-body-of-binary
+--vegetaboundary--

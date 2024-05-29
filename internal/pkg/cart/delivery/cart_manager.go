@@ -22,7 +22,6 @@ func NewCartManager(storage cartusecases.CartStorageInterface) *CartManager {
 }
 
 func ReturningAdvertItem(returningAdvertList *protobuf.ReturningAdvertList) []*models.ReturningAdvert {
-
 	var returningAdvertsList []*models.ReturningAdvert
 
 	for i := 0; i < len(returningAdvertList.Adverts); i++ {
@@ -66,7 +65,6 @@ func ReturningAdvertItem(returningAdvertList *protobuf.ReturningAdvertList) []*m
 }
 
 func newProtobufAdvertList(advertList []*models.ReturningAdvert) *protobuf.ReturningAdvertList {
-
 	var protobufAdvertsList protobuf.ReturningAdvertList
 
 	for i := 0; i < len(advertList); i++ {
@@ -105,7 +103,6 @@ func newProtobufAdvertList(advertList []*models.ReturningAdvert) *protobuf.Retur
 		}
 
 		protobufAdvertsList.Adverts = append(protobufAdvertsList.Adverts, &protobufAdvertItem)
-
 	}
 
 	return &protobufAdvertsList
@@ -126,11 +123,11 @@ func (manager *CartManager) GetCartByUserID(ctx context.Context,
 
 func (manager *CartManager) DeleteAdvByIDs(ctx context.Context,
 	in *protobuf.UserIdAdvertIdRequest) (*protobuf.DeleteAdvResponse, error) {
-	userId := in.GetUserId()
-	cartId := in.GetAdvertId()
+	userID := in.GetUserId()
+	cartID := in.GetAdvertId()
 	storage := manager.cartStorage
 
-	err := storage.DeleteAdvByIDs(ctx, uint(userId), uint(cartId))
+	err := storage.DeleteAdvByIDs(ctx, uint(userID), uint(cartID))
 	if err != nil {
 		return nil, err
 	}
@@ -140,11 +137,11 @@ func (manager *CartManager) DeleteAdvByIDs(ctx context.Context,
 
 func (manager *CartManager) AppendAdvByIDs(ctx context.Context,
 	in *protobuf.UserIdAdvertIdRequest) (*protobuf.AppendAdvResponse, error) {
-	userId := in.GetUserId()
-	cartId := in.GetAdvertId()
+	userID := in.GetUserId()
+	cartID := in.GetAdvertId()
 	storage := manager.cartStorage
 
-	isAppended := storage.AppendAdvByIDs(ctx, uint(userId), uint(cartId))
+	isAppended := storage.AppendAdvByIDs(ctx, uint(userID), uint(cartID))
 
 	return &protobuf.AppendAdvResponse{IsAppended: isAppended}, nil
 }

@@ -1,6 +1,8 @@
+//nolint:tagliatelle
 package models
 
 import (
+	"github.com/jackc/pgx/v5/pgtype"
 	"sync"
 	"time"
 
@@ -14,7 +16,7 @@ const (
 type Image struct{}
 
 type ReceivedAdData struct {
-	ID          uint   `json:"Id"`
+	ID          uint   `json:"Id"` //nolint:tagliatelle
 	UserID      uint   `json:"userId"`
 	City        string `json:"city"`
 	Category    string `json:"category"`
@@ -51,12 +53,20 @@ type Advert struct {
 	Deleted       bool      `json:"-"`
 }
 
+type Promotion struct {
+	NeedPing          bool             `json:"needPing"`
+	IsPromoted        bool             `json:"isPromoted"`
+	PromotionStart    pgtype.Timestamp `json:"promotionStart"`
+	PromotionDuration pgtype.Interval  `json:"promotionDuration"`
+}
+
 type ReturningAdvert struct {
-	Advert    Advert   `json:"advert"`
-	City      City     `json:"city"`
-	Category  Category `json:"category"`
-	Photos    []string `json:"photos"`
-	PhotosIMG []string `json:"photosIMG"`
+	Advert    Advert    `json:"advert"`
+	Promotion Promotion `json:"promotion"`
+	City      City      `json:"city"`
+	Category  Category  `json:"category"`
+	Photos    []string  `json:"photos"`
+	PhotosIMG []string  `json:"photosIMG"`
 }
 
 type PhotoPad struct {
@@ -87,11 +97,27 @@ type ReturningAdInList struct {
 	PhotosIMG    []string `json:"photosIMG"`
 	InFavourites bool     `json:"inFavourites"`
 	InCart       bool     `json:"inCart"`
+	IsPromoted   bool     `json:"isPromoted"`
+	IsActive     bool     `json:"isActive"`
 }
 
 type ReturningAdvertList struct {
 	AdvertItems []*ReturningAdvert
 	Mux         sync.RWMutex
+}
+
+type PriceHistoryItem struct {
+	UpdatedTime string  `json:"updatedTime"`
+	NewPrice    float64 `json:"newPrice"` // ПЕРЕПИСАТЬ НА uint
+}
+
+type DBInsertionAdvert struct {
+	UserID      uint   `json:"userId"`
+	CityID      uint   `json:"cityId"`
+	CategoryID  uint   `json:"categoryId"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Price       uint   `json:"price"`
 }
 
 func (adv *Advert) Sanitize() {

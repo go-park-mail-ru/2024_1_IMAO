@@ -1,14 +1,15 @@
 package delivery
 
 import (
-	"encoding/json"
 	"fmt"
-	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
-	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+
+	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
+	authproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/user/delivery/protobuf"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -17,6 +18,10 @@ import (
 
 	responses "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/server/delivery"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
+)
+
+const (
+	maxMemory = 2 << 20
 )
 
 type ProfileHandler struct {
@@ -50,7 +55,7 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *http.Request) {
@@ -64,7 +69,9 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 
 	var data models.City
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -90,7 +97,7 @@ func (h *ProfileHandler) SetProfileCity(writer http.ResponseWriter, request *htt
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *http.Request) {
@@ -106,7 +113,9 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 
 	var data models.SetProfilePhoneNec
 
-	err := json.NewDecoder(request.Body).Decode(&data)
+	reqData, _ := io.ReadAll(request.Body)
+
+	err := data.UnmarshalJSON(reqData)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -128,7 +137,7 @@ func (h *ProfileHandler) SetProfilePhone(writer http.ResponseWriter, request *ht
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(profile)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(profile)))
 }
 
 func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.Request) {
@@ -138,11 +147,11 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	authClient := h.authClient
 	profileClient := h.profileClient
 
-	session, err := request.Cookie("session_id")
+	session, _ := request.Cookie("session_id")
 
 	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
 
-	err = request.ParseMultipartForm(2 << 20)
+	err := request.ParseMultipartForm(maxMemory)
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
 		log.Println(err, responses.StatusInternalServerError)
@@ -158,16 +167,20 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 		Surname: request.PostFormValue("surname"),
 	}
 
-	var pl *profileproto.ProfileData
-	var fullPath string
+	var (
+		pl       *profileproto.ProfileData
+		fullPath string
+	)
+
 	if len(avatar) != 0 {
 		fullPath, err = utils.WriteFile(avatar[0], "avatars")
 		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image, err=%v",
+			logging.LogError(logger, fmt.Errorf("something went wrong while writing file of the image, err=%w",
 				err))
 			log.Println(err, responses.StatusInternalServerError)
 			responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
 				responses.ErrInternalServer))
+
 			return
 		}
 
@@ -185,5 +198,44 @@ func (h *ProfileHandler) EditProfile(writer http.ResponseWriter, request *http.R
 	}
 
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
-	responses.SendOkResponse(writer, NewProfileOkResponse(CleanProfileData(pl)))
+	responses.SendOkResponse(writer, responses.NewOkResponse(CleanProfileData(pl)))
+}
+
+func (h *ProfileHandler) ChangeSubscription(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	profileClient := h.profileClient
+	authClient := h.authClient
+
+	var data models.ReceivedMerchantItem
+
+	reqData, _ := io.ReadAll(request.Body)
+
+	err := data.UnmarshalJSON(reqData)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+	}
+
+	session, _ := request.Cookie("session_id")
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+	isAppended, _ := profileClient.AppendSubByIDs(ctx, &profileproto.UserIdMerchantIdRequest{UserId: uint32(user.ID),
+		MerchantId: uint32(data.MerchantID)})
+
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.ProfileAppended{IsAppended: isAppended.IsAppended}))
+
+	if isAppended.IsAppended {
+		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
+		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s has been added to the subscribers of merchant %s",
+			fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+	} else {
+		log.Println("User", user.ID, "has been added to subscribers of merchant", data.MerchantID)
+		logging.LogHandlerInfo(logger,
+			fmt.Sprintf("User %s has been removed from the subscribers of merchant %s",
+				fmt.Sprint(user.ID), fmt.Sprint(data.MerchantID)), responses.StatusOk)
+	}
 }

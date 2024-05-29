@@ -1,7 +1,8 @@
+//nolint:forcetypeassert
 package responses
 
 import (
-	"encoding/json"
+	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
 	"log"
 	"net/http"
 )
@@ -35,16 +36,8 @@ const (
 	ErrForbidden      = "User have no access to this content"
 )
 
-func sendResponse(writer http.ResponseWriter, response any) {
-	serverResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Println(err)
-		http.Error(writer, ErrInternalServer, StatusInternalServerError)
-
-		return
-	}
-
-	_, err = writer.Write(serverResponse)
+func sendResponse(writer http.ResponseWriter, serverResponse []byte) {
+	_, err := writer.Write(serverResponse)
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, ErrInternalServer, StatusInternalServerError)
@@ -53,28 +46,47 @@ func sendResponse(writer http.ResponseWriter, response any) {
 	}
 }
 
-func SendOkResponse(writer http.ResponseWriter, response any) {
+func SendOkResponse(writer http.ResponseWriter, response *models.OkResponse) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(StatusOk)
-	sendResponse(writer, response)
+
+	serverResponse, err := response.MarshalJSON()
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, ErrInternalServer, StatusInternalServerError)
+
+		return
+	}
+
+	sendResponse(writer, serverResponse)
 }
 
-func SendErrResponse(request *http.Request, writer http.ResponseWriter, response *ErrResponse) {
+func SendErrResponse(request *http.Request, writer http.ResponseWriter, response *models.ErrResponse) {
 	code := request.Context().Value("code").(*int)
 	*code = response.Code
 
+	serverResponse, err := response.MarshalJSON()
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, ErrInternalServer, StatusInternalServerError)
+
+		return
+	}
+
 	writer.Header().Set("Content-Type", "application/json")
-	sendResponse(writer, response)
+	sendResponse(writer, serverResponse)
 }
 
-type ErrResponse struct {
-	Code   int    `json:"code"`
-	Status string `json:"status"`
-}
-
-func NewErrResponse(code int, status string) *ErrResponse {
-	return &ErrResponse{
+func NewErrResponse(code int, status string) *models.ErrResponse {
+	return &models.ErrResponse{
 		Code:   code,
 		Status: status,
+	}
+}
+
+func NewOkResponse(items any) *models.OkResponse {
+	return &models.OkResponse{
+		Code:  StatusOk,
+		Items: items,
 	}
 }
