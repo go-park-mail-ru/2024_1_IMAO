@@ -67,7 +67,7 @@ func NewRouter(logger *zap.SugaredLogger,
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage, authClient)
 	cartHandler := cartdel.NewCartHandler(cartClient, authClient)
-	authHandler := authdel.NewAuthHandler(authClient, profileClient)
+	authHandler := authdel.NewAuthHandler(authClient, profileClient, cityStorage)
 	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)

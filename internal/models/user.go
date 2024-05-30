@@ -32,11 +32,12 @@ type DBInsertionUser struct {
 
 type AdditionalUserData struct {
 	User        User   `json:"user"`
-	Avatar      string `json:"avatarImg"`
+	Avatar      string `json:"avatar"`
 	IsAuth      bool   `json:"isAuth"`
 	CartNum     uint   `json:"cartNum"`
 	FavNum      uint   `json:"favNum"`
 	PhoneNumber string `json:"phoneNumber"`
+	CityName    string `json:"cityName"`
 }
 
 type AuthResponse struct {

@@ -9,5 +9,5 @@ func ServeCityRouter(router *mux.Router, cityHandler *delivery.CityHandler) {
 	subrouter := router.PathPrefix("/city").Subrouter()
 
 	subrouter.HandleFunc("/list", cityHandler.GetCityList).Methods("GET")
-	subrouter.HandleFunc("/name", cityHandler.GetCityName).Methods("GET")
+	subrouter.HandleFunc("/name", cityHandler.GetCityName).Methods("POST")
 }
