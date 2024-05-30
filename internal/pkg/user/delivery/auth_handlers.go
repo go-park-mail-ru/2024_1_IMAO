@@ -3,11 +3,13 @@ package delivery
 import (
 	"errors"
 	"fmt"
-	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
+
+	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 
@@ -240,41 +242,30 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	client := authHandler.authClient
 	profileClient := authHandler.profileClient
 
-	var responseData models.AdditionalUserData
+	var (
+		responseData models.AdditionalUserData
+		cityExists   bool
+		cityModel    models.City
+	)
 
-	city, err := request.Cookie("location")
-	if err != nil {
-		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
-		log.Println("No city cookie in storage")
-
-		city = &http.Cookie{
-			Name:    "location",
-			Value:   "Москва",
-			Path:    "/",
-			Expires: time.Now().Add(sessionTime),
-		}
-		http.SetCookie(writer, city)
-	}
-
-	cityExists := false
 	cities, _ := authHandler.cityStorage.GetCityList(ctx)
 	i := 0
-
-	var cityModel models.City
+	city, _ := url.QueryUnescape(request.URL.Query().Get("location"))
 
 	for !cityExists && i < len(cities.CityItems) {
 		cityModel = *cities.CityItems[i]
-		cityExists = cityModel.CityName == city.Value
+		cityExists = cityModel.CityName == city
 		i++
 	}
 
 	if cityExists {
-		logging.LogHandlerInfo(logger, fmt.Sprintf("City exists, setting %s", city.Value),
+		logging.LogHandlerInfo(logger, fmt.Sprintf("City exists, setting %s", city),
 			responses.StatusBadRequest)
 	} else {
 		logging.LogHandlerInfo(logger, "City doesn`t exist, setting Moscow", responses.StatusBadRequest)
-		city.Value = "Москва"
-		http.SetCookie(writer, city)
+
+		responseData.NeedUpdate = true
+		city = "Москва"
 		cityModel = models.City{
 			ID:          521,
 			CityName:    "Москва",
@@ -282,7 +273,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		}
 	}
 
-	responseData.CityName = city.Value
+	responseData.CityName = city
 
 	session, err := request.Cookie("session_id")
 	if err != nil {
@@ -308,7 +299,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		responseData.FavNum = uint(profile.FavNum)
 		responseData.CartNum = uint(profile.CartNum)
 
-		if profile.CityName != city.Value {
+		if profile.CityName != city {
 			profileClient.SetProfileCity(ctx, &profileproto.SetCityRequest{
 				ID:          user.ID,
 				CityID:      uint64(cityModel.ID),

@@ -8061,6 +8061,8 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels83(in *jl
 			out.PhoneNumber = string(in.String())
 		case "cityName":
 			out.CityName = string(in.String())
+		case "needUpdate":
+			out.NeedUpdate = bool(in.Bool())
 		default:
 			in.SkipRecursive()
 		}
@@ -8109,6 +8111,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels83(out *j
 		const prefix string = ",\"cityName\":"
 		out.RawString(prefix)
 		out.String(string(in.CityName))
+	}
+	{
+		const prefix string = ",\"needUpdate\":"
+		out.RawString(prefix)
+		out.Bool(bool(in.NeedUpdate))
 	}
 	out.RawByte('}')
 }

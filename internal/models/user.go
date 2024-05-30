@@ -38,6 +38,7 @@ type AdditionalUserData struct {
 	FavNum      uint   `json:"favNum"`
 	PhoneNumber string `json:"phoneNumber"`
 	CityName    string `json:"cityName"`
+	NeedUpdate  bool   `json:"needUpdate"`
 }
 
 type AuthResponse struct {
