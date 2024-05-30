@@ -10,4 +10,5 @@ type FavouritesStorageInterface interface {
 	GetFavouritesByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdInList, error)
 	DeleteAdvByIDs(ctx context.Context, userID uint, advertID uint) error
 	AppendAdvByIDs(ctx context.Context, userID uint, advertID uint) bool
+	GetSubscribedAdvertsByUserID(ctx context.Context, userID uint) ([]*models.ReturningAdInList, error)
 }

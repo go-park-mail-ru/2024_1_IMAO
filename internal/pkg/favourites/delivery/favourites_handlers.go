@@ -206,3 +206,48 @@ func (favouritesHandler *FavouritesHandler) DeleteFromFavourites(writer http.Res
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Adverts %s has been removed from favourites of user %s",
 		fmt.Sprint(data.AdvertIDs), fmt.Sprint(user.ID)), responses.StatusOk)
 }
+
+func (favouritesHandler *FavouritesHandler) GetSubscribedAdverts(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	if request.Method != http.MethodGet {
+		http.Error(writer, responses.ErrNotAllowed, responses.StatusNotAllowed)
+
+		return
+	}
+
+	storage := favouritesHandler.storage
+	authClient := favouritesHandler.authClient
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	var adsList []*models.ReturningAdInList
+
+	adsList, err = storage.GetSubscribedAdvertsByUserID(ctx, uint(user.ID))
+
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	log.Println("Get subscribed adverts for user", user.ID)
+	responses.SendOkResponse(writer, responses.NewOkResponse(adsList))
+	logging.LogHandlerInfo(logger, fmt.Sprintf("Get subscribed adverts for user %s", fmt.Sprint(user.ID)),
+		responses.StatusOk)
+}
