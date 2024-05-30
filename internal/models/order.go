@@ -44,6 +44,11 @@ type OrderItem struct {
 	DeliveryPrice uint      `json:"deliveryPrice"`
 }
 
+type ReviewItem struct {
+	AdvertID uint `json:"advertId"`
+	Rating   uint `json:"rating"`
+}
+
 type OrderList struct {
 	Items []*OrderItem
 	Mux   sync.RWMutex

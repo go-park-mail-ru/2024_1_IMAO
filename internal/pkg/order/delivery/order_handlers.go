@@ -142,3 +142,63 @@ func (orderHandler *OrderHandler) CreateOrder(writer http.ResponseWriter, reques
 	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
 	responses.SendOkResponse(writer, responses.NewOkResponse(models.OrderCreated{IsCreated: true}))
 }
+
+func (orderHandler *OrderHandler) CreateReview(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	storage := orderHandler.storage
+	authClient := orderHandler.authClient
+
+	var data models.ReviewItem
+
+	reqData, _ := io.ReadAll(request.Body)
+
+	err := data.UnmarshalJSON(reqData)
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+
+		return
+	}
+
+	session, err := request.Cookie("session_id")
+
+	if err != nil {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: session.Value})
+
+	orderExists := storage.OrderExists(ctx, uint(user.ID), data.AdvertID)
+
+	if !orderExists {
+		log.Println(err, responses.StatusBadRequest)
+		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusBadRequest,
+			responses.ErrBadRequest))
+
+		return
+	}
+
+	err = storage.CreateReview(ctx, uint(user.ID), data.AdvertID, data.Rating)
+
+	if err != nil {
+		log.Println(err, responses.StatusInternalServerError)
+		logging.LogHandlerError(logger, err, responses.StatusInternalServerError)
+		responses.SendErrResponse(request, writer, responses.NewErrResponse(responses.StatusInternalServerError,
+			responses.ErrInternalServer))
+
+		return
+	}
+
+	logging.LogHandlerInfo(logger, "success", responses.StatusOk)
+	responses.SendOkResponse(writer, responses.NewOkResponse(models.OrderCreated{IsCreated: true}))
+}

@@ -370,3 +370,96 @@ func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *
 
 	return nil
 }
+
+func (ol *OrderStorage) orderExists(ctx context.Context, tx pgx.Tx, userID, advertID uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."order" WHERE user_id = $1 and advert_id = $2);`
+
+	logging.LogInfo(logger, "SELECT FROM user")
+
+	start := time.Now()
+
+	userLine := tx.QueryRow(ctx, SQLUserExists, userID, advertID)
+
+	ol.metrics.AddDuration(funcName, time.Since(start))
+
+	var exists bool
+
+	if err := userLine.Scan(&exists); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning order exists, err=%w", err))
+
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (ol *OrderStorage) OrderExists(ctx context.Context, userID, advertID uint) bool {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var exists bool
+
+	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
+		userExists, err := ol.orderExists(ctx, tx, userID, advertID)
+		exists = userExists
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing advert exists query, err=%w",
+			err))
+	}
+
+	return exists
+}
+
+func (ol *OrderStorage) createReview(ctx context.Context, tx pgx.Tx, userID, advertID, rating uint) error {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLCreateReview :=
+		`INSERT INTO public.review(
+			user_id, advert_id, rating)
+			VALUES ($1, $2, $3);`
+
+	logging.LogInfo(logger, "INSERT INTO review")
+
+	var err error
+
+	start := time.Now()
+
+	_, err = tx.Exec(ctx, SQLCreateReview, userID, advertID, rating)
+
+	ol.metrics.AddDuration(funcName, time.Since(start))
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create review query, err=%w",
+			err))
+		ol.metrics.IncreaseErrors(funcName)
+
+		return err
+	}
+
+	return nil
+}
+
+func (ol *OrderStorage) CreateReview(ctx context.Context, userID, advertID, rating uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
+		err := ol.createReview(ctx, tx, userID, advertID, rating)
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while creating review, err=%w", err))
+
+		return err
+	}
+
+	return nil
+}
