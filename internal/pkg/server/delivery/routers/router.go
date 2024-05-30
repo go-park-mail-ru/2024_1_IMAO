@@ -84,8 +84,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	ServeSurveyRouter(rootRouter, surveyHandler, authCheckMiddleware)
 	ServeFavouritesRouter(rootRouter, favouritesHandler, authCheckMiddleware)
 	ServePaymentsRouter(rootRouter, paymentsHandler, authCheckMiddleware)
+	ServeCityRouter(rootRouter, cityHandler)
 
-	rootRouter.HandleFunc("/city", cityHandler.GetCityList)
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
 
 	return router
