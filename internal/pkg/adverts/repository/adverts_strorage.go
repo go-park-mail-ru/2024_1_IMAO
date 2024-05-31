@@ -1833,7 +1833,7 @@ func (ads *AdvertStorage) CloseAdvert(ctx context.Context, advertID uint) error 
 	return nil
 }
 
-func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, title string, startID,
+func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, title, city string, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -1855,7 +1855,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id AND c.translation = $3
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
@@ -1870,7 +1870,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id AND c.translation = $3
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
@@ -1897,7 +1897,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 
 	start := time.Now()
 
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, city)
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
@@ -1968,7 +1968,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx, title string, userID, startID,
+func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx, title, city string, userID, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -1992,7 +1992,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart								
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id AND c.translation = $4
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
@@ -2012,7 +2012,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id AND c.translation = $4
 		INNER JOIN category ON a.category_id = category.id
 		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
@@ -2039,7 +2039,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 
 	start := time.Now()
 
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID, city)
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
@@ -2108,7 +2108,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string, userID, startID,
+func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title, city string, userID, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2116,7 +2116,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 
 	if userID == 0 {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.searchAdvertByTitle(ctx, tx, title, startID, num)
+			advertsListInner, err := ads.searchAdvertByTitle(ctx, tx, title, city, startID, num)
 			advertsList = advertsListInner
 
 			return err
@@ -2129,7 +2129,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 		}
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, userID, startID, num)
+			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, city, userID, startID, num)
 			advertsList = advertsListInner
 
 			return err
@@ -2145,7 +2145,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title string, num uint) ([]string, error) {
+func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title, city string, num uint) ([]string, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2157,6 +2157,7 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 								'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 								'<b>|</b>', '', 'g')) AS title
 	FROM public.advert a
+	JOIN public.city c on a.city_id = c.id AND c.translation = $3
 	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	ORDER BY title
 	LIMIT $2;
@@ -2167,6 +2168,7 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
+		JOIN public.city c on a.city_id = c.id AND c.translation = $3
 		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	),
 	two_word_titles AS (
@@ -2174,6 +2176,7 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
+		JOIN public.city c on a.city_id = c.id AND c.translation = $3
 		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
 	)
 	SELECT * FROM one_word_titles
@@ -2193,9 +2196,9 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	start := time.Now()
 
 	if wordsCount > 1 {
-		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num)
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num, city)
 	} else {
-		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num)
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num, city)
 	}
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
@@ -2237,13 +2240,13 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	return suggestions, nil
 }
 
-func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title string, num uint) ([]string, error) {
+func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title, city string, num uint) ([]string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var suggestions []string
 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-		suggestionsInner, err := ads.getSuggestions(ctx, tx, title, num)
+		suggestionsInner, err := ads.getSuggestions(ctx, tx, title, city, num)
 		suggestions = suggestionsInner
 
 		return err

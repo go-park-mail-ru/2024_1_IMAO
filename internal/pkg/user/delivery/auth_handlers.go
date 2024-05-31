@@ -254,7 +254,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 
 	for !cityExists && i < len(cities.CityItems) {
 		cityModel = *cities.CityItems[i]
-		cityExists = cityModel.CityName == city
+		cityExists = cityModel.Translation == city
 		i++
 	}
 
@@ -265,7 +265,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		logging.LogHandlerInfo(logger, "City doesn`t exist, setting Moscow", responses.StatusBadRequest)
 
 		responseData.NeedUpdate = true
-		city = "Москва"
+		responseData.UpdateName = "Moscow"
 		cityModel = models.City{
 			ID:          521,
 			CityName:    "Москва",
@@ -273,7 +273,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		}
 	}
 
-	responseData.CityName = city
+	responseData.CityName = cityModel.CityName
 
 	session, err := request.Cookie("session_id")
 	if err != nil {

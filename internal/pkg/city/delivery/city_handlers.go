@@ -91,7 +91,7 @@ func (h *CityHandler) GetCityName(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	city := "Москва"
+	city := "Moscow"
 
 	if len(data.Suggestions) != 0 {
 		city = data.Suggestions[0].Data.City

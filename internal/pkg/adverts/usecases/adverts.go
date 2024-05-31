@@ -17,9 +17,9 @@ type AdvertsStorageInterface interface {
 	GetAdvertsByCategory(ctx context.Context, category, city string, userID, startID,
 		num uint) ([]*models.ReturningAdInList, error)
 	GetAdvertOnlyByID(ctx context.Context, advertID uint) (*models.ReturningAdvert, error)
-	SearchAdvertByTitle(ctx context.Context, title string, userID, startID,
+	SearchAdvertByTitle(ctx context.Context, title, city string, userID, startID,
 		num uint) ([]*models.ReturningAdInList, error)
-	GetSuggestions(ctx context.Context, title string, num uint) ([]string, error)
+	GetSuggestions(ctx context.Context, title, city string, num uint) ([]string, error)
 	GetPriceHistory(ctx context.Context, userID uint) ([]*models.PriceHistoryItem, error)
 	CheckAdvertOwnership(ctx context.Context, advertID, userID uint) bool
 	GetPaymnetUUIDList(ctx context.Context, advertID uint) (*models.PaymnetUUIDList, error)

@@ -39,6 +39,7 @@ type AdditionalUserData struct {
 	PhoneNumber string `json:"phoneNumber"`
 	CityName    string `json:"cityName"`
 	NeedUpdate  bool   `json:"needUpdate"`
+	UpdateName  string `json:"updateName"`
 }
 
 type AuthResponse struct {

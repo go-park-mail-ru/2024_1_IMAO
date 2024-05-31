@@ -4,6 +4,7 @@ package delivery
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -69,7 +70,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 	}
 
 	if city == "" && request.URL.Query().Get("city") != "" {
-		city = request.URL.Query().Get("city")
+		city, _ = url.QueryUnescape(request.URL.Query().Get("city"))
 	} else if city == "" {
 		city = defaultCity
 	}
@@ -124,6 +125,7 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 	authClient := advertsHandler.authClient
 	count, errCount := strconv.Atoi(request.URL.Query().Get("count"))
 	startID, errStartID := strconv.Atoi(request.URL.Query().Get("startId"))
+	city, _ := url.QueryUnescape(request.URL.Query().Get("city"))
 	title := request.URL.Query().Get("title")
 
 	var (
@@ -146,8 +148,12 @@ func (advertsHandler *AdvertsHandler) GetAdsListWithSearch(writer http.ResponseW
 		userIDCookie = uint(user.ID)
 	}
 
+	if city == "" {
+		city = defaultCity
+	}
+
 	if errCount == nil && errStartID == nil && title != "" {
-		adsList, err = storage.SearchAdvertByTitle(ctx, title, userIDCookie, uint(startID), uint(count))
+		adsList, err = storage.SearchAdvertByTitle(ctx, title, city, userIDCookie, uint(startID), uint(count))
 	} else {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
@@ -177,14 +183,19 @@ func (advertsHandler *AdvertsHandler) GetSuggestions(writer http.ResponseWriter,
 	storage := advertsHandler.storage
 	num, errCount := strconv.Atoi(request.URL.Query().Get("num"))
 	title := request.URL.Query().Get("title")
+	city, _ := url.QueryUnescape(request.URL.Query().Get("city"))
 
 	var (
 		suggestions []string
 		err         error
 	)
 
+	if city == "" {
+		city = defaultCity
+	}
+
 	if errCount == nil && title != "" {
-		suggestions, err = storage.GetSuggestions(ctx, title, uint(num))
+		suggestions, err = storage.GetSuggestions(ctx, title, city, uint(num))
 	} else {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)
