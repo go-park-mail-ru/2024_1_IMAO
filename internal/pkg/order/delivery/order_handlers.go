@@ -92,8 +92,6 @@ func (orderHandler *OrderHandler) GetOrderList(writer http.ResponseWriter, reque
 		return
 	}
 
-	fmt.Println("aboba", ordersList[0].OrderItem.Rating)
-
 	log.Println("Get orders for user", user.ID)
 	logging.LogHandlerInfo(logger, fmt.Sprintf("Get orders for user %s", fmt.Sprint(user.ID)), responses.StatusOk)
 	responses.SendOkResponse(writer, responses.NewOkResponse(ordersList))
