@@ -58,7 +58,8 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		a.created_time, 
 		a.closed_time, 
 		a.is_used,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url	
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
+		(SELECT COALESCE(r.rating, 0) AS rating FROM public.advert a LEFT JOIN public.review r ON r.advert_id = a.id WHERE a.id = ord.advert_id) 
 	FROM 
 		public.advert a
 	LEFT JOIN 
@@ -101,7 +102,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
-			&advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&advertModel.IsUsed, &photoPad.Photo, &orderItem.Rating); err != nil {
 			logging.LogError(logger,
 				fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
@@ -139,6 +140,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		}
 
 		orderList = append(orderList, &ReturningOrder)
+
 	}
 
 	return orderList, nil
@@ -200,7 +202,8 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		a.created_time, 
 		a.closed_time, 
 		a.is_used,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url	
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
+		(SELECT COALESCE(r.rating, 0) AS rating FROM public.advert a LEFT JOIN public.review r ON r.advert_id = a.id WHERE a.id = ord.advert_id)	
 	FROM 
 		public.advert a
 	LEFT JOIN 
@@ -243,7 +246,7 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
-			&advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&advertModel.IsUsed, &photoPad.Photo, &orderItem.Rating); err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
 			return nil, err

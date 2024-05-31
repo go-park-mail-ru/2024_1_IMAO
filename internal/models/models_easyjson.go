@@ -5531,6 +5531,8 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels56(in *jl
 			out.Address = string(in.String())
 		case "deliveryPrice":
 			out.DeliveryPrice = uint(in.Uint())
+		case "rating":
+			out.Rating = uint(in.Uint())
 		default:
 			in.SkipRecursive()
 		}
@@ -5604,6 +5606,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels56(out *j
 		const prefix string = ",\"deliveryPrice\":"
 		out.RawString(prefix)
 		out.Uint(uint(in.DeliveryPrice))
+	}
+	{
+		const prefix string = ",\"rating\":"
+		out.RawString(prefix)
+		out.Uint(uint(in.Rating))
 	}
 	out.RawByte('}')
 }
