@@ -1855,9 +1855,9 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id AND c.translation = $3
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $3
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, promotion_start DESC, id
 		OFFSET 5 * $1
@@ -1870,9 +1870,9 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id AND c.translation = $3
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $3
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
 		OFFSET 15 * $1 + 5 * div((SELECT 
@@ -1992,9 +1992,9 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart								
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id AND c.translation = $4
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $4
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, 
 				promotion_start DESC, id
@@ -2012,9 +2012,9 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id AND c.translation = $4
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $4
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
 		OFFSET 15 * $1 + 5 * div((SELECT 
@@ -2157,8 +2157,8 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title, 
 								'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 								'<b>|</b>', '', 'g')) AS title
 	FROM public.advert a
-	JOIN public.city c on a.city_id = c.id AND c.translation = $3
-	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+	JOIN public.city c on a.city_id = c.id 
+	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	ORDER BY title
 	LIMIT $2;
 	`
@@ -2168,16 +2168,16 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title, 
 									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
-		JOIN public.city c on a.city_id = c.id AND c.translation = $3
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+		JOIN public.city c on a.city_id = c.id 
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	),
 	two_word_titles AS (
 		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
 									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
-		JOIN public.city c on a.city_id = c.id AND c.translation = $3
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+		JOIN public.city c on a.city_id = c.id 
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	)
 	SELECT * FROM one_word_titles
 	UNION

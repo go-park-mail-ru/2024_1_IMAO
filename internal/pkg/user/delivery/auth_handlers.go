@@ -298,15 +298,6 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		responseData.PhoneNumber = profile.Phone
 		responseData.FavNum = uint(profile.FavNum)
 		responseData.CartNum = uint(profile.CartNum)
-
-		if profile.CityName != city {
-			profileClient.SetProfileCity(ctx, &profileproto.SetCityRequest{
-				ID:          user.ID,
-				CityID:      uint64(cityModel.ID),
-				CityName:    cityModel.CityName,
-				Translation: cityModel.Translation,
-			})
-		}
 	} else {
 		logging.LogHandlerInfo(logger, "User not authorized", responses.StatusOk)
 	}

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"image"
+	_ "image/png"
 	"os"
 
 	"golang.org/x/image/draw"

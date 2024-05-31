@@ -188,8 +188,6 @@ func (pl *ProfileStorage) getProfileByUserIDAuth(ctx context.Context, tx pgx.Tx,
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
-	fmt.Println("userId", userId, " profileId", profileId)
-
 	SQLUserById := `
 		SELECT 
 			p.id, 
@@ -268,8 +266,6 @@ func (pl *ProfileStorage) getProfileByUserIDAuth(ctx context.Context, tx pgx.Tx,
 	profile.Avatar = avatartToInsert
 	profile.City = city
 	profile.MerchantsName = nameToInsert
-
-	fmt.Println("profile.IsSubscribed", profile.IsSubscribed)
 
 	return &profile, nil
 }
