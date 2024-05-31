@@ -64,18 +64,18 @@ func (mr *MockProfileStorageInterfaceMockRecorder) CreateProfile(ctx, userID int
 }
 
 // GetProfileByUserID mocks base method.
-func (m *MockProfileStorageInterface) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
+func (m *MockProfileStorageInterface) GetProfileByUserID(ctx context.Context, profileId, userId uint) (*models.Profile, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
+	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, profileId, userId)
 	ret0, _ := ret[0].(*models.Profile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProfileByUserID indicates an expected call of GetProfileByUserID.
-func (mr *MockProfileStorageInterfaceMockRecorder) GetProfileByUserID(ctx, userID interface{}) *gomock.Call {
+func (mr *MockProfileStorageInterfaceMockRecorder) GetProfileByUserID(ctx, profileId, userId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileStorageInterface)(nil).GetProfileByUserID), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileStorageInterface)(nil).GetProfileByUserID), ctx, profileId, userId)
 }
 
 // SetProfileCity mocks base method.

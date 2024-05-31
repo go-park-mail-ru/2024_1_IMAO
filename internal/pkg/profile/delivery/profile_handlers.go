@@ -42,9 +42,27 @@ func (h *ProfileHandler) GetProfile(writer http.ResponseWriter, request *http.Re
 
 	vars := mux.Vars(request)
 
-	id, _ := strconv.Atoi(vars["id"])
+	profileId, _ := strconv.Atoi(vars["id"])
 
-	profile, err := h.profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: uint64(id)})
+	authClient := h.authClient
+
+	session, cookieErr := request.Cookie("session_id")
+
+	var sessionValue string
+
+	if session != nil {
+		sessionValue = session.Value
+	}
+
+	var userIDCookie uint
+
+	user, _ := authClient.GetCurrentUser(ctx, &authproto.SessionData{SessionID: sessionValue})
+
+	if cookieErr == nil && user.IsAuth {
+		userIDCookie = uint(user.ID)
+	}
+
+	profile, err := h.profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ProfileId: uint64(profileId), UserId: uint64(userIDCookie)})
 	if err != nil {
 		logging.LogHandlerError(logger, err, responses.StatusBadRequest)
 		log.Println(err, responses.StatusBadRequest)

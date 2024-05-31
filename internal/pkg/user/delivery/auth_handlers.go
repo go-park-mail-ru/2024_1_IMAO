@@ -211,7 +211,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	http.SetCookie(writer, cookie)
 
-	_, _ = profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
+	_, _ = profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ProfileId: user.ID})
 
 	userData := models.AuthResponse{
 		User: models.User{
@@ -290,7 +290,7 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	})
 
 	if user.IsAuth {
-		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
+		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ProfileId: user.ID})
 
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
 

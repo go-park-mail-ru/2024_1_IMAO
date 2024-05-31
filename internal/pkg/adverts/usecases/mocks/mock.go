@@ -215,18 +215,18 @@ func (mr *MockAdvertsStorageInterfaceMockRecorder) GetPromotionData(ctx, advertI
 }
 
 // GetSuggestions mocks base method.
-func (m *MockAdvertsStorageInterface) GetSuggestions(ctx context.Context, title string, num uint) ([]string, error) {
+func (m *MockAdvertsStorageInterface) GetSuggestions(ctx context.Context, title, city string, num uint) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSuggestions", ctx, title, num)
+	ret := m.ctrl.Call(m, "GetSuggestions", ctx, title, city, num)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSuggestions indicates an expected call of GetSuggestions.
-func (mr *MockAdvertsStorageInterfaceMockRecorder) GetSuggestions(ctx, title, num interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) GetSuggestions(ctx, title, city, num interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSuggestions", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetSuggestions), ctx, title, num)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSuggestions", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).GetSuggestions), ctx, title, city, num)
 }
 
 // InsertView mocks base method.
@@ -244,18 +244,18 @@ func (mr *MockAdvertsStorageInterfaceMockRecorder) InsertView(ctx, userID, adver
 }
 
 // SearchAdvertByTitle mocks base method.
-func (m *MockAdvertsStorageInterface) SearchAdvertByTitle(ctx context.Context, title string, userID, startID, num uint) ([]*models.ReturningAdInList, error) {
+func (m *MockAdvertsStorageInterface) SearchAdvertByTitle(ctx context.Context, title, city string, userID, startID, num uint) ([]*models.ReturningAdInList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchAdvertByTitle", ctx, title, userID, startID, num)
+	ret := m.ctrl.Call(m, "SearchAdvertByTitle", ctx, title, city, userID, startID, num)
 	ret0, _ := ret[0].([]*models.ReturningAdInList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SearchAdvertByTitle indicates an expected call of SearchAdvertByTitle.
-func (mr *MockAdvertsStorageInterfaceMockRecorder) SearchAdvertByTitle(ctx, title, userID, startID, num interface{}) *gomock.Call {
+func (mr *MockAdvertsStorageInterfaceMockRecorder) SearchAdvertByTitle(ctx, title, city, userID, startID, num interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAdvertByTitle", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).SearchAdvertByTitle), ctx, title, userID, startID, num)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAdvertByTitle", reflect.TypeOf((*MockAdvertsStorageInterface)(nil).SearchAdvertByTitle), ctx, title, city, userID, startID, num)
 }
 
 // YuKassaUpdateDB mocks base method.

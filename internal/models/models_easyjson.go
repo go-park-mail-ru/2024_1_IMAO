@@ -3811,6 +3811,8 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels39(in *jl
 			out.ReactionsCount = float32(in.Float32())
 		case "approved":
 			out.Approved = bool(in.Bool())
+		case "isSubscribed":
+			out.IsSubscribed = bool(in.Bool())
 		case "merchantsName":
 			out.MerchantsName = string(in.String())
 		case "subersCount":
@@ -3895,6 +3897,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels39(out *j
 		const prefix string = ",\"approved\":"
 		out.RawString(prefix)
 		out.Bool(bool(in.Approved))
+	}
+	{
+		const prefix string = ",\"isSubscribed\":"
+		out.RawString(prefix)
+		out.Bool(bool(in.IsSubscribed))
 	}
 	{
 		const prefix string = ",\"merchantsName\":"
@@ -6418,6 +6425,8 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels66(in *jl
 			out.Lat = float64(in.Float64())
 		case "lon":
 			out.Lon = float64(in.Float64())
+		case "language":
+			out.Language = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -6441,6 +6450,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels66(out *j
 		const prefix string = ",\"lon\":"
 		out.RawString(prefix)
 		out.Float64(float64(in.Lon))
+	}
+	{
+		const prefix string = ",\"language\":"
+		out.RawString(prefix)
+		out.String(string(in.Language))
 	}
 	out.RawByte('}')
 }
