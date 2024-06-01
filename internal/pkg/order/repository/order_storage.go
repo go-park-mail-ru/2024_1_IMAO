@@ -328,7 +328,7 @@ func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID u
 	var err error
 
 	const (
-		paidStatus     string = "Оплачено"
+		paidStatus     string = "В обработке"
 		surnamePlug    string = "Фамилия"
 		patronymicPlug string = "Отчество"
 	)
