@@ -8,10 +8,11 @@ import (
 func ServeOrderRouter(router *mux.Router, orderHandler *delivery.OrderHandler,
 	authCheckMiddleware mux.MiddlewareFunc) {
 	subrouter := router.PathPrefix("/order").Subrouter()
-	subrouter.Use(authCheckMiddleware)
 
 	subrouter.Use(authCheckMiddleware)
 
 	subrouter.HandleFunc("/list", orderHandler.GetOrderList)
 	subrouter.HandleFunc("/create", orderHandler.CreateOrder)
+	subrouter.HandleFunc("/rate", orderHandler.CreateReview).Methods("POST")
+
 }

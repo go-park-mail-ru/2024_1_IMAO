@@ -601,25 +601,6 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
 		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -741,24 +722,6 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
-		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
 		}
 
 		// returningAdInList.Sanitize()
@@ -912,22 +875,6 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -1053,22 +1000,6 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -1185,24 +1116,6 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -1289,25 +1202,6 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
 		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -1833,7 +1727,7 @@ func (ads *AdvertStorage) CloseAdvert(ctx context.Context, advertID uint) error 
 	return nil
 }
 
-func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, title string, startID,
+func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, title, city string, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -1855,9 +1749,9 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $3
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, promotion_start DESC, id
 		OFFSET 5 * $1
@@ -1870,9 +1764,9 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	                                    WHERE advert_id = a.id 
 	                                    ORDER BY id) AS ordered_images) AS image_urls
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $3
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
 		OFFSET 15 * $1 + 5 * div((SELECT 
@@ -1897,7 +1791,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 
 	start := time.Now()
 
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, city)
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
@@ -1935,22 +1829,6 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -1968,7 +1846,7 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx, title string, userID, startID,
+func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx, title, city string, userID, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
@@ -1992,9 +1870,9 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart								
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = TRUE AND a.advert_status = 'Активно' AND c.translation = $4
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, 
 				promotion_start DESC, id
@@ -2012,9 +1890,9 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 		CAST(CASE WHEN EXISTS (SELECT 1 FROM cart c WHERE c.user_id = $3 AND c.advert_id = a.id)
 			THEN 1 ELSE 0 END AS bool) AS in_cart
 		FROM public.advert a
-		INNER JOIN city c ON a.city_id = c.id
+		INNER JOIN city c ON a.city_id = c.id 
 		INNER JOIN category ON a.category_id = category.id
-		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' 
+		WHERE is_promoted = FALSE AND a.advert_status = 'Активно' AND c.translation = $4
 			AND (to_tsvector(a.title) @@ to_tsquery(replace($2 || ':*', ' ', ' | ')))
 		ORDER BY ts_rank(to_tsvector(a.title), to_tsquery(replace($2 || ':*', ' ', ' | '))) DESC, id
 		OFFSET 15 * $1 + 5 * div((SELECT 
@@ -2039,7 +1917,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 
 	start := time.Now()
 
-	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID)
+	rows, err := tx.Query(ctx, SQLSearchAdvertByTitle, param, title, userID, city)
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
 
@@ -2076,24 +1954,6 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -2108,7 +1968,7 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 	return adsList, nil
 }
 
-func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string, userID, startID,
+func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title, city string, userID, startID,
 	num uint) ([]*models.ReturningAdInList, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2116,7 +1976,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 
 	if userID == 0 {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.searchAdvertByTitle(ctx, tx, title, startID, num)
+			advertsListInner, err := ads.searchAdvertByTitle(ctx, tx, title, city, startID, num)
 			advertsList = advertsListInner
 
 			return err
@@ -2129,7 +1989,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 		}
 	} else {
 		err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, userID, startID, num)
+			advertsListInner, err := ads.searchAdvertByTitleAuth(ctx, tx, title, city, userID, startID, num)
 			advertsList = advertsListInner
 
 			return err
@@ -2145,7 +2005,7 @@ func (ads *AdvertStorage) SearchAdvertByTitle(ctx context.Context, title string,
 	return advertsList, nil
 }
 
-func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title string, num uint) ([]string, error) {
+func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title, city string, num uint) ([]string, error) {
 	funcName := logging.GetOnlyFunctionName()
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
@@ -2157,7 +2017,8 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 								'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 								'<b>|</b>', '', 'g')) AS title
 	FROM public.advert a
-	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+	JOIN public.city c on a.city_id = c.id 
+	WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	ORDER BY title
 	LIMIT $2;
 	`
@@ -2167,14 +2028,16 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 									  'MaxFragments=1,' || 'FragmentDelimiter=...,MaxWords=2,MinWords=1'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+		JOIN public.city c on a.city_id = c.id 
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	),
 	two_word_titles AS (
 		SELECT DISTINCT LOWER(regexp_replace(ts_headline(a.title, to_tsquery(replace($1 || ':*', ' ', ' | ')), 
 									  'MaxFragments=2,' || 'FragmentDelimiter=...,MaxWords=3,MinWords=2'), 
 										'<b>|</b>', '', 'g')) AS title
 		FROM public.advert a
-		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно'
+		JOIN public.city c on a.city_id = c.id 
+		WHERE (to_tsvector(a.title) @@ to_tsquery(replace($1 || ':*', ' ', ' | '))) AND a.advert_status = 'Активно' AND c.translation = $3
 	)
 	SELECT * FROM one_word_titles
 	UNION
@@ -2193,9 +2056,9 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	start := time.Now()
 
 	if wordsCount > 1 {
-		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num)
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsManyWords, title, num, city)
 	} else {
-		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num)
+		rows, err = tx.Query(ctx, SQLSelectSuggestionsOneWord, title, num, city)
 	}
 
 	ads.metrics.AddDuration(funcName, time.Since(start))
@@ -2237,13 +2100,13 @@ func (ads *AdvertStorage) getSuggestions(ctx context.Context, tx pgx.Tx, title s
 	return suggestions, nil
 }
 
-func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title string, num uint) ([]string, error) {
+func (ads *AdvertStorage) GetSuggestions(ctx context.Context, title, city string, num uint) ([]string, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var suggestions []string
 
 	err := pgx.BeginFunc(ctx, ads.pool, func(tx pgx.Tx) error {
-		suggestionsInner, err := ads.getSuggestions(ctx, tx, title, num)
+		suggestionsInner, err := ads.getSuggestions(ctx, tx, title, city, num)
 		suggestions = suggestionsInner
 
 		return err

@@ -58,7 +58,8 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		a.created_time, 
 		a.closed_time, 
 		a.is_used,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url	
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
+		(SELECT COALESCE(r.rating, 0) AS rating FROM public.advert a LEFT JOIN public.review r ON r.advert_id = a.id WHERE a.id = ord.advert_id) 
 	FROM 
 		public.advert a
 	LEFT JOIN 
@@ -101,7 +102,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
-			&advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&advertModel.IsUsed, &photoPad.Photo, &orderItem.Rating); err != nil {
 			logging.LogError(logger,
 				fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
@@ -139,6 +140,7 @@ func (ol *OrderStorage) getBoughtOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		}
 
 		orderList = append(orderList, &ReturningOrder)
+
 	}
 
 	return orderList, nil
@@ -200,7 +202,8 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 		a.created_time, 
 		a.closed_time, 
 		a.is_used,
-		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url	
+		(SELECT url FROM advert_image WHERE advert_id = a.id ORDER BY id LIMIT 1) AS first_image_url,
+		(SELECT COALESCE(r.rating, 0) AS rating FROM public.advert a LEFT JOIN public.review r ON r.advert_id = a.id WHERE a.id = ord.advert_id)	
 	FROM 
 		public.advert a
 	LEFT JOIN 
@@ -243,7 +246,7 @@ func (ol *OrderStorage) getSoldOrdersByUserID(ctx context.Context, tx pgx.Tx,
 			&advertModel.ID, &advertModel.UserID, &cityModel.ID, &cityModel.CityName, &cityModel.Translation,
 			&categoryModel.ID, &categoryModel.Name, &categoryModel.Translation, &advertModel.Title,
 			&advertModel.Description, &advertModel.Price, &advertModel.CreatedTime, &advertModel.ClosedTime,
-			&advertModel.IsUsed, &photoPad.Photo); err != nil {
+			&advertModel.IsUsed, &photoPad.Photo, &orderItem.Rating); err != nil {
 			logging.LogError(logger, fmt.Errorf("something went wrong while scanning adverts from the cart, err=%w", err))
 
 			return nil, err
@@ -325,7 +328,7 @@ func (ol *OrderStorage) createOrderByID(ctx context.Context, tx pgx.Tx, userID u
 	var err error
 
 	const (
-		paidStatus     string = "Оплачено"
+		paidStatus     string = "В обработке"
 		surnamePlug    string = "Фамилия"
 		patronymicPlug string = "Отчество"
 	)
@@ -364,6 +367,99 @@ func (ol *OrderStorage) CreateOrderByID(ctx context.Context, userID uint, data *
 
 	if err != nil {
 		logging.LogError(logger, fmt.Errorf("error while creating user, err=%w", err))
+
+		return err
+	}
+
+	return nil
+}
+
+func (ol *OrderStorage) orderExists(ctx context.Context, tx pgx.Tx, userID, advertID uint) (bool, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLUserExists := `SELECT EXISTS(SELECT 1 FROM public."order" WHERE user_id = $1 and advert_id = $2);`
+
+	logging.LogInfo(logger, "SELECT FROM user")
+
+	start := time.Now()
+
+	userLine := tx.QueryRow(ctx, SQLUserExists, userID, advertID)
+
+	ol.metrics.AddDuration(funcName, time.Since(start))
+
+	var exists bool
+
+	if err := userLine.Scan(&exists); err != nil {
+		logging.LogError(logger, fmt.Errorf("error while scanning order exists, err=%w", err))
+
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (ol *OrderStorage) OrderExists(ctx context.Context, userID, advertID uint) bool {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	var exists bool
+
+	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
+		userExists, err := ol.orderExists(ctx, tx, userID, advertID)
+		exists = userExists
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while executing advert exists query, err=%w",
+			err))
+	}
+
+	return exists
+}
+
+func (ol *OrderStorage) createReview(ctx context.Context, tx pgx.Tx, userID, advertID, rating uint) error {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLCreateReview :=
+		`INSERT INTO public.review(
+			user_id, advert_id, rating)
+			VALUES ($1, $2, $3);`
+
+	logging.LogInfo(logger, "INSERT INTO review")
+
+	var err error
+
+	start := time.Now()
+
+	_, err = tx.Exec(ctx, SQLCreateReview, userID, advertID, rating)
+
+	ol.metrics.AddDuration(funcName, time.Since(start))
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("something went wrong while executing create review query, err=%w",
+			err))
+		ol.metrics.IncreaseErrors(funcName)
+
+		return err
+	}
+
+	return nil
+}
+
+func (ol *OrderStorage) CreateReview(ctx context.Context, userID, advertID, rating uint) error {
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	err := pgx.BeginFunc(ctx, ol.pool, func(tx pgx.Tx) error {
+		err := ol.createReview(ctx, tx, userID, advertID, rating)
+
+		return err
+	})
+
+	if err != nil {
+		logging.LogError(logger, fmt.Errorf("error while creating review, err=%w", err))
 
 		return err
 	}

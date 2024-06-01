@@ -121,6 +121,7 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 			(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
 			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
 			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count,
+			p.rating,
 			p.cart_adverts_number,
 			p.fav_adverts_number
 		FROM 
@@ -144,7 +145,7 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
 		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation, &profile.SubersCount,
-		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount,
+		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount, &profile.Rating,
 		&profile.CartNum, &profile.FavNum); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile, err=%w", err))
@@ -177,41 +178,146 @@ func (pl *ProfileStorage) getProfileByUserID(ctx context.Context, tx pgx.Tx, id 
 	profile.Surname = surnameToInsert
 	profile.Avatar = avatartToInsert
 	profile.City = city
-
-	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
-	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
-	//profile.ReactionsCount = 10
-	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
-	//profile.SubersCount = rand.Intn(10)
-	//profile.SubonsCount = rand.Intn(10)
+	profile.IsSubscribed = false
 
 	return &profile, nil
 }
 
-func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
+func (pl *ProfileStorage) getProfileByUserIDAuth(ctx context.Context, tx pgx.Tx, profileId, userId uint) (*models.Profile, error) {
+	funcName := logging.GetOnlyFunctionName()
+	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
+
+	SQLUserById := `
+		SELECT 
+			p.id, 
+			p.user_id, 
+			p.city_id, 
+			p.phone, 
+			p.name, 
+			p.surname, 
+			p.regtime, 
+			p.verified, 
+			p.avatar_url,
+			c.name AS city_name,
+			c.translation AS city_translation,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_merchant = $1) AS subscriber_count,
+			(SELECT COUNT(*) FROM subscription WHERE user_id_subscriber = $1) AS subscription_count,
+			(SELECT COUNT(*) FROM public.review JOIN public.advert ON review.advert_id = advert.id JOIN public.user ON advert.user_id = "user".id WHERE "user".id = $1) AS review_count,
+			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Активно') AS active_ads_count,
+			(SELECT COUNT(*) FROM advert WHERE user_id = $1 AND advert_status = 'Продано') AS sold_ads_count,
+			CAST(CASE WHEN EXISTS (SELECT 1 FROM subscription s WHERE s.user_id_merchant = $1 AND s.user_id_subscriber = $2)
+			THEN 1 ELSE 0 END AS bool) AS is_subscribed,
+			p.rating,
+			p.cart_adverts_number,
+			p.fav_adverts_number
+		FROM 
+			public.profile p
+		INNER JOIN 
+			public.city c
+		ON 
+			p.city_id = c.id
+		WHERE 
+			p.user_id = $1`
+
+	logging.LogInfo(logger, "SELECT FROM profile, city, subscription, review")
+
+	start := time.Now()
+	profileLine := tx.QueryRow(ctx, SQLUserById, profileId, userId)
+	pl.metrics.AddDuration(funcName, time.Since(start))
+
+	profile := models.Profile{}
+	city := models.City{}
+	profilePad := models.ProfilePad{}
+
+	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation, &profile.SubersCount,
+		&profile.SubonsCount, &profile.ReactionsCount, &profile.ActiveAddsCount, &profile.SoldAddsCount, &profile.IsSubscribed, &profile.Rating,
+		&profile.CartNum, &profile.FavNum); err != nil {
+
+		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile, err=%w", err))
+
+		return nil, err
+	}
+
+	phoneToInsert := ""
+	if profilePad.Phone != nil {
+		phoneToInsert = *profilePad.Phone
+	}
+
+	nameToInsert := ""
+	if profilePad.Name != nil {
+		nameToInsert = *profilePad.Name
+	}
+
+	surnameToInsert := ""
+	if profilePad.Surname != nil {
+		surnameToInsert = *profilePad.Surname
+	}
+
+	avatartToInsert := ""
+	if profilePad.Avatar != nil {
+		avatartToInsert = *profilePad.Avatar
+	}
+
+	profile.Phone = phoneToInsert
+	profile.Name = nameToInsert
+	profile.Surname = surnameToInsert
+	profile.Avatar = avatartToInsert
+	profile.City = city
+	profile.MerchantsName = nameToInsert
+
+	return &profile, nil
+}
+
+func (pl *ProfileStorage) GetProfileByUserID(ctx context.Context, profileId, userId uint) (*models.Profile, error) {
 	logger := logging.GetLoggerFromContext(ctx).With(zap.String("func", logging.GetFunctionName()))
 
 	var profile *models.Profile
 
-	err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
-		profileInner, err := pl.getProfileByUserID(ctx, tx, userID)
-		profile = profileInner
+	if userId == 0 {
 
-		return err
-	})
+		err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
+			profileInner, err := pl.getProfileByUserID(ctx, tx, profileId)
+			profile = profileInner
 
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("something went wrong while getting profile by UserID , err=%w", errProfileNotExists))
+			return err
+		})
 
-		return nil, errProfileNotExists
-	}
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting profile by UserID , err=%w", errProfileNotExists))
 
-	profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
-	if err != nil {
-		logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
+			return nil, errProfileNotExists
+		}
 
-		return nil, err
+		profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
+
+			return nil, err
+		}
+	} else {
+
+		err := pgx.BeginFunc(ctx, pl.pool, func(tx pgx.Tx) error {
+			profileInner, err := pl.getProfileByUserIDAuth(ctx, tx, profileId, userId)
+			profile = profileInner
+
+			return err
+		})
+
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("something went wrong while getting profile by UserID , err=%w", errProfileNotExists))
+
+			return nil, errProfileNotExists
+		}
+
+		profile.AvatarIMG, err = utils.DecodeImage(profile.Avatar)
+		if err != nil {
+			logging.LogError(logger, fmt.Errorf("error occurred while decoding avatar image, err = %w", err))
+
+			return nil, err
+		}
+
 	}
 
 	profile.Sanitize()
@@ -227,7 +333,7 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	SET city_id = $1
 	FROM public.city c
 	WHERE c.id = $1 AND p.user_id = $2
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, p.rating, c.name AS city_name, c.translation AS city_translation;`
 
 	logging.LogInfo(logger, "UPDATE profile")
 
@@ -240,7 +346,7 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	profilePad := models.ProfilePad{}
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &profile.Rating, &city.CityName, &city.Translation); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines, err=%w", err))
 
@@ -273,8 +379,8 @@ func (pl *ProfileStorage) setProfileCity(ctx context.Context, tx pgx.Tx, userID 
 	profile.Avatar = avatartToInsert
 	profile.City = city
 
-	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
-	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
+	//rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
+	//profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert
@@ -322,7 +428,7 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	SET phone = $1
 	FROM public.city c
 	WHERE c.id = p.city_id AND p.user_id = $2
-	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified, p.avatar_url, c.name AS city_name, c.translation AS city_translation;`
+	RETURNING p.id, p.user_id, p.city_id, p.phone, p.name, p.surname, p.regtime, p.verified,  p.avatar_url, p.rating, c.name AS city_name, c.translation AS city_translation;`
 
 	logging.LogInfo(logger, "UPDATE profile")
 
@@ -335,7 +441,7 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	profilePad := models.ProfilePad{}
 
 	if err := profileLine.Scan(&profile.ID, &profile.UserID, &city.ID, &profilePad.Phone, &profilePad.Name,
-		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &city.CityName, &city.Translation); err != nil {
+		&profilePad.Surname, &profile.RegisterTime, &profile.Approved, &profilePad.Avatar, &profile.Rating, &city.CityName, &city.Translation); err != nil {
 
 		logging.LogError(logger, fmt.Errorf("something went wrong while scanning profile lines , err=%w", err))
 
@@ -368,8 +474,8 @@ func (pl *ProfileStorage) setProfilePhone(ctx context.Context, tx pgx.Tx, userID
 	profile.Avatar = avatartToInsert
 	profile.City = city
 
-	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
-	profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
+	//rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
+	//profile.Rating = float32(math.Round((rand.Float64()*4+1)*100) / 100)
 	profile.ReactionsCount = 10
 	//profile.Approved = true
 	profile.MerchantsName = nameToInsert

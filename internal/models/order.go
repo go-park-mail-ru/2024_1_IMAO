@@ -42,6 +42,12 @@ type OrderItem struct {
 	Email         string    `json:"email"`
 	Address       string    `json:"address"`
 	DeliveryPrice uint      `json:"deliveryPrice"`
+	Rating        uint      `json:"rating"`
+}
+
+type ReviewItem struct {
+	AdvertID uint `json:"advertId"`
+	Rating   uint `json:"rating"`
 }
 
 type OrderList struct {

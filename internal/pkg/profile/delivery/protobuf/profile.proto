@@ -25,7 +25,8 @@ message AppendSubResponse {
 }
 
 message ProfileIDRequest {
-    uint64 ID = 1;
+    uint64 profileId = 1;
+    uint64 userId = 2;
 }
 
 message ProfileData {
@@ -42,14 +43,15 @@ message ProfileData {
     float Rating = 11;
     float ReactionsCount = 12;
     bool Approved = 13;
-    string MerchantsName = 14;
-    int64 SubersCount = 15;
-    int64 SubonsCount = 16;
-    string AvatarIMG = 17;
-    int64 ActiveAddsCount = 18;
-    int64 SoldAddsCount = 19;
-    int64 CartNum = 20;         
-	int64 FavNum = 21;          
+    bool IsSubscribed = 14;
+    string MerchantsName = 15;
+    int64 SubersCount = 16;
+    int64 SubonsCount = 17;
+    string AvatarIMG = 18;
+    int64 ActiveAddsCount = 19;
+    int64 SoldAddsCount = 20;
+    int64 CartNum = 21;         
+	int64 FavNum = 22;          
 }
 
 message SetCityRequest {

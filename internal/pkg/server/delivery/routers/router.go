@@ -67,7 +67,7 @@ func NewRouter(logger *zap.SugaredLogger,
 
 	advertsHandler := advdel.NewAdvertsHandler(advertStorage, authClient)
 	cartHandler := cartdel.NewCartHandler(cartClient, authClient)
-	authHandler := authdel.NewAuthHandler(authClient, profileClient)
+	authHandler := authdel.NewAuthHandler(authClient, profileClient, cityStorage)
 	profileHandler := profdel.NewProfileHandler(profileClient, authClient)
 	orderHandler := orderdel.NewOrderHandler(orderStorage, cartStorage, authClient, advertStorage)
 	cityHandler := citydel.NewCityHandler(cityStorage)
@@ -84,8 +84,8 @@ func NewRouter(logger *zap.SugaredLogger,
 	ServeSurveyRouter(rootRouter, surveyHandler, authCheckMiddleware)
 	ServeFavouritesRouter(rootRouter, favouritesHandler, authCheckMiddleware)
 	ServePaymentsRouter(rootRouter, paymentsHandler, authCheckMiddleware)
+	ServeCityRouter(rootRouter, cityHandler)
 
-	rootRouter.HandleFunc("/city", cityHandler.GetCityList)
 	router.PathPrefix("/metrics").Handler(promhttp.Handler())
 
 	return router

@@ -6,7 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
+
+	cityusecases "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/city/usecases"
 
 	profileproto "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/profile/delivery/protobuf"
 
@@ -29,13 +32,15 @@ const (
 type AuthHandler struct {
 	authClient    authproto.AuthClient
 	profileClient profileproto.ProfileClient
+	cityStorage   cityusecases.CityStorageInterface
 }
 
 func NewAuthHandler(authClient authproto.AuthClient,
-	profileClient profileproto.ProfileClient) *AuthHandler {
+	profileClient profileproto.ProfileClient, storage cityusecases.CityStorageInterface) *AuthHandler {
 	return &AuthHandler{
 		authClient:    authClient,
 		profileClient: profileClient,
+		cityStorage:   storage,
 	}
 }
 
@@ -204,7 +209,7 @@ func (authHandler *AuthHandler) Signup(writer http.ResponseWriter, request *http
 
 	http.SetCookie(writer, cookie)
 
-	_, _ = profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
+	_, _ = profileClient.CreateProfile(ctx, &profileproto.ProfileIDRequest{ProfileId: user.ID})
 
 	userData := models.AuthResponse{
 		User: models.User{
@@ -235,12 +240,45 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 	client := authHandler.authClient
 	profileClient := authHandler.profileClient
 
-	session, err := request.Cookie("session_id")
+	var (
+		responseData models.AdditionalUserData
+		cityExists   bool
+		cityModel    models.City
+	)
 
+	cities, _ := authHandler.cityStorage.GetCityList(ctx)
+	i := 0
+	city, _ := url.QueryUnescape(request.URL.Query().Get("location"))
+
+	for !cityExists && i < len(cities.CityItems) {
+		cityModel = *cities.CityItems[i]
+		cityExists = cityModel.Translation == city
+		i++
+	}
+
+	if cityExists {
+		logging.LogHandlerInfo(logger, fmt.Sprintf("City exists, setting %s", city),
+			responses.StatusBadRequest)
+	} else {
+		logging.LogHandlerInfo(logger, "City doesn`t exist, setting Moscow", responses.StatusBadRequest)
+
+		responseData.NeedUpdate = true
+		responseData.UpdateName = "Moscow"
+		cityModel = models.City{
+			ID:          521,
+			CityName:    "Москва",
+			Translation: "Moscow",
+		}
+	}
+
+	responseData.CityName = cityModel.CityName
+
+	session, err := request.Cookie("session_id")
 	if err != nil {
+		responseData.IsAuth = false
 		logging.LogHandlerError(logger, err, responses.StatusUnauthorized)
 		responses.SendOkResponse(writer,
-			responses.NewOkResponse(models.AuthResponse{IsAuth: false}))
+			responses.NewOkResponse(responseData))
 
 		return
 	}
@@ -249,14 +287,12 @@ func (authHandler *AuthHandler) CheckAuth(writer http.ResponseWriter, request *h
 		SessionID: session.Value,
 	})
 
-	var responseData models.AdditionalUserData
-
 	if user.IsAuth {
-		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ID: user.ID})
+		profile, _ := profileClient.GetProfile(ctx, &profileproto.ProfileIDRequest{ProfileId: user.ID})
 
 		logging.LogHandlerInfo(logger, fmt.Sprintf("User %s is authorized", user.Email), responses.StatusOk)
 
-		responseData.Avatar = profile.AvatarIMG
+		responseData.Avatar = profile.Avatar
 		responseData.PhoneNumber = profile.Phone
 		responseData.FavNum = uint(profile.FavNum)
 		responseData.CartNum = uint(profile.CartNum)

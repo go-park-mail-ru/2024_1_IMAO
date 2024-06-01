@@ -19,6 +19,7 @@ type Profile struct {
 	Rating          float32   `json:"rating"`
 	ReactionsCount  float32   `json:"reactionsCount"`
 	Approved        bool      `json:"approved"`
+	IsSubscribed    bool      `json:"isSubscribed"`
 	MerchantsName   string    `json:"merchantsName"`
 	SubersCount     int       `json:"subersCount"`
 	SubonsCount     int       `json:"subonsCount"`

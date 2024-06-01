@@ -70,4 +70,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+--============= DEFENCE ===========================
+
+CREATE OR REPLACE FUNCTION update_profile_rating()
+RETURNS TRIGGER AS $$
+BEGIN
+   UPDATE profile  
+	SET  rating = (SELECT COALESCE(AVG(r.rating), 0) AS average_rating FROM public.review r 
+	INNER JOIN advert a ON r.advert_id = a.id 
+	WHERE a.user_id = profile.user_id )
+	WHERE EXISTS (
+        SELECT 1 FROM advert a
+        WHERE a.id = NEW.advert_id AND a.user_id = profile.user_id
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 

@@ -6,7 +6,6 @@ package mock_usecases
 
 import (
 	context "context"
-	multipart "mime/multipart"
 	reflect "reflect"
 
 	models "github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
@@ -36,6 +35,20 @@ func (m *MockProfileStorageInterface) EXPECT() *MockProfileStorageInterfaceMockR
 	return m.recorder
 }
 
+// AppendSubByIDs mocks base method.
+func (m *MockProfileStorageInterface) AppendSubByIDs(ctx context.Context, userID, advertID uint) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendSubByIDs", ctx, userID, advertID)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AppendSubByIDs indicates an expected call of AppendSubByIDs.
+func (mr *MockProfileStorageInterfaceMockRecorder) AppendSubByIDs(ctx, userID, advertID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendSubByIDs", reflect.TypeOf((*MockProfileStorageInterface)(nil).AppendSubByIDs), ctx, userID, advertID)
+}
+
 // CreateProfile mocks base method.
 func (m *MockProfileStorageInterface) CreateProfile(ctx context.Context, userID uint) *models.Profile {
 	m.ctrl.T.Helper()
@@ -51,18 +64,18 @@ func (mr *MockProfileStorageInterfaceMockRecorder) CreateProfile(ctx, userID int
 }
 
 // GetProfileByUserID mocks base method.
-func (m *MockProfileStorageInterface) GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error) {
+func (m *MockProfileStorageInterface) GetProfileByUserID(ctx context.Context, profileId, userId uint) (*models.Profile, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
+	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, profileId, userId)
 	ret0, _ := ret[0].(*models.Profile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProfileByUserID indicates an expected call of GetProfileByUserID.
-func (mr *MockProfileStorageInterfaceMockRecorder) GetProfileByUserID(ctx, userID interface{}) *gomock.Call {
+func (mr *MockProfileStorageInterfaceMockRecorder) GetProfileByUserID(ctx, profileId, userId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileStorageInterface)(nil).GetProfileByUserID), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileStorageInterface)(nil).GetProfileByUserID), ctx, profileId, userId)
 }
 
 // SetProfileCity mocks base method.
@@ -81,18 +94,18 @@ func (mr *MockProfileStorageInterfaceMockRecorder) SetProfileCity(ctx, userID, d
 }
 
 // SetProfileInfo mocks base method.
-func (m *MockProfileStorageInterface) SetProfileInfo(ctx context.Context, userID uint, file *multipart.FileHeader, data models.EditProfileNec) (*models.Profile, error) {
+func (m *MockProfileStorageInterface) SetProfileInfo(ctx context.Context, userID uint, data models.EditProfileNec) (*models.Profile, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetProfileInfo", ctx, userID, file, data)
+	ret := m.ctrl.Call(m, "SetProfileInfo", ctx, userID, data)
 	ret0, _ := ret[0].(*models.Profile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SetProfileInfo indicates an expected call of SetProfileInfo.
-func (mr *MockProfileStorageInterfaceMockRecorder) SetProfileInfo(ctx, userID, file, data interface{}) *gomock.Call {
+func (mr *MockProfileStorageInterfaceMockRecorder) SetProfileInfo(ctx, userID, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProfileInfo", reflect.TypeOf((*MockProfileStorageInterface)(nil).SetProfileInfo), ctx, userID, file, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProfileInfo", reflect.TypeOf((*MockProfileStorageInterface)(nil).SetProfileInfo), ctx, userID, data)
 }
 
 // SetProfilePhone mocks base method.

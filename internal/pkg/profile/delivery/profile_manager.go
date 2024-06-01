@@ -38,6 +38,7 @@ func CleanProfileData(profile *protobuf.ProfileData) *models.Profile {
 		Rating:          profile.Rating,
 		ReactionsCount:  profile.ReactionsCount,
 		Approved:        profile.Approved,
+		IsSubscribed:    profile.IsSubscribed,
 		MerchantsName:   profile.MerchantsName,
 		SubersCount:     int(profile.SubersCount),
 		SubonsCount:     int(profile.SubonsCount),
@@ -64,6 +65,7 @@ func newProtobufProfile(profile *models.Profile) *protobuf.ProfileData {
 		Rating:          profile.Rating,
 		ReactionsCount:  profile.ReactionsCount,
 		Approved:        profile.Approved,
+		IsSubscribed:    profile.IsSubscribed,
 		MerchantsName:   profile.MerchantsName,
 		SubersCount:     int64(profile.SubersCount),
 		SubonsCount:     int64(profile.SubonsCount),
@@ -77,10 +79,11 @@ func newProtobufProfile(profile *models.Profile) *protobuf.ProfileData {
 
 func (manager *ProfileManager) GetProfile(ctx context.Context,
 	in *protobuf.ProfileIDRequest) (*protobuf.ProfileData, error) {
-	id := in.GetID()
+	profileId := in.GetProfileId()
+	userId := in.GetUserId()
 	storage := manager.profileStorage
 
-	profile, err := storage.GetProfileByUserID(ctx, uint(id))
+	profile, err := storage.GetProfileByUserID(ctx, uint(profileId), uint(userId))
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +93,7 @@ func (manager *ProfileManager) GetProfile(ctx context.Context,
 
 func (manager *ProfileManager) CreateProfile(ctx context.Context,
 	in *protobuf.ProfileIDRequest) (*protobuf.ProfileData, error) {
-	id := in.GetID()
+	id := in.GetProfileId()
 	storage := manager.profileStorage
 
 	profile := storage.CreateProfile(ctx, uint(id))

@@ -10,7 +10,7 @@ import (
 
 type ProfileStorageInterface interface {
 	CreateProfile(ctx context.Context, userID uint) *models.Profile
-	GetProfileByUserID(ctx context.Context, userID uint) (*models.Profile, error)
+	GetProfileByUserID(ctx context.Context, profileId, userId uint) (*models.Profile, error)
 
 	SetProfileCity(ctx context.Context, userID uint, data models.City) (*models.Profile, error)
 	SetProfilePhone(ctx context.Context, userID uint, data models.SetProfilePhoneNec) (*models.Profile, error)

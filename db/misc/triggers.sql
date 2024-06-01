@@ -33,3 +33,10 @@ CREATE TRIGGER update_advert_promotion
 AFTER UPDATE ON payments
 FOR EACH ROW
 EXECUTE PROCEDURE update_advert_promotion_func()
+
+--============= DEFENCE ===========================
+
+CREATE OR REPLACE TRIGGER profile_rating_update_trigger
+AFTER INSERT ON review
+FOR EACH ROW
+EXECUTE PROCEDURE update_profile_rating();

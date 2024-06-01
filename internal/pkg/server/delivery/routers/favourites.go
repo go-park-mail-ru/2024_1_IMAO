@@ -14,4 +14,5 @@ func ServeFavouritesRouter(router *mux.Router, favouritesHandler *delivery.Favou
 	subrouter.HandleFunc("/list", favouritesHandler.GetFavouritesList)
 	subrouter.HandleFunc("/change", favouritesHandler.ChangeFavourites)
 	subrouter.HandleFunc("/delete", favouritesHandler.DeleteFromFavourites)
+	subrouter.HandleFunc("/subscribed", favouritesHandler.GetSubscribedAdverts).Methods("GET")
 }
