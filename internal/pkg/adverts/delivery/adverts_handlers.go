@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	defaultCity       = "Moscow"
-	defaultAdverCount = 20
-	maxMemory         = 2 << 28
+	defaultCity              = "Moscow"
+	defaultAdverCount        = 20
+	defaultAdverCountProfile = 50
+	maxMemory                = 2 << 28
 )
 
 type AdvertsHandler struct {
@@ -101,7 +102,7 @@ func (advertsHandler *AdvertsHandler) GetAdsList(writer http.ResponseWriter, req
 		adsList, err = storage.GetAdvertsByCity(ctx, city, userIDCookie, uint(startID), uint(count))
 	} else if errUser == nil && errdeleted == nil {
 		adsList, err = storage.GetAdvertsForUserWhereStatusIs(ctx, userIDCookie, uint(userID),
-			uint(deleted), uint(count))
+			uint(deleted), defaultAdverCountProfile)
 	}
 
 	if err != nil {
