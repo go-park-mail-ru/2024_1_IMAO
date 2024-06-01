@@ -94,7 +94,6 @@ type ReturningAdInList struct {
 	City         string   `json:"city"`
 	Category     string   `json:"category"`
 	Photos       []string `json:"photos"`
-	PhotosIMG    []string `json:"photosIMG"`
 	InFavourites bool     `json:"inFavourites"`
 	InCart       bool     `json:"inCart"`
 	IsPromoted   bool     `json:"isPromoted"`

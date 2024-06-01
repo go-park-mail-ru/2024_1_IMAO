@@ -2272,29 +2272,6 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels24(in *jl
 				}
 				in.Delim(']')
 			}
-		case "photosIMG":
-			if in.IsNull() {
-				in.Skip()
-				out.PhotosIMG = nil
-			} else {
-				in.Delim('[')
-				if out.PhotosIMG == nil {
-					if !in.IsDelim(']') {
-						out.PhotosIMG = make([]string, 0, 4)
-					} else {
-						out.PhotosIMG = []string{}
-					}
-				} else {
-					out.PhotosIMG = (out.PhotosIMG)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v19 string
-					v19 = string(in.String())
-					out.PhotosIMG = append(out.PhotosIMG, v19)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
 		case "inFavourites":
 			out.InFavourites = bool(in.Bool())
 		case "inCart":
@@ -2349,27 +2326,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels24(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v20, v21 := range in.Photos {
-				if v20 > 0 {
+			for v19, v20 := range in.Photos {
+				if v19 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v21))
-			}
-			out.RawByte(']')
-		}
-	}
-	{
-		const prefix string = ",\"photosIMG\":"
-		out.RawString(prefix)
-		if in.PhotosIMG == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
-			out.RawString("null")
-		} else {
-			out.RawByte('[')
-			for v22, v23 := range in.PhotosIMG {
-				if v22 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v23))
+				out.String(string(v20))
 			}
 			out.RawByte(']')
 		}
@@ -2601,17 +2562,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels27(in *jl
 					out.Adverts = (out.Adverts)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v24 *ReceivedOrderItem
+					var v21 *ReceivedOrderItem
 					if in.IsNull() {
 						in.Skip()
-						v24 = nil
+						v21 = nil
 					} else {
-						if v24 == nil {
-							v24 = new(ReceivedOrderItem)
+						if v21 == nil {
+							v21 = new(ReceivedOrderItem)
 						}
-						(*v24).UnmarshalEasyJSON(in)
+						(*v21).UnmarshalEasyJSON(in)
 					}
-					out.Adverts = append(out.Adverts, v24)
+					out.Adverts = append(out.Adverts, v21)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -2637,14 +2598,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels27(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v25, v26 := range in.Adverts {
-				if v25 > 0 {
+			for v22, v23 := range in.Adverts {
+				if v22 > 0 {
 					out.RawByte(',')
 				}
-				if v26 == nil {
+				if v23 == nil {
 					out.RawString("null")
 				} else {
-					(*v26).MarshalEasyJSON(out)
+					(*v23).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -2885,9 +2846,9 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels30(in *jl
 					out.AdvertIDs = (out.AdvertIDs)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v27 uint
-					v27 = uint(in.Uint())
-					out.AdvertIDs = append(out.AdvertIDs, v27)
+					var v24 uint
+					v24 = uint(in.Uint())
+					out.AdvertIDs = append(out.AdvertIDs, v24)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -2913,11 +2874,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels30(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v28, v29 := range in.AdvertIDs {
-				if v28 > 0 {
+			for v25, v26 := range in.AdvertIDs {
+				if v25 > 0 {
 					out.RawByte(',')
 				}
-				out.Uint(uint(v29))
+				out.Uint(uint(v26))
 			}
 			out.RawByte(']')
 		}
@@ -3171,9 +3132,9 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels33(in *jl
 					out.QuestionResults = (out.QuestionResults)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v30 uint
-					v30 = uint(in.Uint())
-					out.QuestionResults = append(out.QuestionResults, v30)
+					var v27 uint
+					v27 = uint(in.Uint())
+					out.QuestionResults = append(out.QuestionResults, v27)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -3199,11 +3160,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels33(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v31, v32 := range in.QuestionResults {
-				if v31 > 0 {
+			for v28, v29 := range in.QuestionResults {
+				if v28 > 0 {
 					out.RawByte(',')
 				}
-				out.Uint(uint(v32))
+				out.Uint(uint(v29))
 			}
 			out.RawByte(']')
 		}
@@ -3549,17 +3510,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels36(in *jl
 				for !in.IsDelim('}') {
 					key := uint(in.UintStr())
 					in.WantColon()
-					var v33 *Profile
+					var v30 *Profile
 					if in.IsNull() {
 						in.Skip()
-						v33 = nil
+						v30 = nil
 					} else {
-						if v33 == nil {
-							v33 = new(Profile)
+						if v30 == nil {
+							v30 = new(Profile)
 						}
-						(*v33).UnmarshalEasyJSON(in)
+						(*v30).UnmarshalEasyJSON(in)
 					}
-					(out.Profiles)[key] = v33
+					(out.Profiles)[key] = v30
 					in.WantComma()
 				}
 				in.Delim('}')
@@ -3587,19 +3548,19 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels36(out *j
 			out.RawString(`null`)
 		} else {
 			out.RawByte('{')
-			v34First := true
-			for v34Name, v34Value := range in.Profiles {
-				if v34First {
-					v34First = false
+			v31First := true
+			for v31Name, v31Value := range in.Profiles {
+				if v31First {
+					v31First = false
 				} else {
 					out.RawByte(',')
 				}
-				out.UintStr(uint(v34Name))
+				out.UintStr(uint(v31Name))
 				out.RawByte(':')
-				if v34Value == nil {
+				if v31Value == nil {
 					out.RawString("null")
 				} else {
-					(*v34Value).MarshalEasyJSON(out)
+					(*v31Value).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte('}')
@@ -4242,17 +4203,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels43(in *jl
 					out.Photo = (out.Photo)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v35 *string
+					var v32 *string
 					if in.IsNull() {
 						in.Skip()
-						v35 = nil
+						v32 = nil
 					} else {
-						if v35 == nil {
-							v35 = new(string)
+						if v32 == nil {
+							v32 = new(string)
 						}
-						*v35 = string(in.String())
+						*v32 = string(in.String())
 					}
-					out.Photo = append(out.Photo, v35)
+					out.Photo = append(out.Photo, v32)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4278,14 +4239,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels43(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v36, v37 := range in.Photo {
-				if v36 > 0 {
+			for v33, v34 := range in.Photo {
+				if v33 > 0 {
 					out.RawByte(',')
 				}
-				if v37 == nil {
+				if v34 == nil {
 					out.RawString("null")
 				} else {
-					out.String(string(*v37))
+					out.String(string(*v34))
 				}
 			}
 			out.RawByte(']')
@@ -4352,17 +4313,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels44(in *jl
 					out.Pad = (out.Pad)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v38 *string
+					var v35 *string
 					if in.IsNull() {
 						in.Skip()
-						v38 = nil
+						v35 = nil
 					} else {
-						if v38 == nil {
-							v38 = new(string)
+						if v35 == nil {
+							v35 = new(string)
 						}
-						*v38 = string(in.String())
+						*v35 = string(in.String())
 					}
-					out.Pad = append(out.Pad, v38)
+					out.Pad = append(out.Pad, v35)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4388,14 +4349,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels44(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v39, v40 := range in.Pad {
-				if v39 > 0 {
+			for v36, v37 := range in.Pad {
+				if v36 > 0 {
 					out.RawByte(',')
 				}
-				if v40 == nil {
+				if v37 == nil {
 					out.RawString("null")
 				} else {
-					out.String(string(*v40))
+					out.String(string(*v37))
 				}
 			}
 			out.RawByte(']')
@@ -4462,9 +4423,9 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels45(in *jl
 					out.UUIDList = (out.UUIDList)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v41 string
-					v41 = string(in.String())
-					out.UUIDList = append(out.UUIDList, v41)
+					var v38 string
+					v38 = string(in.String())
+					out.UUIDList = append(out.UUIDList, v38)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4490,11 +4451,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels45(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v42, v43 := range in.UUIDList {
-				if v42 > 0 {
+			for v39, v40 := range in.UUIDList {
+				if v39 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v43))
+				out.String(string(v40))
 			}
 			out.RawByte(']')
 		}
@@ -4560,19 +4521,19 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels46(in *jl
 					out.List = (out.List)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v44 *time.Time
+					var v41 *time.Time
 					if in.IsNull() {
 						in.Skip()
-						v44 = nil
+						v41 = nil
 					} else {
-						if v44 == nil {
-							v44 = new(time.Time)
+						if v41 == nil {
+							v41 = new(time.Time)
 						}
 						if data := in.Raw(); in.Ok() {
-							in.AddError((*v44).UnmarshalJSON(data))
+							in.AddError((*v41).UnmarshalJSON(data))
 						}
 					}
-					out.List = append(out.List, v44)
+					out.List = append(out.List, v41)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4598,14 +4559,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels46(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v45, v46 := range in.List {
-				if v45 > 0 {
+			for v42, v43 := range in.List {
+				if v42 > 0 {
 					out.RawByte(',')
 				}
-				if v46 == nil {
+				if v43 == nil {
 					out.RawString("null")
 				} else {
-					out.Raw((*v46).MarshalJSON())
+					out.Raw((*v43).MarshalJSON())
 				}
 			}
 			out.RawByte(']')
@@ -4754,9 +4715,9 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels48(in *jl
 					out.Items = (out.Items)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v47 WaitingForCapturePayment
-					(v47).UnmarshalEasyJSON(in)
-					out.Items = append(out.Items, v47)
+					var v44 WaitingForCapturePayment
+					(v44).UnmarshalEasyJSON(in)
+					out.Items = append(out.Items, v44)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4787,11 +4748,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels48(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v48, v49 := range in.Items {
-				if v48 > 0 {
+			for v45, v46 := range in.Items {
+				if v45 > 0 {
 					out.RawByte(',')
 				}
-				(v49).MarshalEasyJSON(out)
+				(v46).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -5237,15 +5198,15 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels54(in *jl
 				for !in.IsDelim('}') {
 					key := string(in.String())
 					in.WantColon()
-					var v50 interface{}
-					if m, ok := v50.(easyjson.Unmarshaler); ok {
+					var v47 interface{}
+					if m, ok := v47.(easyjson.Unmarshaler); ok {
 						m.UnmarshalEasyJSON(in)
-					} else if m, ok := v50.(json.Unmarshaler); ok {
+					} else if m, ok := v47.(json.Unmarshaler); ok {
 						_ = m.UnmarshalJSON(in.Raw())
 					} else {
-						v50 = in.Interface()
+						v47 = in.Interface()
 					}
-					(out.Metadata)[key] = v50
+					(out.Metadata)[key] = v47
 					in.WantComma()
 				}
 				in.Delim('}')
@@ -5326,21 +5287,21 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels54(out *j
 			out.RawString(`null`)
 		} else {
 			out.RawByte('{')
-			v51First := true
-			for v51Name, v51Value := range in.Metadata {
-				if v51First {
-					v51First = false
+			v48First := true
+			for v48Name, v48Value := range in.Metadata {
+				if v48First {
+					v48First = false
 				} else {
 					out.RawByte(',')
 				}
-				out.String(string(v51Name))
+				out.String(string(v48Name))
 				out.RawByte(':')
-				if m, ok := v51Value.(easyjson.Marshaler); ok {
+				if m, ok := v48Value.(easyjson.Marshaler); ok {
 					m.MarshalEasyJSON(out)
-				} else if m, ok := v51Value.(json.Marshaler); ok {
+				} else if m, ok := v48Value.(json.Marshaler); ok {
 					out.Raw(m.MarshalJSON())
 				} else {
-					out.Raw(json.Marshal(v51Value))
+					out.Raw(json.Marshal(v48Value))
 				}
 			}
 			out.RawByte('}')
@@ -5407,17 +5368,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels55(in *jl
 					out.Items = (out.Items)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v52 *OrderItem
+					var v49 *OrderItem
 					if in.IsNull() {
 						in.Skip()
-						v52 = nil
+						v49 = nil
 					} else {
-						if v52 == nil {
-							v52 = new(OrderItem)
+						if v49 == nil {
+							v49 = new(OrderItem)
 						}
-						(*v52).UnmarshalEasyJSON(in)
+						(*v49).UnmarshalEasyJSON(in)
 					}
-					out.Items = append(out.Items, v52)
+					out.Items = append(out.Items, v49)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -5445,14 +5406,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels55(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v53, v54 := range in.Items {
-				if v53 > 0 {
+			for v50, v51 := range in.Items {
+				if v50 > 0 {
 					out.RawByte(',')
 				}
-				if v54 == nil {
+				if v51 == nil {
 					out.RawString("null")
 				} else {
-					(*v54).MarshalEasyJSON(out)
+					(*v51).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -5890,9 +5851,9 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels60(in *jl
 					out.Suggestions = (out.Suggestions)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v55 SuggestionInfo
-					(v55).UnmarshalEasyJSON(in)
-					out.Suggestions = append(out.Suggestions, v55)
+					var v52 SuggestionInfo
+					(v52).UnmarshalEasyJSON(in)
+					out.Suggestions = append(out.Suggestions, v52)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -5918,11 +5879,11 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels60(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v56, v57 := range in.Suggestions {
-				if v56 > 0 {
+			for v53, v54 := range in.Suggestions {
+				if v53 > 0 {
 					out.RawByte(',')
 				}
-				(v57).MarshalEasyJSON(out)
+				(v54).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -6663,17 +6624,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels69(in *jl
 					out.CityItems = (out.CityItems)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v58 *City
+					var v55 *City
 					if in.IsNull() {
 						in.Skip()
-						v58 = nil
+						v55 = nil
 					} else {
-						if v58 == nil {
-							v58 = new(City)
+						if v55 == nil {
+							v55 = new(City)
 						}
-						(*v58).UnmarshalEasyJSON(in)
+						(*v55).UnmarshalEasyJSON(in)
 					}
-					out.CityItems = append(out.CityItems, v58)
+					out.CityItems = append(out.CityItems, v55)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -6701,14 +6662,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels69(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v59, v60 := range in.CityItems {
-				if v59 > 0 {
+			for v56, v57 := range in.CityItems {
+				if v56 > 0 {
 					out.RawByte(',')
 				}
-				if v60 == nil {
+				if v57 == nil {
 					out.RawString("null")
 				} else {
-					(*v60).MarshalEasyJSON(out)
+					(*v57).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -6940,17 +6901,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels72(in *jl
 					out.Items = (out.Items)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v61 *CartItem
+					var v58 *CartItem
 					if in.IsNull() {
 						in.Skip()
-						v61 = nil
+						v58 = nil
 					} else {
-						if v61 == nil {
-							v61 = new(CartItem)
+						if v58 == nil {
+							v58 = new(CartItem)
 						}
-						(*v61).UnmarshalEasyJSON(in)
+						(*v58).UnmarshalEasyJSON(in)
 					}
-					out.Items = append(out.Items, v61)
+					out.Items = append(out.Items, v58)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -6978,14 +6939,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels72(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v62, v63 := range in.Items {
-				if v62 > 0 {
+			for v59, v60 := range in.Items {
+				if v59 > 0 {
 					out.RawByte(',')
 				}
-				if v63 == nil {
+				if v60 == nil {
 					out.RawString("null")
 				} else {
-					(*v63).MarshalEasyJSON(out)
+					(*v60).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -7669,17 +7630,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels81(in *jl
 					out.Adverts = (out.Adverts)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v64 *Advert
+					var v61 *Advert
 					if in.IsNull() {
 						in.Skip()
-						v64 = nil
+						v61 = nil
 					} else {
-						if v64 == nil {
-							v64 = new(Advert)
+						if v61 == nil {
+							v61 = new(Advert)
 						}
-						(*v64).UnmarshalEasyJSON(in)
+						(*v61).UnmarshalEasyJSON(in)
 					}
-					out.Adverts = append(out.Adverts, v64)
+					out.Adverts = append(out.Adverts, v61)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -7700,17 +7661,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels81(in *jl
 					out.Categories = (out.Categories)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v65 *Category
+					var v62 *Category
 					if in.IsNull() {
 						in.Skip()
-						v65 = nil
+						v62 = nil
 					} else {
-						if v65 == nil {
-							v65 = new(Category)
+						if v62 == nil {
+							v62 = new(Category)
 						}
-						(*v65).UnmarshalEasyJSON(in)
+						(*v62).UnmarshalEasyJSON(in)
 					}
-					out.Categories = append(out.Categories, v65)
+					out.Categories = append(out.Categories, v62)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -7731,17 +7692,17 @@ func easyjsonD2b7633eDecodeGithubComGoParkMailRu20241IMAOInternalModels81(in *jl
 					out.Cities = (out.Cities)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v66 *City
+					var v63 *City
 					if in.IsNull() {
 						in.Skip()
-						v66 = nil
+						v63 = nil
 					} else {
-						if v66 == nil {
-							v66 = new(City)
+						if v63 == nil {
+							v63 = new(City)
 						}
-						(*v66).UnmarshalEasyJSON(in)
+						(*v63).UnmarshalEasyJSON(in)
 					}
-					out.Cities = append(out.Cities, v66)
+					out.Cities = append(out.Cities, v63)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -7775,14 +7736,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels81(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v67, v68 := range in.Adverts {
-				if v67 > 0 {
+			for v64, v65 := range in.Adverts {
+				if v64 > 0 {
 					out.RawByte(',')
 				}
-				if v68 == nil {
+				if v65 == nil {
 					out.RawString("null")
 				} else {
-					(*v68).MarshalEasyJSON(out)
+					(*v65).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -7795,14 +7756,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels81(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v69, v70 := range in.Categories {
-				if v69 > 0 {
+			for v66, v67 := range in.Categories {
+				if v66 > 0 {
 					out.RawByte(',')
 				}
-				if v70 == nil {
+				if v67 == nil {
 					out.RawString("null")
 				} else {
-					(*v70).MarshalEasyJSON(out)
+					(*v67).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')
@@ -7815,14 +7776,14 @@ func easyjsonD2b7633eEncodeGithubComGoParkMailRu20241IMAOInternalModels81(out *j
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v71, v72 := range in.Cities {
-				if v71 > 0 {
+			for v68, v69 := range in.Cities {
+				if v68 > 0 {
 					out.RawByte(',')
 				}
-				if v72 == nil {
+				if v69 == nil {
 					out.RawString("null")
 				} else {
-					(*v72).MarshalEasyJSON(out)
+					(*v69).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')

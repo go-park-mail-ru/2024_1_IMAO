@@ -601,25 +601,6 @@ func (ads *AdvertStorage) getAdvertsByCity(ctx context.Context, tx pgx.Tx, city 
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
 		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -741,24 +722,6 @@ func (ads *AdvertStorage) getAdvertsByCityAuth(ctx context.Context, tx pgx.Tx, c
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
-		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
 		}
 
 		// returningAdInList.Sanitize()
@@ -912,22 +875,6 @@ func (ads *AdvertStorage) getAdvertsByCategory(ctx context.Context, tx pgx.Tx, c
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -1053,22 +1000,6 @@ func (ads *AdvertStorage) getAdvertsByCategoryAuth(ctx context.Context, tx pgx.T
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -1185,24 +1116,6 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIs(ctx context.Context, tx
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -1289,25 +1202,6 @@ func (ads *AdvertStorage) getAdvertsForUserWhereStatusIsAuth(ctx context.Context
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
 		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		// returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
@@ -1935,22 +1829,6 @@ func (ads *AdvertStorage) searchAdvertByTitle(ctx context.Context, tx pgx.Tx, ti
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
 		returningAdInList.InFavourites = false
 		returningAdInList.InCart = false
 
@@ -2074,24 +1952,6 @@ func (ads *AdvertStorage) searchAdvertByTitleAuth(ctx context.Context, tx pgx.Tx
 			for _, ptr := range photoPad.Photo {
 				returningAdInList.Photos = append(returningAdInList.Photos, *ptr)
 			}
-		}
-
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %s, err = %w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
 		}
 
 		// returningAdInList.Sanitize()

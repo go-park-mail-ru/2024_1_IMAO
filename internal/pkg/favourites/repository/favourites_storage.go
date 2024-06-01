@@ -8,7 +8,6 @@ import (
 	mymetrics "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/metrics"
 
 	"github.com/go-park-mail-ru/2024_1_IMAO/internal/models"
-	"github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils"
 	logging "github.com/go-park-mail-ru/2024_1_IMAO/internal/pkg/utils/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -88,25 +87,7 @@ func (favouritesStorage *FavouritesStorage) getFavouritesByUserID(ctx context.Co
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err=%w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
@@ -313,25 +294,7 @@ func (favouritesStorage *FavouritesStorage) getSubscribedAdvertsByUserID(ctx con
 			}
 		}
 
-		for i := 0; i < len(returningAdInList.Photos); i++ {
-			image, err := utils.DecodeImage(returningAdInList.Photos[i])
-			if err != nil {
-				logging.LogError(logger, fmt.Errorf("error occurred while decoding advert_image %v, err=%w",
-					returningAdInList.Photos[i], err))
-
-				return nil, err
-			}
-
-			returningAdInList.PhotosIMG = append(returningAdInList.PhotosIMG, image)
-		}
-
-		if err != nil {
-			logging.LogError(logger, fmt.Errorf("something went wrong while decoding image, err=%w", err))
-
-			return nil, err
-		}
-
-		returningAdInList.Sanitize()
+		//returningAdInList.Sanitize()
 
 		adsList = append(adsList, &returningAdInList)
 	}
